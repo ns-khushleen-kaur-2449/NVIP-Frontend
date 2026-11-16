@@ -1,9 +1,12 @@
 [build]
-  command = "cross-env NODE_OPTIONS=--openssl-legacy-provider craco build"
+  command = "npm run build"
   publish = "build"
 
 [build.environment]
+  # Node 22, not predev's 18: react-router-dom 7 (used by both apps) needs Node >= 20.
   NODE_VERSION = "22"
+  # Set REACT_APP_NVIP_API_URL and REACT_APP_NVIP_USE_MOCKS per deploy context in
+  # Netlify (Site configuration -> Environment variables), not here.
   # REACT_APP_BACKEND_URL is deliberately NOT set here.
   #
   # It used to hard-code an ngrok tunnel, which is ephemeral — the deployed

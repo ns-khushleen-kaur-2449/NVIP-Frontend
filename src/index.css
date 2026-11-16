@@ -481,3 +481,117 @@
 .ops-tone-accent { --tone: var(--ops-accent-ink); }
 .ops-border-bad { border-color: color-mix(in srgb, var(--ops-bad) 45%, transparent); }
 .ops-row-alert { background: color-mix(in srgb, var(--ops-bad) 6%, transparent); }
+
+/* ====== NVIP shell styles (from predev; appended, so they win where they overlap) ====== */
+/* ============================================================
+   NVIP design tokens — based on the Netsmartz brand (netsmartz.com:
+   orange #FE7725, peach tint, slate navy, Inter, pill buttons), softened
+   in both themes so neither is harsh to look at.
+
+   Components only ever read these variables (e.g.
+   bg-[var(--nv-surface)]), so the theme toggle just swaps this set.
+   The theme is chosen by data-theme on <html> (see ThemeContext).
+   ============================================================ */
+/* Light: warm off-whites and charcoal text instead of pure white / near-black,
+   so the page is easy on the eyes while keeping the Netsmartz orange. */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --nv-bg:          #FAF3E8;  /* page background (light cream)        */
+  --nv-surface:     #FFFAF2;  /* cards, tables, inputs (paler cream)  */
+  --nv-surface-2:   #F5ECDF;  /* hover rows, insets                   */
+  /* Feature panels (sign-in brand panel, "custom agent" card): a deeper
+     cream in light mode, so nothing is navy unless the theme is dark. */
+  --nv-feature-bg:     #F2E4D1;
+  --nv-feature-raised: #E9D6BE;
+  --nv-feature-fg:     #262B36;
+  --nv-feature-muted:  #5C5246;
+  --nv-feature-border: #D9C4A9;
+  --nv-orange:      #FE7725;  /* brand: primary buttons, active nav   */
+  --nv-orange-2:    #E86A1C;  /* primary hover                        */
+  --nv-orange-ink:  #A6490C;  /* orange text/links (AA on surfaces)   */
+  --nv-orange-soft: #FBE3CF;  /* tinted tiles, meters, attention      */
+  --nv-ink:         #262B36;  /* body text (charcoal)                 */
+  --nv-muted:       #5F6573;  /* secondary text                       */
+  --nv-line:        #EADDCB;  /* hairlines                            */
+  --nv-success:     #28703F;
+  --nv-success-bg:  #E3F1E7;
+  --nv-warning:     #9A5B12;
+  --nv-warning-bg:  #FAEEDC;
+  --nv-danger:      #A93A3A;
+  --nv-danger-bg:   #F8E6E4;
+  --nv-info:        #3559A8;
+  --nv-info-bg:     #E5ECF8;
+  --nv-neutral-bg:  #EFE6DA;
+
+  /* App chrome: workspace sidebar + public top bar. Same background as the
+     page (one continuous surface); separated only by a hairline border. */
+  --nv-chrome-bg:     var(--nv-bg);
+  --nv-chrome-fg:     #262B36;
+  --nv-chrome-muted:  #5A606C;
+  --nv-chrome-hover:  #F2E7D8;
+  --nv-chrome-raised: #F3E9DB;
+  --nv-chrome-border: var(--nv-line);
+}
+
+/* Dark: soft slate-charcoal instead of deep navy, off-white text instead of
+   pure white, and slightly muted status colours to avoid glare. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --nv-bg:          #1A1E25;
+  --nv-surface:     #222731;
+  --nv-surface-2:   #2A303B;
+  --nv-feature-bg:     #151920;
+  --nv-feature-raised: #2A303B;
+  --nv-feature-fg:     #E4E6EA;
+  --nv-feature-muted:  #A3ABB8;
+  --nv-feature-border: #3A414E;
+  --nv-orange:      #F47A2E;
+  --nv-orange-2:    #F7935A;
+  --nv-orange-ink:  #F4A06C;
+  --nv-orange-soft: #3A2A20;
+  --nv-ink:         #E4E6EA;
+  --nv-muted:       #A0A7B3;
+  --nv-line:        #323946;
+  --nv-success:     #74C893;
+  --nv-success-bg:  #1F3328;
+  --nv-warning:     #E3B25C;
+  --nv-warning-bg:  #3A3020;
+  --nv-danger:      #EC8E8A;
+  --nv-danger-bg:   #3D2425;
+  --nv-info:        #97B6EE;
+  --nv-info-bg:     #222F48;
+  --nv-neutral-bg:  #2E343F;
+
+  --nv-chrome-bg:     var(--nv-bg);
+  --nv-chrome-fg:     #E4E6EA;
+  --nv-chrome-muted:  #A0A7B3;
+  --nv-chrome-hover:  #252A33;
+  --nv-chrome-raised: #222731;
+  --nv-chrome-border: var(--nv-line);
+}
+
+body {
+  margin: 0;
+  color: var(--nv-ink);
+  background: var(--nv-bg);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--nv-orange);
+  outline-offset: 2px;
+}
+
+.nv-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
