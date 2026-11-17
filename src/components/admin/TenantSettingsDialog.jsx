@@ -22,6 +22,12 @@ const limitFields = (settings) => Object.keys(settings?.limits || {}).map((key) 
   key, label: LIMIT_LABELS[key]?.label || key.replace(/_/g, ' '), min: LIMIT_LABELS[key]?.min ?? 0,
 }));
 const ROLE_LABELS = { manager: 'Manager', rep: 'Sales rep' };
+// What a switch does, where the label alone doesn't say. Off by default: on only once switched on here.
+export const FEATURE_DESCRIPTIONS = {
+  agent_instances: "Off by default. Managers and Tenant Admins configure agents (drafts, versions, publish) on the Agents page. Calls still use the Assistant builder's configuration unless shared assistants is also on.",
+  shared_assistants: "Off by default. The tenant's calls go through the platform's shared Outbound and Inbound SDR assistants, using its published agent configuration. Needs a caller ID number (or the platform caller ID switch) and the shared assistants published.",
+  allow_platform_caller_id: "Off by default. A shared-assistant tenant without a number of its own may call from the platform's number.",
+};
 const number = (value) => (value === '' ? null : Number(value));
 
 /** One tenant's limits, feature switches and Tenant Admins. Every change takes a reason and is audited. */
@@ -113,9 +119,15 @@ export default function TenantSettingsDialog({ tenant, onOpenChange }) {
               <h3 className="text-sm font-semibold">Features</h3>
               <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
                 {data.features.map((feature) => (
-                  <li key={feature.key} className="flex items-center justify-between gap-3 text-sm">
-                    <span>{feature.label}</span>
-                    <Switch checked={feature.enabled} aria-label={feature.label} onCheckedChange={(enabled) => setChange({
+                  <li key={feature.key} className="flex items-start justify-between gap-3 text-sm">
+                    <span>
+                      {feature.label}
+                      {FEATURE_DESCRIPTIONS[feature.key] && (
+                        <span className="block text-xs text-muted-foreground" id={`feature-${feature.key}-help`}>{FEATURE_DESCRIPTIONS[feature.key]}</span>
+                      )}
+                    </span>
+                    <Switch checked={feature.enabled} aria-label={feature.label}
+                      aria-describedby={FEATURE_DESCRIPTIONS[feature.key] ? `feature-${feature.key}-help` : undefined} onCheckedChange={(enabled) => setChange({
                       title: `${enabled ? 'Switch on' : 'Switch off'} ${feature.label} for ${tenant.name}?`, label: enabled ? 'Switch on' : 'Switch off', danger: !enabled,
                       run: (reason) => setTenantFeature(tenantId, feature.key, enabled, reason),
                     })} />

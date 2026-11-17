@@ -8,7 +8,7 @@ export const ACTIVE_REFRESH_MS = 5000;
 export const isLive = (log) => Boolean(log?.in_progress || log?.analysis_pending);
 
 export function useCallLogs(opts = {}) {
-  const { page=1, pageSize=20, status='', sourceType='', campaignId='', assistantId='', search='', dateFrom='', dateTo='', sortBy='latest', autoRefresh=true, refreshInterval=30000 } = opts;
+  const { page=1, pageSize=20, status='', sourceType='', agentType='', campaignId='', assistantId='', search='', dateFrom='', dateTo='', sortBy='latest', autoRefresh=true, refreshInterval=30000 } = opts;
   const [logs, setLogs] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -23,6 +23,7 @@ export function useCallLogs(opts = {}) {
       const params = { page, page_size: pageSize, sort_by: sortBy };
       if (status) params.status = status;
       if (sourceType) params.source_type = sourceType;
+      if (agentType) params.agent_type = agentType;
       if (campaignId) params.campaign_id = campaignId;
       if (assistantId) params.assistant_id = assistantId;
       if (search) params.search = search;
@@ -46,7 +47,7 @@ export function useCallLogs(opts = {}) {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, status, sourceType, campaignId, assistantId, search, dateFrom, dateTo, sortBy]);
+  }, [page, pageSize, status, sourceType, agentType, campaignId, assistantId, search, dateFrom, dateTo, sortBy]);
 
   // A filter change shows the loading state until its first answer.
   useEffect(() => { setLoading(true); hasRows.current = false; }, [fetchLogs]);

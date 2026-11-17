@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   activateTenant, addTenantPhoneNumber, cancelTenantOffboarding, createTenantWithAdmin, initiateTenantOffboarding,
-  listAdminTenants, listTenantPhoneNumbers, removeTenantPhoneNumber, setTenantApolloAccess, suspendTenant,
+  getTenantSettings, listAdminTenants, listTenantPhoneNumbers, removeTenantPhoneNumber, setTenantApolloAccess,
+  setTenantPhoneNumberInboundMode, suspendTenant,
 } from '@/lib/api';
 import { generateTemporaryPassword } from '@/lib/passwords';
 
@@ -133,13 +134,91 @@ function NewTenantDialog({ open, onOpenChange, onCreated }) {
   );
 }
 
-/** Super Admin: the Vapi phone numbers a tenant's admins may attach to its assistants.  Nothing here contacts Vapi. */
+export const INBOUND_MODES = [
+  { value: 'fixed', label: 'Fixed assistant', help: "One of the tenant's own assistants answers." },
+  { value: 'shared', label: 'Shared via NVIP', help: 'NVIP picks the shared Inbound SDR assistant per call.' },
+];
+export const SHARED_OFF_REASON = "Switch on Shared assistants for this tenant first (Settings → Features).";
+
+/**
+ * How Vapi answers calls to one number (its `inbound_mode` from the server). Every change takes a reason and is
+ * confirmed; the server's refusal (prerequisites, cooldown) is shown as it is sent.
+ */
+export function InboundModeControl({ tenant, row, sharedOn, mode, onChanged }) {
+  const [target, setTarget] = useState(null);
+  const [assistantId, setAssistantId] = useState('');
+  const [error, setError] = useState(null);
+  const name = row.label || row.vapi_phone_number_id;
+  const open = (value) => { setTarget(value); setAssistantId(''); setError(null); };
+  const confirm = async (reason) => {
+    try {
+      const response = await setTenantPhoneNumberInboundMode(tenant.tenant_id, row.id,
+        { mode: target, vapiAssistantId: target === 'fixed' ? assistantId.trim() : null, reason });
+      toast.success(`${name}: ${INBOUND_MODES.find((m) => m.value === response.data?.mode)?.label || response.data?.mode}`);
+      onChanged(row.id, response.data?.mode || target);
+      return true;
+    } catch (e) {
+      setError(errorText(e, 'Could not change the inbound mode'));
+      return false;
+    }
+  };
+  return (
+    <fieldset className="min-w-[200px]" data-testid={`inbound-mode-${row.id}`}>
+      <legend className="sr-only">Inbound mode of {name}</legend>
+      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={`Inbound mode of ${name}`}>
+        {INBOUND_MODES.map((m) => {
+          const disabled = m.value === 'shared' && !sharedOn;
+          return (
+            <button key={m.value} type="button" role="radio" aria-checked={mode === m.value} disabled={disabled}
+              title={disabled ? SHARED_OFF_REASON : m.help} onClick={() => open(m.value)}
+              className={`rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 focus-visible:outline focus-visible:outline-2 ${mode === m.value ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`}>
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {mode ? `Now: ${INBOUND_MODES.find((m) => m.value === mode)?.label || mode}` : 'Now: Fixed assistant'}
+        {mode === 'fixed' && row.assistant_name ? ` (${row.assistant_name})` : ''}
+        {!sharedOn && <> · {SHARED_OFF_REASON}</>}
+      </p>
+      <ReasonDialog open={Boolean(target)} onOpenChange={(next) => !next && setTarget(null)}
+        title={`Answer ${name} with: ${INBOUND_MODES.find((m) => m.value === target)?.label}?`}
+        changes={target === 'shared'
+          ? ['The number loses its fixed assistant in Vapi; each call asks NVIP which assistant answers.', `Calls are answered with ${tenant?.name}'s published Inbound SDR configuration.`]
+          : [`One of ${tenant?.name}'s own assistants answers every call to this number.`]}
+        confirmLabel="Change inbound mode" reasonPlaceholder="Why? It is kept in the platform audit trail." onConfirm={confirm}>
+        {target === 'fixed' && (
+          <label className="block text-sm font-medium">Vapi assistant id (optional)
+            <Input className="mt-1" value={assistantId} onChange={(e) => setAssistantId(e.target.value)}
+              placeholder="Blank: the assistant it had before" />
+          </label>
+        )}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      </ReasonDialog>
+    </fieldset>
+  );
+}
+
+/** Super Admin: the Vapi phone numbers a tenant's admins may attach to its assistants, and how inbound calls are answered. */
 function PhoneNumbersDialog({ tenant, onClose }) {
   const [rows, setRows] = useState(null);
   const [form, setForm] = useState({ vapi_phone_number_id: '', label: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [removing, setRemoving] = useState(null);
+  const [sharedOn, setSharedOn] = useState(false);
+  const [modes, setModes] = useState({});
+
+  useEffect(() => {
+    if (!tenant) return undefined;
+    let cancelled = false;
+    setModes({});
+    Promise.resolve().then(() => getTenantSettings(tenant.tenant_id)).then((r) => {
+      if (!cancelled) setSharedOn(Boolean((r.data?.features || []).find((f) => f.key === 'shared_assistants')?.enabled));
+    }).catch(() => { if (!cancelled) setSharedOn(false); });
+    return () => { cancelled = true; };
+  }, [tenant]);
 
   const load = useCallback(async () => {
     try {
@@ -190,7 +269,7 @@ function PhoneNumbersDialog({ tenant, onClose }) {
   return (
     <>
       <Dialog open={Boolean(tenant)} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[620px]" data-testid="tenant-phone-numbers-dialog">
+        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto" data-testid="tenant-phone-numbers-dialog">
           <DialogHeader>
             <DialogTitle>Phone numbers of {tenant?.name}</DialogTitle>
             <DialogDescription>
@@ -206,13 +285,20 @@ function PhoneNumbersDialog({ tenant, onClose }) {
               </p>
             ) : (
               <Table>
-                <TableHeader><TableRow><TableHead>Vapi number id</TableHead><TableHead>Label</TableHead><TableHead>Added</TableHead><TableHead /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Vapi number id</TableHead><TableHead>Label</TableHead><TableHead>Added</TableHead><TableHead>Inbound calls</TableHead><TableHead /></TableRow></TableHeader>
                 <TableBody>
                   {rows.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell><code className="text-xs">{row.vapi_phone_number_id}</code></TableCell>
+                      <TableCell>
+                        <code className="text-xs">{row.vapi_phone_number_id}</code>
+                        <span className="block text-xs text-muted-foreground">{row.phone_number || 'number not synced yet'}</span>
+                      </TableCell>
                       <TableCell className="text-sm">{row.label || '—'}</TableCell>
                       <TableCell className="text-sm">{new Date(row.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <InboundModeControl tenant={tenant} row={row} sharedOn={sharedOn} mode={modes[row.id] || row.inbound_mode}
+                          onChanged={(id, mode) => { setModes((m) => ({ ...m, [id]: mode })); load(); }} />
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" aria-label={`Remove ${row.label || row.vapi_phone_number_id}`}
                           onClick={() => setRemoving(row)}><Trash2 className="w-4 h-4" /></Button>

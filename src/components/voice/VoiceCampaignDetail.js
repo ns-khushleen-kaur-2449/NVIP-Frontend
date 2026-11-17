@@ -29,6 +29,8 @@ import CampaignPitchCard from './CampaignPitchCard';
 import { PreflightProblems } from './CampaignOfferFields';
 import { preflightProblems } from '@/lib/campaignOffer';
 import CallLogDetail from './CallLogDetail';
+import CampaignRefusals from './CampaignRefusals';
+import CampaignBriefCard from './CampaignBriefCard';
 import { IdChip } from './VoiceCampaigns';
 import ScoreChips from '@/components/leads/ScoreChips';
 
@@ -349,6 +351,7 @@ function Overview({ campaign, contacts, onEditRules, canEditRules, user, onChang
           </dl>
         )}
       </section>
+      <CampaignBriefCard campaign={campaign} />
       <CampaignPitchCard campaign={campaign} user={user} onSaved={onChanged} />
     </div>
   );
@@ -435,6 +438,8 @@ export default function VoiceCampaignDetail() {
               ))}
             </div>
           )}
+
+          <CampaignRefusals campaign={campaign} contacts={contacts} user={user} />
 
           <div role="tablist" aria-label="Campaign" className="flex flex-wrap gap-1 border-b border-border">
             {TABS.map((t) => (

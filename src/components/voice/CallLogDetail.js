@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import LeadTimelineDialog from '@/components/shared/LeadTimelineDialog';
 import IntentAssessmentDetails from '@/components/ops/IntentAssessmentDetails';
 import CallbackFollowUp from '@/components/voice/CallbackFollowUp';
+import AgentTypeBadge, { CallAgentVersion } from '@/components/voice/AgentTypeBadge';
 import OpsStatusBadge from '@/components/ops/StatusBadge';
 import { useCallLogDetail } from '@/hooks/useCallLogs';
 import { useAuth } from '@/lib/AuthContext';
@@ -342,6 +343,7 @@ export default function CallLogDetail({ callId, onBack }) {
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-foreground">{d.customer_name || 'Unknown Caller'}</h2>
               <p className="text-sm text-muted-foreground">{d.phone_number || 'No phone'}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2"><AgentTypeBadge log={d} /><CallAgentVersion log={d} /></div>
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-muted-foreground" /> {formatDuration(d.duration_seconds)}</span>

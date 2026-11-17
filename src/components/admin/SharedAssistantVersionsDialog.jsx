@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorText } from '@/components/admin/userBits';
 import {
-  checkAgentAssistantVersion, createAgentAssistantDraft, importAgentAssistantVersion, listAgentAssistantVersions,
+  checkAgentAssistantVersion, createAgentAssistantDraft, createAgentAssistantDraftFromTemplate, importAgentAssistantVersion,
+  listAgentAssistantVersions,
   publishAgentAssistantVersion, rollbackAgentAssistantVersion,
 } from '@/lib/api';
-import { VERSION_STATUS_LABELS, parseAssistantJson } from '@/lib/agents';
+import { VERSION_STATUS_LABELS, hasSharedAssistantTemplate, parseAssistantJson } from '@/lib/agents';
 
 const STATUS_STYLE = {
   published: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/25',
@@ -100,6 +101,16 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
       await load();
     }, 'Could not save the draft');
   };
+
+  // SDR's agent types: a draft whose prompt and first message come from the pack template (model, voice, transcriber
+  // and tools of the newest version are kept). Then Check and Publish as usual.
+  const draftFromTemplate = () => run(async () => {
+    const saved = (await createAgentAssistantDraftFromTemplate(agent.id, assistant.id)).data;
+    toast.success(`Draft version ${saved.version} created from the template. Check it, then publish.`);
+    setCheck(null);
+    await load();
+    setText(pretty(saved.payload));
+  }, 'Could not create a draft from the template');
 
   const runCheck = (version) => run(async () => {
     const result = (await checkAgentAssistantVersion(agent.id, assistant.id, version.version)).data;
@@ -208,7 +219,10 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
         )}
         {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
         {versions?.length > 0 && (
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            {hasSharedAssistantTemplate(agent) && (
+              <Button variant="outline" onClick={draftFromTemplate} disabled={busy}>Create draft from template</Button>
+            )}
             <Button onClick={saveDraft} disabled={busy} className="bg-primary text-primary-foreground">
               {busy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Save as draft
             </Button>

@@ -6,11 +6,58 @@
  * agent never produces a broken link.
  */
 export const AGENT_ROUTES = Object.freeze({
+  // Outbound SDR: its catalog row keeps the legacy key `sdr`; the agent type is `sdr_outbound`.
   sdr: '/voice_agent',
+  sdr_outbound: '/voice_agent',
+  // Inbound SDR runs on SDR's pack but has its own configuration screen (no campaigns).
+  sdr_inbound: '/agents/sdr_inbound',
   hiring: '/hiring_agent',
 });
 
 export const agentRoute = (agent) => AGENT_ROUTES[agent?.key] || null;
+
+/** Old agent keys the backend still accepts for an agent type (registry `legacy_keys`). */
+export const LEGACY_AGENT_KEYS = Object.freeze({ sdr: 'sdr_outbound' });
+
+/** The agent type for a catalog key or agent type key: `sdr` -> `sdr_outbound`; anything else as it is. */
+export const canonicalAgentType = (key) => (key ? LEGACY_AGENT_KEYS[key] || key : null);
+
+export const AGENT_TYPE_LABELS = Object.freeze({
+  sdr_outbound: 'Outbound SDR',
+  sdr_inbound: 'Inbound SDR',
+  hiring: 'Hiring',
+});
+
+/** "Outbound SDR" for `sdr` or `sdr_outbound`; an unknown type is shown as it is. */
+export const agentTypeLabel = (key) => AGENT_TYPE_LABELS[canonicalAgentType(key)] || key || 'Unknown';
+
+/** Agent types configured through agent instances (Hiring keeps its own screens). */
+export const CONFIGURABLE_AGENT_TYPES = Object.freeze(['sdr_outbound', 'sdr_inbound']);
+export const isConfigurableAgentType = (key) => CONFIGURABLE_AGENT_TYPES.includes(canonicalAgentType(key));
+
+/** Where an agent type's configuration opens. */
+export const agentConfigRoute = (key) => `/agents/${canonicalAgentType(key)}`;
+
+/** Shared assistants built from a pack template (`.../versions/from-template`): SDR's two agent types. */
+export const hasSharedAssistantTemplate = (agent) => isConfigurableAgentType(agent?.key);
+
+/**
+ * The agent type of a call log: its `agent_type` when the API sends it, else the old `agent` key, else (only SDR's
+ * calls are listed on /api/call-logs) the backend's own backfill rule: inbound -> Inbound SDR, otherwise Outbound SDR.
+ */
+export function callAgentType(log) {
+  if (!log) return null;
+  if (log.agent_type) return canonicalAgentType(log.agent_type);
+  if (log.agent) return canonicalAgentType(log.agent);
+  return log.direction === 'inbound' ? 'sdr_inbound' : 'sdr_outbound';
+}
+
+/** The catalog row of Outbound SDR that Inbound SDR follows (`AgentResponse.follows`). */
+export const FOLLOWED_AGENT_LABELS = Object.freeze({ sdr: 'Outbound SDR' });
+export const followsLabel = (agent) => (agent?.follows ? `Follows ${FOLLOWED_AGENT_LABELS[agent.follows] || agent.follows}` : null);
+
+/** Inbound SDR can follow Outbound SDR again once its access was set directly. */
+export const canFollowAgain = (agent) => agent?.key === 'sdr_inbound' && !agent?.follows;
 
 export const AGENT_STATUS_LABELS = Object.freeze({ draft: 'Draft', active: 'Active', retired: 'Retired' });
 

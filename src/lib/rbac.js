@@ -227,6 +227,42 @@ export function featureEnabled(actor, key) {
   return actor?.features?.[key] !== false;
 }
 
+// Off unless a Super Admin switched them on (backend core.features.OFF_BY_DEFAULT). /api/auth/me sends them resolved;
+// a missing key here means off, never on.
+export const OFF_BY_DEFAULT_FEATURES = Object.freeze(['agent_instances', 'shared_assistants', 'allow_platform_caller_id']);
+
+/** For the off-by-default features: on only when /api/auth/me says `true`. */
+export function featureOn(actor, key) {
+  if (OFF_BY_DEFAULT_FEATURES.includes(key)) return actor?.features?.[key] === true;
+  return featureEnabled(actor, key);
+}
+
+// Agent instances (backend agent_instances endpoints: the assistant roles, AssistantAction VIEW / CREATE / EDIT).
+export const AGENT_CONFIG_ROLES = Object.freeze(['tenant_admin', 'manager']);
+
+/** May view, draft, publish, rebase and restore agent configurations. */
+export function canConfigureAgents(actor) {
+  return Boolean(actor) && AGENT_CONFIG_ROLES.includes(actor.role);
+}
+
+/**
+ * May publish a stale draft over a newer version (publish?force=true). The backend lets Managers too; the UI keeps it
+ * to Tenant Admins, as decided for this screen.
+ */
+export function canForcePublish(actor) {
+  return actor?.role === ROLES.TENANT_ADMIN;
+}
+
+/** May edit the business profile (PUT /api/v1/business-profile); Managers read it. */
+export function canEditBusinessProfile(actor) {
+  return actor?.role === ROLES.TENANT_ADMIN;
+}
+
+/** The agent configuration screens: the flag is on and the role may use them. */
+export function agentInstancesAvailable(actor) {
+  return featureOn(actor, 'agent_instances') && canConfigureAgents(actor);
+}
+
 export function featuresEnabled(actor, keys = []) {
   return keys.every((key) => featureEnabled(actor, key));
 }

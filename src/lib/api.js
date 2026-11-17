@@ -124,11 +124,27 @@ export const setTenantApolloAccess = (id, enabled, reason) => api.put(`/api/admi
 export const listTenantPhoneNumbers = (tenantId) => api.get(`/api/admin/tenants/${tenantId}/phone-numbers`);
 export const addTenantPhoneNumber = (tenantId, data) => api.post(`/api/admin/tenants/${tenantId}/phone-numbers`, data);
 export const removeTenantPhoneNumber = (tenantId, numberId) => api.delete(`/api/admin/tenants/${tenantId}/phone-numbers/${numberId}`);
+// How Vapi answers calls to the number: 'shared' (NVIP picks the assistant per call; the tenant's shared_assistants must
+// be on) or 'fixed' (one of the tenant's own assistants). Reason required; audited.
+export const setTenantPhoneNumberInboundMode = (tenantId, numberId, { mode, vapiAssistantId, reason }) =>
+  api.post(`/api/admin/tenants/${tenantId}/phone-numbers/${numberId}/inbound-mode`, {
+    mode, reason, ...(vapiAssistantId ? { vapi_assistant_id: vapiAssistantId } : {}),
+  });
 export const getRoleDashboard = () => api.get('/api/v1/dashboard');
 
 // ── Agents (the platform catalog; backend app/api/v1/endpoints/agents.py) ──
 // Everyone: the agents their organisation may use. Never includes Vapi details.
 export const listAvailableAgents = () => api.get('/api/v1/agents/available');
+// The same, with agent types that run on another's screen (Inbound SDR) and { agent_type, usable, follows, has_screen }.
+export const listAvailableAgentTypes = () => api.get('/api/v1/agents/available', { params: { include: 'agent_types' } });
+// Every published agent with `usable` for the caller's tenant ("Not in plan" cards). Tenant users only.
+export const getAgentCatalog = () => api.get('/api/v1/agents/catalog');
+// The tenant's business profile: Tenant Admins and Managers read, Tenant Admins replace it (PUT, every field).
+export const getBusinessProfile = () => api.get('/api/v1/business-profile');
+export const updateBusinessProfile = (profile) => api.put('/api/v1/business-profile', profile);
+// The tenant's own phone numbers, read-only: [{ id, vapi_phone_number_id, phone_number (E.164 or null), label,
+// inbound_mode, assistant_name }].
+export const listOwnPhoneNumbers = () => api.get('/api/v1/phone-numbers');
 // Super Admin only: author agents, decide who may use them, and register their shared assistants.
 export const listAgents = () => api.get('/api/v1/agents');
 export const createAgent = (data) => api.post('/api/v1/agents', data);
@@ -148,7 +164,32 @@ export const checkAgentAssistantVersion = (id, rowId, n) => api.post(`${assistan
 export const publishAgentAssistantVersion = (id, rowId, n) => api.post(`${assistantVersions(id, rowId)}/${n}/publish`);
 export const rollbackAgentAssistantVersion = (id, rowId, n) => api.post(`${assistantVersions(id, rowId)}/${n}/rollback`);
 // Whether this server has the agent's code and can run it: { key, has_code, contract_version, ok, problems }.
+// A draft whose prompt and first message come from the agent type's pack template (SDR's two types); then check/publish.
+export const createAgentAssistantDraftFromTemplate = (id, rowId) => api.post(`${assistantVersions(id, rowId)}/from-template`);
 export const getAgentHealth = (id) => api.get(`/api/v1/agents/${id}/health`);
+
+// ── Agent instances: the tenant's configured agent per agent type, with versions ──
+// Backend app/api/v1/endpoints/agent_instances.py. Tenant Admins and Managers; behind the `agent_instances` feature
+// (403 while it is off). The tenant is always the signed-in user's; `agentType` accepts `sdr` for `sdr_outbound`.
+const INSTANCES = '/api/v1/agent-instances';
+const instancePath = (agentType) => `${INSTANCES}/${encodeURIComponent(agentType)}`;
+export const listAgentInstances = () => api.get(INSTANCES);
+// -> the instance with `versions` (newest first); 404 while the tenant has none of that type.
+export const getAgentInstance = (agentType) => api.get(instancePath(agentType));
+export const getAgentInstanceVersion = (agentType, version) => api.get(`${instancePath(agentType)}/versions/${version}`);
+// body: { payload? , from_version? } (neither: a copy of the published version). 409 while a draft is open.
+export const createAgentInstanceDraft = (agentType, body = {}) => api.post(`${instancePath(agentType)}/drafts`, body);
+export const updateAgentInstanceDraft = (agentType, version, payload) =>
+  api.put(`${instancePath(agentType)}/drafts/${version}`, { payload });
+export const discardAgentInstanceDraft = (agentType, version) => api.delete(`${instancePath(agentType)}/drafts/${version}`);
+// 409 { code: "stale_draft", base_version, published_version, message } when another version was published since.
+export const publishAgentInstanceVersion = (agentType, version, { force = false } = {}) =>
+  api.post(`${instancePath(agentType)}/versions/${version}/publish`, null, { params: force ? { force: true } : {} });
+// -> { draft, replaced_version, previous_payload }: a fresh draft from the latest published version.
+export const rebaseAgentInstanceDraft = (agentType, version) => api.post(`${instancePath(agentType)}/drafts/${version}/rebase`);
+// A new draft copying an older version.
+export const restoreAgentInstanceVersion = (agentType, version) =>
+  api.post(`${instancePath(agentType)}/versions/${version}/restore`);
 // Calls per agent for [from, to): { from, to, tenant_id? } (a Super Admin must name the tenant). Counts only.
 export const getAgentMetrics = (params) => api.get('/api/v1/agents/metrics', { params });
 

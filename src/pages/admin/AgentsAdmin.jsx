@@ -10,11 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { errorText } from '@/components/admin/userBits';
 import SharedAssistantVersionsDialog from '@/components/admin/SharedAssistantVersionsDialog';
+import ConfirmDialog from '@/components/ops/ConfirmDialog';
 import {
   createAgent, getAgentAccess, getAgentHealth, listAgentAssistants, listAgents, registerAgentAssistant,
   removeAgentAssistant, setAgentAccess, updateAgent,
 } from '@/lib/api';
-import { AGENT_STATUS_ACTIONS, AGENT_STATUS_LABELS, accessSummary, healthState, problemLabel } from '@/lib/agents';
+import {
+  AGENT_STATUS_ACTIONS, AGENT_STATUS_LABELS, FOLLOWED_AGENT_LABELS, accessSummary, canFollowAgain, followsLabel, healthState,
+  problemLabel,
+} from '@/lib/agents';
 
 const STATUS_STYLE = {
   draft: 'bg-amber-500/10 text-amber-600 border-amber-500/25',
@@ -116,10 +120,14 @@ function AccessDialog({ agent, onClose, onSaved }) {
   const [selected, setSelected] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // An agent that follows another (Inbound SDR follows Outbound SDR): saving its access directly detaches it.
+  const [confirmDetach, setConfirmDetach] = useState(false);
+  const followed = agent?.follows ? FOLLOWED_AGENT_LABELS[agent.follows] || agent.follows : null;
 
   useEffect(() => {
     if (!agent) return undefined;
     let cancelled = false;
+    setConfirmDetach(false);
     setScope(agent.access_scope);
     setTenants(null);
     setError(null);
@@ -142,11 +150,13 @@ function AccessDialog({ agent, onClose, onSaved }) {
     setError(null);
     try {
       await setAgentAccess(agent.id, scope, scope === 'selected' ? [...selected] : []);
-      toast.success('Access updated');
+      toast.success(followed ? `Access updated; ${agent.name} no longer follows ${followed}` : 'Access updated');
       onSaved?.();
       onClose();
+      return true;
     } catch (e) {
       setError(errorText(e, 'Could not update access'));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -159,6 +169,11 @@ function AccessDialog({ agent, onClose, onSaved }) {
           <DialogTitle>Who can use {agent?.name}</DialogTitle>
           <DialogDescription>Only active agents reach organisations. Revoking takes effect at once.</DialogDescription>
         </DialogHeader>
+        {followed && (
+          <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+            {agent.name} follows {followed}: it gets {followed}'s access and status automatically. Saving access here detaches it.
+          </p>
+        )}
         <div className="flex gap-2">
           <Button type="button" variant={scope === 'all' ? 'default' : 'outline'} aria-pressed={scope === 'all'}
             onClick={() => setScope('all')}>All organisations</Button>
@@ -182,10 +197,15 @@ function AccessDialog({ agent, onClose, onSaved }) {
         )}
         {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
         <DialogFooter>
-          <Button onClick={save} disabled={saving || (scope === 'selected' && !tenants)} className="bg-primary text-primary-foreground">
+          <Button onClick={() => (followed ? setConfirmDetach(true) : save())} disabled={saving || (scope === 'selected' && !tenants)}
+            className="bg-primary text-primary-foreground">
             {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Save access
           </Button>
         </DialogFooter>
+        <ConfirmDialog open={confirmDetach} onOpenChange={setConfirmDetach} danger
+          title={`Detach ${agent?.name} from ${followed}?`}
+          description={`From now on ${agent?.name}'s access and status are managed on their own; changes to ${followed} no longer reach it. You can make it follow ${followed} again later.`}
+          confirmLabel="Detach and save" onConfirm={save} />
       </DialogContent>
     </Dialog>
   );
@@ -306,6 +326,7 @@ export default function AgentsAdminPage() {
   const [versionsFor, setVersionsFor] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [health, setHealth] = useState({});
+  const [refollow, setRefollow] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -338,6 +359,19 @@ export default function AgentsAdminPage() {
       toast.error(errorText(e, 'Could not change the status'));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Re-attach Inbound SDR to Outbound SDR: the backend copies SDR's scope, grants and status at once.
+  const followAgain = async () => {
+    try {
+      await updateAgent(refollow.id, { settings: { ...(refollow.settings || {}), follows: 'sdr' } });
+      toast.success(`${refollow.name} follows ${FOLLOWED_AGENT_LABELS.sdr} again`);
+      await load();
+      return true;
+    } catch (e) {
+      toast.error(errorText(e, 'Could not change it'));
+      return false;
     }
   };
 
@@ -379,6 +413,9 @@ export default function AgentsAdminPage() {
                     <TableCell>
                       <p className="font-medium text-sm">{agent.name}</p>
                       <p className="text-xs text-muted-foreground">{agent.key}{agent.industry ? ` · ${agent.industry}` : ''}</p>
+                      {followsLabel(agent) && (
+                        <Badge variant="outline" className="mt-1 text-[11px]" data-testid={`agent-follows-${agent.key}`}>{followsLabel(agent)}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`text-[11px] ${STATUS_STYLE[agent.status] || ''}`}>{AGENT_STATUS_LABELS[agent.status] || agent.status}</Badge>
@@ -393,6 +430,9 @@ export default function AgentsAdminPage() {
                         </Button>
                       ))}
                       <Button variant="outline" size="sm" onClick={() => setAccessFor(agent)}>Access</Button>
+                      {canFollowAgain(agent) && (
+                        <Button variant="outline" size="sm" onClick={() => setRefollow(agent)}>Follow {FOLLOWED_AGENT_LABELS.sdr} again</Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => setAssistantsFor(agent)}>Assistants</Button>
                     </TableCell>
                   </TableRow>
@@ -404,6 +444,10 @@ export default function AgentsAdminPage() {
       </Card>
 
       <NewAgentDialog open={creating} onOpenChange={setCreating} onCreated={load} />
+      <ConfirmDialog open={Boolean(refollow)} onOpenChange={(open) => !open && setRefollow(null)}
+        title={`Make ${refollow?.name} follow ${FOLLOWED_AGENT_LABELS.sdr} again?`}
+        description={`It takes ${FOLLOWED_AGENT_LABELS.sdr}'s current access, grants and status now, and follows every later change.`}
+        confirmLabel="Follow again" onConfirm={followAgain} />
       <AccessDialog agent={accessFor} onClose={() => setAccessFor(null)} onSaved={load} />
       <AssistantsDialog agent={assistantsFor} onClose={() => setAssistantsFor(null)}
         onVersions={(row) => { setVersionsFor({ agent: assistantsFor, assistant: row }); setAssistantsFor(null); }} />

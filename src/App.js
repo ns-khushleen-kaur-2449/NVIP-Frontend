@@ -40,6 +40,8 @@ import ForbiddenPage from "@/pages/Forbidden";
 import UsersAdminPage from "@/pages/admin/Users";
 import TeamsAdminPage from "@/pages/admin/Teams";
 import AgentsPage from "@/pages/Agents";
+import AgentConfigPage from "@/pages/agentConfig/AgentConfigPage";
+import CampaignBuilderPage from "@/pages/campaignBuilder/CampaignBuilderPage";
 import { HiringRoute } from "@/pages/hiring/HiringAgent";
 import RequirePermission from "@/components/auth/RequirePermission";
 import { CAMPAIGN_FEATURES, PERMISSIONS, homePath } from "@/lib/rbac";
@@ -137,6 +139,9 @@ function AppShell() {
       {/* The agent catalog moved into the platform area with the rest of the Super Admin's pages. */}
       <Route path="/settings/agents" element={<Navigate to="/admin/agent-catalog" replace />} />
       <Route path="/agents" element={<RequirePermission perm={PERMISSIONS.AGENTS_VIEW}><AgentsPage /></RequirePermission>} />
+      {/* An agent type's configuration (agent instances): /agents/sdr_outbound, /agents/sdr_inbound. The page checks the
+          agent_instances feature and the role; lib/agents.js AGENT_ROUTES sends Inbound SDR here. */}
+      <Route path="/agents/:agentType" element={<RequirePermission perm={PERMISSIONS.AGENTS_VIEW}><AgentConfigPage /></RequirePermission>} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/settings/calendar" element={<SettingsPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -256,6 +261,7 @@ function App() {
           {/* The Hiring agent (AGENT_ROUTES.hiring): tenant users with hiring.view; the page checks the agent is available. */}
           <Route path="/hiring_agent/*" element={<SidebarShell><HiringRoute /></SidebarShell>} />
           <Route path="/voice-campaigns" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaigns /></FeatureRoute></SidebarShell>} />
+          <Route path="/voice-campaigns/new" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><CampaignBuilderPage /></FeatureRoute></SidebarShell>} />
           <Route path="/voice-campaigns/:campaignId" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaignDetail /></FeatureRoute></SidebarShell>} />
           {/* <Route path="/calls" element={<SidebarShell><CallsPage /></SidebarShell>} /> */}
           <Route path="/*" element={<AppShell />} />

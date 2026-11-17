@@ -85,7 +85,7 @@ export default function CampaignOfferFields({
   );
 }
 
-function OfferPreview({ preview }) {
+export function OfferPreview({ preview }) {
   const missing = preview.missing || [];
   return (
     <div className="space-y-2 text-sm" dir={preview.direction || 'ltr'} aria-label="Offer preview" role="group">

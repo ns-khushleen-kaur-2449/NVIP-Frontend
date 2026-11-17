@@ -115,7 +115,7 @@ export default function VoiceCampaigns() {
           <h1 className="text-2xl font-semibold tracking-tight">Voice campaigns</h1>
           <p className="text-sm text-muted-foreground">Every campaign, its state and its progress.</p>
         </div>
-        {canCreate && <OpsButton variant="primary" onClick={() => navigate('/voice_agent?tab=builder')}>New campaign</OpsButton>}
+        {canCreate && <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton>}
       </header>
 
       {campaigns && filters.length > 0 && (
@@ -137,7 +137,7 @@ export default function VoiceCampaigns() {
       {!error && campaigns === null && <SkeletonRows rows={5} label="Loading campaigns" />}
       {!error && campaigns?.length === 0 && (
         <EmptyState title="No campaigns yet." body="Pick leads in the Lead-to-Campaign Builder or upload a file to start one."
-          action={canCreate ? <OpsButton variant="primary" onClick={() => navigate('/voice_agent?tab=builder')}>New campaign</OpsButton> : null} />
+          action={canCreate ? <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton> : null} />
       )}
       {!error && campaigns?.length > 0 && shown.length === 0 && <EmptyState title="No campaigns with this status." />}
       {!error && shown.length > 0 && (

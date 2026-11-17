@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCallLogs } from '@/hooks/useCallLogs';
 import CallLogDetail from './CallLogDetail';
+import AgentTypeBadge from './AgentTypeBadge';
 import {
   Search, RefreshCw, Phone, Clock, Calendar,
   CheckCircle2, XCircle, AlertCircle, Loader2, Mic,
@@ -91,6 +92,7 @@ export default function CallLogsList({ assistantId = '', assistantName = '', onC
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [agentTypeFilter, setAgentTypeFilter] = useState('');
   // ?call=<id> (database or Vapi id) opens that call, e.g. from the Inbox.
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCallId, setSelectedCallId] = useState(() => searchParams.get('call'));
@@ -108,6 +110,7 @@ export default function CallLogsList({ assistantId = '', assistantName = '', onC
     pageSize: 15,
     status: statusFilter,
     sourceType: sourceFilter,
+    agentType: agentTypeFilter,
     assistantId,
     search,
     sortBy: 'latest',
@@ -186,6 +189,17 @@ export default function CallLogsList({ assistantId = '', assistantName = '', onC
                 ))}
               </SelectContent>
             </Select>
+            {/* GET /api/call-logs?agent_type= (the call-log list holds SDR's two agent types). */}
+            <Select value={agentTypeFilter} onValueChange={(v) => { setAgentTypeFilter(v === 'all' ? '' : v); setPage(1); }}>
+              <SelectTrigger aria-label="Agent type" className="w-[150px] px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F87217] focus:border-[#F87217]">
+                <SelectValue placeholder="Agent type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All agents</SelectItem>
+                <SelectItem value="sdr_outbound">Outbound SDR</SelectItem>
+                <SelectItem value="sdr_inbound">Inbound SDR</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v === 'all' ? '' : v); setPage(1); }}>
               <SelectTrigger className="w-[130px] px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F87217] focus:border-[#F87217]">
                 <SelectValue placeholder="Source" />
@@ -242,6 +256,7 @@ export default function CallLogsList({ assistantId = '', assistantName = '', onC
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-foreground truncate">{log.customer_name || 'Unknown'}</p>
                       <StatusBadge status={log.status} label={log.status_label} />
+                      <AgentTypeBadge log={log} />
                       <SourceBadge source={log.source_type} />
                       <LeadStatusBadge status={log.lead_status} />
                       {log.appointment_booked && (
