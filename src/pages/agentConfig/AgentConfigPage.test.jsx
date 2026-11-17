@@ -212,8 +212,10 @@ describe('business details (step 1)', () => {
     api.updateBusinessProfile.mockResolvedValue({ data: { company_name: 'Apex Motors', locations: [], source: 'api',
       updated_at: at, updated_by_name: 'Tara Admin' } });
     await openBusiness(admin);
+    expect(screen.getByTestId('agent-config')).toHaveClass('ops');
     expect(await screen.findByTestId('business-updated')).toHaveTextContent('by Tara Admin');
     const name = screen.getByLabelText('Company name');
+    expect(screen.getByRole('button', { name: 'Save business details' })).toBeInTheDocument();
     await waitFor(() => expect(name).toHaveValue('Acme Motors'));
     await userEvent.clear(name);
     await userEvent.type(name, 'Apex Motors');

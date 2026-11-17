@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/AuthContext';
 import ThemeToggle from '@/components/shared/ThemeToggle';
 import BrandLockup, { NetsmartzMark } from '@/components/shared/BrandLockup';
 import {
-  canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, voiceTabEnabled,
+  canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, featureOn, voiceTabEnabled,
 } from '@/lib/rbac';
 
 const APP_NAV = [
@@ -94,6 +94,7 @@ export function Sidebar() {
   // const [reportOpen, setReportOpen] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
+  const agentInstancesMode = featureOn(user, 'agent_instances');
 
   // The organisation's current plan, shown above Logout for its Tenant Admin. Re-read when they leave the
   // billing page, so a plan they just bought shows without a reload. A failure only hides the label.
@@ -123,6 +124,20 @@ export function Sidebar() {
   // );
   // With no ?tab=, VoiceAgent shows the campaign builder.
   const currentTab = onVoiceAgent ? (params.get('tab') || (params.get('view') === 'logs' ? 'logs' : 'builder')) : null;
+  const newModeNav = [
+    ...APP_NAV,
+    { path: '/voice-campaigns', label: 'Campaigns', icon: Megaphone },
+    { path: '/prospects', label: 'Prospects', icon: Users },
+    { path: '/catalog', label: 'Product catalog', icon: Package, requires: () => featureEnabled(user, 'product_catalog') },
+    // While shared assistants are off, calls still use the Assistant builder's configuration.
+    { path: '/voice_agent?tab=create', label: 'Assistant builder', icon: Mic,
+      requires: () => canViewAssistants(user) && !featureOn(user, 'shared_assistants') },
+    { path: '/call-logs', label: 'Call logs', icon: Phone },
+    { path: '/single-call', label: 'Single call', icon: PhoneCall },
+    { path: '/inbox', label: 'Inbox', icon: InboxIcon },
+    { path: '/meetings', label: 'Meetings', icon: CalendarClock },
+    ...PENDING_NAV.filter((item) => item.path === '/operations' && (!item.requires || item.requires(user))),
+  ];
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -143,7 +158,7 @@ export function Sidebar() {
 
         <ScrollArea className="flex-1 px-3 py-2">
           <nav className="flex flex-col gap-0.5">
-            {APP_NAV.map((item) => {
+            {(agentInstancesMode ? newModeNav.filter((item) => !item.requires || item.requires()) : APP_NAV).map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
               const Icon = item.icon;
               const link = (
@@ -160,7 +175,7 @@ export function Sidebar() {
               ) : link;
             })}
 
-            {/* Voice Agent — expandable group, part of the same list (no separator).
+            {!agentInstancesMode && <>{/* Voice Agent — expandable group, part of the same list (no separator).
                 Purely a toggle: it does not navigate anywhere by itself, it just
                 opens/closes the sub-list below. */}
             <button
@@ -254,7 +269,7 @@ export function Sidebar() {
                   <TooltipContent side="right">{item.label}</TooltipContent>
                 </Tooltip>
               ) : link;
-            })}
+            })}</>}
           </nav>
         </ScrollArea>
 

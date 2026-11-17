@@ -189,3 +189,112 @@ the server's own detail text and a fix link.
 "Create draft from template", then the existing check / publish. Phone numbers: per number, inbound mode (Fixed /
 Shared via NVIP) with a required reason and confirmation; "Shared" disabled with the reason when the tenant's
 `shared_assistants` is off; server errors (cooldown, prerequisites) shown as sent.
+
+## 5. Tenant pipeline rollout and acceptance walkthrough
+
+The tenant's mode is read from the signed-in user's `features.agent_instances` value supplied by `/api/auth/me`.
+`featureOn` treats this off-by-default flag as enabled only when the session explicitly contains `true`. Sidebar and
+route redirects use that same session value; no tenant id is read from the URL or browser storage. A session changes
+modes when its authenticated user data is refreshed (normally on sign-in / reload after a platform-admin change).
+
+### NEW MODE (`agent_instances: true`)
+
+Sidebar order: Dashboard, Agents, Campaigns, Prospects, Product catalog, Call logs, Single call, Inbox,
+Meetings, Operations, Settings. Product catalog, Inbox, Meetings and Operations retain their existing
+feature/permission visibility. The Prospects
+workspace reuses the current prospect list and lead finder as tabs. The finder sends selected rows to `/voice-campaigns/new`;
+the builder preselects those rows and also preselects prospects imported by its CSV dialog. The CSV dialog creates
+prospects through the existing prospects-import API. Campaigns reuse the existing list, three-step builder and detail
+page. Call logs reuse the existing server-side agent-type filter and version display. Inbound setup reuses the separate
+agent-instance wizard and shows numbers whose API response says `inbound_mode: shared`; tenants cannot change that mode.
+
+Legacy route redirects in this mode:
+
+| Old route | New destination |
+|---|---|
+| `/voice_agent`, `?tab=builder`, `?tab=csv` | `/voice-campaigns/new` |
+| `/voice_agent?tab=create` (Assistant builder) | `/agents/sdr_outbound` **only while `shared_assistants` is on**; while it is off the builder stays (it still drives calls) and has a sidebar entry |
+| `/voice_agent?tab=requests` | stays on `/voice_agent` (Reps keep their change requests) |
+| `/voice_agent?tab=campaigns` | `/voice-campaigns` |
+| `/voice_agent?tab=logs` or `?view=logs` | `/call-logs` |
+| `/voice_agent?tab=single` | `/single-call` |
+| `/voice_agent?tab=kb`, `/knowledge-base` | `/agents` (the Knowledge Base is hidden in NEW MODE) |
+| `/campaigns/*` | `/voice-campaigns/new` |
+| `/leads`, `/prospecting` | `/prospects` |
+
+Every redirect keeps the query string and hash (`/leads?prospect=X` → `/prospects?prospect=X` opens that prospect;
+`/voice_agent?tab=logs&assistant=a1` → `/call-logs?assistant=a1`). The redirects live in
+`src/components/auth/ModeRoutes.jsx`.
+
+`/voice-campaigns/new` remains the same URL for the existing builder and is not redirected for legacy tenants. It is the
+destination for both old campaign-building entry points in NEW MODE.
+
+### LEGACY MODE (`agent_instances: false`)
+
+The old Voice Agent group and its Create Agent, Lead-to-Campaign Builder, CSV Call Campaign, Single Call, Call Logs and
+Voice Campaigns entries remain in place. The new top-level Campaigns, Prospects hub, Single call and Call logs routes
+redirect to the existing legacy pages. `/voice-campaigns/new` retains its pre-existing builder behaviour. The flag-off
+tenant does not load agent-instance configuration screens from navigation.
+
+### Walkthrough status and backend-dependent limits
+
+The following is the rollout walkthrough to run against an enabled test tenant. Frontend checks cover the UI behaviour;
+the live calls and tenant provisioning steps require the documented Super Admin setup and a real integration environment.
+
+1. Super Admin enables `agent_instances` for tenant T. After T's session reloads, its sidebar selects NEW MODE.
+2. Agents shows Outbound SDR and its setup state. Tenant Admin or Manager uses the existing wizard; publishing creates
+   Active v1. Managers may publish, but only Tenant Admins can confirm a forced stale-draft publish. Reps see agent cards
+   as managed by their admin and get no configuration controls.
+3. Product catalog remains the existing catalog page; the wizard reads active catalog items from the catalog API.
+4. New campaign selects two prospects, imports a one-row CSV through the prospects importer, and selects the imported
+   prospect. The existing brief form configures an offer; `offer-preview` supplies the preview; launch opens the campaign
+   detail page. If an administrator has not published Outbound SDR, the campaign action links to its setup screen.
+5. Campaign detail keeps existing progress/outcome/refusal and pause/resume actions. Call logs uses the server-side
+   Outbound SDR filter. A manual call is sent through the existing manual-call endpoint.
+6. Super Admin turns `agent_instances` off; after the session reloads, the same tenant returns to LEGACY MODE and its
+   existing campaign records remain in the existing campaigns API.
+
+Remaining gaps in that walkthrough are real backend contract gaps, not inferred UI state:
+
+* **Manual-call agent resolution and purpose / campaign pitch.** `POST /api/smartsdr-calls` accepts phone, name,
+  assistant and prospect, but not an `agent_type`, campaign id or purpose. Tenant assistant-list responses do not
+  identify the shared assistant's agent type. The form only starts a call if it can identify an Outbound SDR assistant
+  from the returned data; otherwise it asks the platform admin. When it can start a call, selected campaign/custom
+  purpose is not sent and the agent's default reason is used. Proposed change: accept `agent_type: "sdr_outbound"`
+  plus optional `campaign_id` or `purpose`, and resolve the tenant's approved shared assistant and persisted campaign
+  brief server-side.
+* **Manager/Rep campaign launch against a shared agent instance.** (Partly resolved: campaign creation and manual calls
+  no longer need an assistant id in shared mode.) The instance read route is TA/Manager only, while campaign creation
+  permits Reps. A Rep cannot check the published instance version or
+  reliably choose the shared Outbound SDR assistant from `/api/v1/assistants` (which lists tenant-owned assistants).
+  Proposed change: tenant-scoped `GET /api/v1/agent-instances/availability` for all campaign-creator roles, returning
+  only `{agent_type, active, published_version}` and a supported way to resolve the server-approved outbound assistant
+  without exposing provider details; or let campaign creation resolve the agent instance without `assistant_id`.
+* **Dashboard agent-type selector.** The main dashboard widgets use `/api/v1/dashboard`; the separate voice summary
+  does not expose the requested agent-type dimension. The existing dashboard remains as-is. Proposed change: add an
+  optional `agent_type` filter to the dashboard metrics API and return filtered metrics.
+* **Prerequisite detail beyond grants and tenant numbers.** The Agents banner uses returned agent usability and the
+  tenant's own phone-number list. The tenant catalog does not expose shared-assistant readiness/refusal reasons, so the
+  banner can only say to contact the platform admin. Proposed change: return a tenant-safe readiness object in the
+  available-agent response, including stable reason codes and user-facing-safe descriptions.
+
+### Backend changes made with this rollout (NVIP-Backend, uncommitted with it)
+
+Rule: the tenant's `shared_assistants` switch alone decides shared mode everywhere (preflight, pre-dial checks, dial).
+
+| File | Why |
+|---|---|
+| `app/schemas/requests/voice_campaigns.py` | `assistant_id` optional on create (required only while shared assistants are off). |
+| `app/features/voice_campaigns/service.py` | Create without an assistant in shared mode; an assistant sent anyway is kept, not used (`assistant_notice`), never 422; CSV campaigns use the session tenant; offer preview and manual calls (`/api/smartsdr-calls`) work without a tenant assistant in shared mode. |
+| `app/schemas/responses/voice_campaigns.py` | `assistant_notice` on campaign responses. |
+| `app/features/voice_campaigns/preflight.py` | Shared preflight by the switch (assistant, signing key, caller ID, Outbound SDR access); switch off and no assistant: `shared_assistants_off`. |
+| `app/features/voice_campaigns/runner.py` | The same rule before each dial; pauses with `agent_not_ready`, `no_caller_id` or `shared_assistants_off`. |
+| `app/core/statuses.py`, `app/features/voice_campaigns/failures.py`, `app/features/voice/metrics.py` | New pause reason `shared_assistants_off` and its label. |
+| `app/features/admin/platform.py` | Feature dependency: `shared_assistants` needs `agent_instances` (409 both ways). |
+| `app/features/tenants/service.py` | New tenants get both switches together. |
+| `app/agents/contract.py`, `app/agents/sdr/handlers.py`, `app/api/v1/endpoints/agents.py`, `app/schemas/responses/agents.py` | Health `notices`: a missing `CALL_CONTEXT_KEYS` is a problem only while a tenant uses shared assistants. |
+| `.env.example`, `docs/staging-shared-assistants.md` | Per-environment `CALL_CONTEXT_KEYS` and rotation. |
+| Tests: `app/tests/__init__.py`, `test_agent_contract.py`, `test_sdr_shared_outbound.py`, `test_voice_campaigns.py`, `test_shared_mode_rules.py` (new) | The rules above. |
+
+The remaining gaps listed above still need backend work (manual-call purpose, dashboard agent-type filter, tenant-safe
+readiness reasons).

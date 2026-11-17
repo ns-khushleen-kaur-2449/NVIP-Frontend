@@ -7,7 +7,7 @@ import { errorText } from '@/components/admin/userBits';
 import { getRoleDashboard } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import VoiceDashboard from '@/components/voice/VoiceDashboard';
-import { canViewAssistants, roleLabel } from '@/lib/rbac';
+import { canViewAssistants, featureOn, roleLabel } from '@/lib/rbac';
 
 /** The dashboard for the current role: only the widgets its permissions allow. */
 export default function RoleDashboard() {
@@ -21,6 +21,7 @@ export default function RoleDashboard() {
   }, []);
 
   const widgets = data ? allowedWidgets(can, undefined, data) : [];
+  const newMode = featureOn(user, 'agent_instances');
 
   return (
     <div className="max-w-6xl mx-auto space-y-6" data-testid="role-dashboard">
@@ -29,7 +30,7 @@ export default function RoleDashboard() {
           <h1 className="font-display text-2xl font-semibold flex items-center gap-2"><LayoutDashboard className="w-6 h-6 text-primary" /> Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">{user ? `${user.name} · ${roleLabel(user.role)}` : ''}</p>
         </div>
-        <Button asChild variant="outline"><Link to="/voice_agent"><PhoneCall className="w-4 h-4 mr-1" /> Voice Agent</Link></Button>
+        <Button asChild variant="outline"><Link to={newMode ? '/voice-campaigns/new' : '/voice_agent'}><PhoneCall className="w-4 h-4 mr-1" /> {newMode ? 'New campaign' : 'Voice Agent'}</Link></Button>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!data && !error && <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}

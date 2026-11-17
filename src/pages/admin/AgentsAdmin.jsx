@@ -86,26 +86,40 @@ function NewAgentDialog({ open, onOpenChange, onCreated }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>New agent</DialogTitle>
-          <DialogDescription>Starts as a draft: no organisation can use it until you activate it and open access.</DialogDescription>
+          <DialogTitle>Add an agent to the catalog</DialogTitle>
+          <DialogDescription>
+            This creates a draft catalog entry. It does not create the agent’s calling behaviour or Vapi assistant.
+            The code pack key must match an agent pack installed on this server.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <label className={field}>Key (lowercase letters, digits, underscores)
-            <Input value={form.key} onChange={(e) => set({ key: e.target.value })} className="mt-1" placeholder="hiring" />
+          <label className={field}>Code pack key
+            <Input value={form.key} onChange={(e) => set({ key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} className="mt-1" placeholder="sdr" aria-describedby="agent-pack-key-help" />
           </label>
+          <p id="agent-pack-key-help" className="-mt-2 text-xs text-muted-foreground">
+            Use the key of a pack already installed on this server, such as <code>sdr</code> or <code>hiring</code>.
+          </p>
           <label className={field}>Name
             <Input value={form.name} onChange={(e) => set({ name: e.target.value })} className="mt-1" />
           </label>
-          <label className={field}>Industry
-            <Input value={form.industry} onChange={(e) => set({ industry: e.target.value })} className="mt-1" />
-          </label>
-          <label className={field}>Description
-            <Input value={form.description} onChange={(e) => set({ description: e.target.value })} className="mt-1" />
-          </label>
+          <details className="rounded-md border border-border px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Additional catalog details (optional)</summary>
+            <div className="mt-3 space-y-3">
+              <label className={field}>Industry
+                <Input value={form.industry} onChange={(e) => set({ industry: e.target.value })} className="mt-1" />
+              </label>
+              <label className={field}>Description
+                <Input value={form.description} onChange={(e) => set({ description: e.target.value })} className="mt-1" />
+              </label>
+            </div>
+          </details>
+          <p className="text-xs text-muted-foreground">
+            To set up outbound calling, use the existing Outbound SDR (<code>sdr</code>) entry and configure its shared assistant. A new catalog row alone cannot place calls.
+          </p>
           {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
           <DialogFooter>
             <Button onClick={save} disabled={saving} className="bg-primary text-primary-foreground">
-              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Create agent
+              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Add catalog entry
             </Button>
           </DialogFooter>
         </div>

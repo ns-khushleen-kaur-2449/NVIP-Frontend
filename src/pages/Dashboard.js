@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { VoiceCard } from '@/components/marketing/ProductVisuals';
+import { featureOn } from '@/lib/rbac';
 
 const PRODUCTS = [
   {
@@ -33,6 +34,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const firstName = user?.name?.split(' ')[0];
+  const newMode = featureOn(user, 'agent_instances');
 
   return (
     <div className="mk bg-transparent">
@@ -93,7 +95,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-auto flex items-center justify-between border-t border-[var(--line)] pt-5">
-                  <span className="text-sm font-semibold text-[var(--pine)]">Open {p.name}</span>
+                <span className="text-sm font-semibold text-[var(--pine)]">{newMode ? 'New campaign' : `Open ${p.name}`}</span>
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--stone)] text-[var(--pine)] transition-all duration-300 group-hover:bg-[var(--pine)] group-hover:text-white">
                     <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   </span>

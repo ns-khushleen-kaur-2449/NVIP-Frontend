@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Copy, Check, Trash2 } from 'lucide-react';
-import { deleteVoiceCampaign, getVoiceCampaigns } from '@/lib/api';
+import { deleteVoiceCampaign, getAgentInstance, getVoiceCampaigns } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
-import { canCreateCampaigns, canDeleteCampaigns } from '@/lib/rbac';
+import { canCreateCampaigns, canDeleteCampaigns, featureOn } from '@/lib/rbac';
 import usePolling from '@/hooks/usePolling';
 import useApiAction, { errorMessage } from '@/hooks/useApiAction';
 import StatusBadge, { CAMPAIGN_TONES } from '@/components/ops/StatusBadge';
@@ -86,6 +86,16 @@ export default function VoiceCampaigns() {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('all');
   const [deleting, setDeleting] = useState(null);
+  const newMode = featureOn(user, 'agent_instances');
+  const [outboundActive, setOutboundActive] = useState(newMode ? null : true);
+
+  useEffect(() => {
+    if (!newMode) { setOutboundActive(true); return undefined; }
+    let cancelled = false;
+    getAgentInstance('sdr_outbound').then(({ data }) => { if (!cancelled) setOutboundActive(data?.published_version != null); })
+      .catch((error) => { if (!cancelled) setOutboundActive(error?.response?.status === 403 ? null : false); });
+    return () => { cancelled = true; };
+  }, [newMode]);
 
   const load = useCallback(async () => {
     try {
@@ -112,10 +122,12 @@ export default function VoiceCampaigns() {
     <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Voice campaigns</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{newMode ? 'Campaigns' : 'Voice campaigns'}</h1>
           <p className="text-sm text-muted-foreground">Every campaign, its state and its progress.</p>
         </div>
-        {canCreate && <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton>}
+        {canCreate && (outboundActive !== false
+          ? <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton>
+          : <div className="text-right"><OpsButton variant="primary" disabled title="Set up your Outbound SDR agent first">New campaign</OpsButton><Link className="mt-1 block text-xs underline" to="/agents/sdr_outbound">Set up your Outbound SDR agent first</Link></div>)}
       </header>
 
       {campaigns && filters.length > 0 && (
@@ -136,8 +148,8 @@ export default function VoiceCampaigns() {
       {error && <ErrorState message={error} onRetry={load} />}
       {!error && campaigns === null && <SkeletonRows rows={5} label="Loading campaigns" />}
       {!error && campaigns?.length === 0 && (
-        <EmptyState title="No campaigns yet." body="Pick leads in the Lead-to-Campaign Builder or upload a file to start one."
-          action={canCreate ? <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton> : null} />
+        <EmptyState title="No campaigns yet." body={newMode ? 'Choose prospects and launch your first campaign.' : 'Pick leads in the Lead-to-Campaign Builder or upload a file to start one.'}
+          action={canCreate && outboundActive !== false ? <OpsButton variant="primary" onClick={() => navigate('/voice-campaigns/new')}>New campaign</OpsButton> : null} />
       )}
       {!error && campaigns?.length > 0 && shown.length === 0 && <EmptyState title="No campaigns with this status." />}
       {!error && shown.length > 0 && (

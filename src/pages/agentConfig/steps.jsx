@@ -76,9 +76,9 @@ const SUBTITLES = {
   'Review and test': 'Check the setup, then publish.',
 };
 
-function Section({ title, badge, children, note }) {
+function Section({ title, badge, action, children, note }) {
   return (
-    <SetupPanel title={title} subtitle={SUBTITLES[title]} badge={badge}>
+    <SetupPanel title={title} subtitle={SUBTITLES[title]} badge={badge} action={action}>
       {note}
       {children}
     </SetupPanel>
@@ -132,7 +132,9 @@ export function BusinessStep({ context, user }) {
   };
   const business = context.business;
   return (
-    <Section title="Business details" badge="Shared with all your agents" note={business?.updated_at && (
+    <Section title="Business details" badge="Shared with all your agents" action={editable && (
+      <OpsButton variant="primary" busy={saving} onClick={save}>Save business details</OpsButton>
+    )} note={business?.updated_at && (
       <p className="text-xs text-muted-foreground" data-testid="business-updated">
         Last changed {business.updated_by_name ? `by ${business.updated_by_name} ` : ''}
         {formatDateTime(business.updated_at, displayTimeZone(user))}
@@ -160,9 +162,6 @@ export function BusinessStep({ context, user }) {
           <TextField label="Company brochure (link)" type="url" maxLength={500} {...field('brochure')} />
         </div>
       </div>
-      {editable && (
-        <div><OpsButton variant="primary" busy={saving} onClick={save}>Save business details</OpsButton></div>
-      )}
       <div>
         <p className="text-sm font-medium">Caller ID numbers</p>
         {context.numbersError && <p className="mt-1 text-sm text-muted-foreground">{context.numbersError}</p>}

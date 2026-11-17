@@ -331,7 +331,7 @@ export function AgentConfigEditor({ agentType, user }) {
     : published ? `Version ${instance.published_version} is live` : 'Not set up yet';
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6" data-testid="agent-config">
+    <div className="ops mx-auto max-w-7xl space-y-6" data-testid="agent-config">
       <SetupHeader crumbs={[{ label: 'Agents', to: '/agents' }, { label }]}
         title={mode === 'wizard' ? `Set up ${label}` : label}
         aside={(

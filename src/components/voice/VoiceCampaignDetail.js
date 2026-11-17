@@ -440,6 +440,9 @@ export default function VoiceCampaignDetail() {
           )}
 
           <CampaignRefusals campaign={campaign} contacts={contacts} user={user} />
+          {campaign.assistant_notice && (
+            <p role="status" className="ops-tone ops-tone-info rounded-[14px] px-4 py-3 text-sm" data-testid="assistant-notice">{campaign.assistant_notice}</p>
+          )}
 
           <div role="tablist" aria-label="Campaign" className="flex flex-wrap gap-1 border-b border-border">
             {TABS.map((t) => (

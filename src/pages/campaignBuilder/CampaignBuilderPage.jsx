@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertCircle, CheckCircle2, Plus, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import {
   isOverridden, requiredChecklist,
 } from '@/lib/campaignBrief';
 import { PLATFORM_RULES, PREVIEW_NOTE, greetingValues, renderGreeting } from '@/lib/agentInstances';
-import { agentInstancesAvailable, canCreateCampaigns } from '@/lib/rbac';
+import { agentInstancesAvailable, canCreateCampaigns, featureOn } from '@/lib/rbac';
 import { cn } from '@/lib/utils';
 import { ChoiceField, ListField, SelectField, TextField } from '@/pages/agentConfig/fields';
 
@@ -47,9 +47,9 @@ function useAgentDefaults(user) {
         const instance = (await getAgentInstance('sdr_outbound')).data;
         const version = instance.published_version != null
           ? (await getAgentInstanceVersion('sdr_outbound', instance.published_version)).data : null;
-        if (!cancelled) setDefaults({ loaded: true, version: version?.version ?? null, payload: version?.payload || null });
+        if (!cancelled) setDefaults({ loaded: true, active: instance.published_version != null, version: version?.version ?? null, payload: version?.payload || null });
       } catch {
-        if (!cancelled) setDefaults({ loaded: true });
+        if (!cancelled) setDefaults({ loaded: true, active: false });
       }
     })();
     return () => { cancelled = true; };
@@ -186,7 +186,7 @@ function LeadPicker({ leads, loading, selected, setSelected, onImported }) {
 
 // ── Step 2: configure ──
 
-function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantId, timeZone }) {
+function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantId, sharedMode, timeZone }) {
   const [leadId, setLeadId] = useState('');
   const lead = leads.find((l) => String(l.id) === leadId) || leads[0];
   const opener = defaults.payload?.opener?.first_message || assistant?.first_message || '';
@@ -195,7 +195,7 @@ function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantI
   const { preview, loading, error } = useOfferPreview(
     previewBody({ offer: { offering_name: form.spokenName, offer_text: form.offer.text, valid_until: form.offer.validUntil },
       assistantId, name: form.name.trim(), timeZone }),
-    offerOn && Boolean(assistantId),
+    offerOn && (Boolean(assistantId) || sharedMode),
   );
   const missing = checklist.filter((i) => !i.done);
   const facts = [leadCompany(lead), lead?.job_title, lead?.city].filter(Boolean).join(' · ');
@@ -244,7 +244,7 @@ function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantI
   );
 }
 
-function ConfigureStep({ form, setForm, settings, setSettings, assistants, catalog, defaults, errors, limitConflicts }) {
+function ConfigureStep({ form, setForm, settings, setSettings, assistants, sharedMode, catalog, defaults, errors, limitConflicts }) {
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setOffer = (patch) => setForm((f) => ({ ...f, offer: { ...f.offer, ...patch } }));
   const limits = defaults.payload?.calling;
@@ -269,13 +269,25 @@ function ConfigureStep({ form, setForm, settings, setSettings, assistants, catal
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5" data-field="assistant">
             <label htmlFor="campaign-assistant" className="text-sm font-medium">Assistant that places the calls <span aria-hidden="true">*</span></label>
-            <select id="campaign-assistant" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={settings.assistantId} aria-invalid={Boolean(errors.assistant)}
-              onChange={(e) => setSettings((s) => ({ ...s, assistantId: e.target.value }))}>
-              <option value="">{assistants.length ? 'Select an assistant' : 'No assistants available'}</option>
-              {assistants.map((a) => <option key={a.vapi_assistant_id} value={a.vapi_assistant_id}>{a.name}</option>)}
-            </select>
+            {sharedMode ? (
+              <div id="campaign-assistant" className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                <span className="font-medium">Outbound SDR</span>
+                <span className="ml-2 text-muted-foreground">Platform shared assistant · configured by your platform admin</span>
+              </div>
+            ) : (
+              <select id="campaign-assistant" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={settings.assistantId} aria-invalid={Boolean(errors.assistant)}
+                onChange={(e) => setSettings((s) => ({ ...s, assistantId: e.target.value }))}>
+                <option value="">{assistants.length ? 'Select an assistant' : 'No assistants available'}</option>
+                {assistants.map((a) => <option key={a.vapi_assistant_id} value={a.vapi_assistant_id}>{a.name}</option>)}
+              </select>
+            )}
             {errors.assistant && <p role="alert" className="text-xs text-red-600">{errors.assistant}</p>}
+            {!sharedMode && assistants.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                SDR access is separate from assistant setup. Ask your platform admin to enable Shared assistants (outbound) for your organisation, or add a tenant assistant.
+              </p>
+            )}
           </div>
           <SelectField label="Priority" path="priority" value={form.priority == null ? '' : String(form.priority)}
             onChange={(v) => set({ priority: v ? Number(v) : null })} options={PRIORITIES} />
@@ -472,7 +484,9 @@ function ReviewStep({ form, settings, leads, defaults, assistant, checklist, lim
  */
 export default function CampaignBuilderPage() {
   const { user } = useAuth();
+  const sharedMode = featureOn(user, 'shared_assistants');
   const navigate = useNavigate();
+  const location = useLocation();
   const defaults = useAgentDefaults(user);
   const [step, setStep] = useState(0);
   const [allLeads, setAllLeads] = useState([]);
@@ -487,16 +501,36 @@ export default function CampaignBuilderPage() {
   const [problems, setProblems] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    const incoming = location.state?.fromProspecting;
+    if (!Array.isArray(incoming) || incoming.length === 0) return;
+    const rows = incoming.map(toLeadRow);
+    const ids = new Set(rows.map((row) => row.id));
+    setAllLeads((current) => [...current.filter((row) => !ids.has(row.id)), ...rows]);
+    setSelected((current) => new Set([...current, ...ids]));
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
   const loadLeads = async () => {
     const res = await getProspects({ leads_only: true, limit: 1000, include: 'score_summary' });
-    setAllLeads((res.data?.prospects || []).map(toLeadRow));
+    const fetched = (res.data?.prospects || []).map(toLeadRow);
+    setAllLeads((current) => {
+      const byId = new Map(current.map((lead) => [lead.id, lead]));
+      fetched.forEach((lead) => byId.set(lead.id, lead));
+      return [...byId.values()];
+    });
   };
   useEffect(() => {
     (async () => {
       const [leadsRes, assistantsRes] = await Promise.allSettled([
         getProspects({ leads_only: true, limit: 1000, include: 'score_summary' }), getAssistants(),
       ]);
-      setAllLeads(leadsRes.status === 'fulfilled' ? (leadsRes.value.data?.prospects || []).map(toLeadRow) : []);
+      const fetched = leadsRes.status === 'fulfilled' ? (leadsRes.value.data?.prospects || []).map(toLeadRow) : [];
+      setAllLeads((current) => {
+        const byId = new Map(current.map((lead) => [lead.id, lead]));
+        fetched.forEach((lead) => byId.set(lead.id, lead));
+        return [...byId.values()];
+      });
       setAssistants(assistantsRes.status === 'fulfilled' ? (assistantsRes.value.data || []) : []);
       setLoading(false);
     })();
@@ -522,7 +556,7 @@ export default function CampaignBuilderPage() {
   }, [check.retryDefaults]);
 
   const leads = allLeads.filter((l) => selected.has(l.id));
-  const checklist = requiredChecklist(form, { leadCount: leads.length, assistantId: settings.assistantId });
+  const checklist = requiredChecklist(form, { leadCount: leads.length, assistantId: sharedMode ? 'shared-sdr' : settings.assistantId });
   const limitConflicts = callingLimitConflicts({ window: settings.callingWindow, attempts: settings.config.max_attempts_per_lead },
     defaults.payload?.calling);
 
@@ -530,11 +564,16 @@ export default function CampaignBuilderPage() {
     return <EmptyState title="Campaigns are created by Tenant Admins, Managers and Sales Reps" action={<Link className="underline" to="/voice-campaigns">Back to campaigns</Link>} />;
   }
 
+  if (agentInstancesAvailable(user) && defaults.loaded && defaults.active === false) {
+    return <EmptyState title="Set up your Outbound SDR agent first" body="Publish your Outbound SDR agent before creating a campaign."
+      action={<Link className="font-semibold underline" to="/agents/sdr_outbound">Set up Outbound SDR</Link>} />;
+  }
+
   const configureProblems = () => {
     const found = {};
     if (!form.name.trim()) found.name = 'Give the campaign a name.';
     if (!GOALS.some((g) => g.value === form.goal)) found.goal = 'Choose a goal.';
-    if (!settings.assistantId) found.assistant = 'Pick the assistant that will make the calls.';
+    if (!sharedMode && !settings.assistantId) found.assistant = 'Pick the assistant that will make the calls.';
     if (!form.callPurpose.trim()) found.callPurpose = 'Say why the agent is calling.';
     if (form.offer.enabled && !form.offer.text.trim()) found.offerText = 'Write the offer, or turn it off.';
     const settingsProblem = validateSettings({ window: settings.callingWindow, config: settings.config, timeZone: settings.timeZone });
@@ -573,7 +612,7 @@ export default function CampaignBuilderPage() {
       name: form.name.trim(),
       // The campaign API requires a description: the call purpose is what the campaign is about.
       description: form.callPurpose.trim(),
-      assistant_id: settings.assistantId,
+      ...(!sharedMode ? { assistant_id: settings.assistantId } : {}),
       timezone: settings.timeZone.trim(),
       calling_window: settings.callingWindow,
       calling_config: settings.config,
@@ -633,7 +672,7 @@ export default function CampaignBuilderPage() {
       {step === 1 && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-5">
-            <ConfigureStep form={form} setForm={setForm} settings={settings} setSettings={setSettings} assistants={callable}
+            <ConfigureStep form={form} setForm={setForm} settings={settings} setSettings={setSettings} assistants={callable} sharedMode={sharedMode}
               catalog={catalog} defaults={defaults} errors={errors} limitConflicts={limitConflicts} />
             <div className="flex flex-wrap justify-between gap-2">
               <OpsButton variant="outline" onClick={() => goTo(0)}>Back</OpsButton>
@@ -641,7 +680,7 @@ export default function CampaignBuilderPage() {
             </div>
           </div>
           <PreviewColumn form={form} leads={leads} assistant={assistant} defaults={defaults} checklist={checklist}
-            assistantId={settings.assistantId} timeZone={settings.timeZone.trim()} />
+            assistantId={settings.assistantId} sharedMode={sharedMode} timeZone={settings.timeZone.trim()} />
         </div>
       )}
 

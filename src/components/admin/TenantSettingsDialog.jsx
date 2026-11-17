@@ -25,7 +25,7 @@ const ROLE_LABELS = { manager: 'Manager', rep: 'Sales rep' };
 // What a switch does, where the label alone doesn't say. Off by default: on only once switched on here.
 export const FEATURE_DESCRIPTIONS = {
   agent_instances: "Off by default. Managers and Tenant Admins configure agents (drafts, versions, publish) on the Agents page. Calls still use the Assistant builder's configuration unless shared assistants is also on.",
-  shared_assistants: "Off by default. The tenant's calls go through the platform's shared Outbound and Inbound SDR assistants, using its published agent configuration. Needs a caller ID number (or the platform caller ID switch) and the shared assistants published.",
+  shared_assistants: "Off by default. Routes outbound campaigns through the platform's published shared Outbound SDR and the tenant's published SDR setup. The tenant also needs Agent instances enabled, SDR catalog access, and a caller ID number (or the platform caller ID switch).",
   allow_platform_caller_id: "Off by default. A shared-assistant tenant without a number of its own may call from the platform's number.",
 };
 const number = (value) => (value === '' ? null : Number(value));

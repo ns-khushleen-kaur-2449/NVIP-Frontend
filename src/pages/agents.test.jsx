@@ -175,17 +175,19 @@ describe('Agent catalog admin (Super Admin)', () => {
     await waitFor(() => expect(api.updateAgent).toHaveBeenCalledWith('a-2', { status: 'active' }));
   });
 
-  test('creating an agent needs a key and a name', async () => {
+  test('adding a catalog entry needs a code pack key and a name', async () => {
     const user = userEvent.setup();
     renderWithAuth(<AgentsAdminPage />, { user: USERS.super_admin });
     await screen.findByTestId('agent-row-sdr');
     await user.click(screen.getByRole('button', { name: /new agent/i }));
-    await user.click(screen.getByRole('button', { name: /create agent/i }));
+    expect(screen.getByText(/does not create the agent’s calling behaviour or Vapi assistant/i)).toBeInTheDocument();
+    expect(screen.getByText(/existing Outbound SDR/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /add catalog entry/i }));
     expect(screen.getByRole('alert')).toHaveTextContent('A key and a name are required');
     expect(api.createAgent).not.toHaveBeenCalled();
-    await user.type(screen.getByLabelText(/key/i), 'finance');
+    await user.type(screen.getByLabelText(/code pack key/i), 'finance');
     await user.type(screen.getByLabelText(/^name/i), 'Finance');
-    await user.click(screen.getByRole('button', { name: /create agent/i }));
+    await user.click(screen.getByRole('button', { name: /add catalog entry/i }));
     await waitFor(() => expect(api.createAgent).toHaveBeenCalledWith(
       { key: 'finance', name: 'Finance', industry: null, description: null }));
   });

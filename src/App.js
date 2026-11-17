@@ -16,7 +16,6 @@ import PropertiesPage from "@/pages/Properties";
 import SettingsPage from "@/pages/Settings";
 import LoginPage from "@/pages/Login";
 import AgentRunsPage from "@/pages/AgentRuns";
-import VoiceAgentPage from "@/pages/VoiceAgent";
 import VoiceCampaigns from "@/components/voice/VoiceCampaigns";
 import VoiceCampaignDetail from "@/components/voice/VoiceCampaignDetail";
 import LandingPage from "@/pages/LandingPage";
@@ -57,10 +56,22 @@ import { operationsRoutes } from "@/pages/Operations";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { SuperAdminBoundary, SuperAdminGoesTo } from "@/components/auth/SuperAdminRoute";
 import { adminRoutes } from "@/pages/admin/adminRoutes";
+import { featureOn } from "@/lib/rbac";
+import { ModeRedirect, OldCampaignRouteRedirect, VoiceAgentModeRedirect } from "@/components/auth/ModeRoutes";
+import CallLogsList from "@/components/voice/CallLogsList";
+import ProspectsHub from "@/pages/ProspectsHub";
+import SingleCallPage from "@/pages/SingleCallPage";
 
 // The backend's roles (lib/rbac.js).  Older routes said "admin", a role that never existed.
 const ADMINS = ['super_admin', 'tenant_admin'];
 const ADMINS_AND_MANAGERS = ['super_admin', 'tenant_admin', 'manager'];
+
+/** The Knowledge Base: legacy mode only; hidden in NEW MODE (sent to the Agents page). */
+function KnowledgeBaseRoute() {
+  const { user } = useAuth();
+  if (featureOn(user, 'agent_instances')) return <Navigate to="/agents" replace />;
+  return <ExecAppShell><ProtectedRoute roles={ADMINS}><KnowledgeBasePage /></ProtectedRoute></ExecAppShell>;
+}
 
 /** Shows LandingPage for guests; redirects logged-in users home (/admin/overview for a Super Admin, else /dashboard) */
 function SmartRoot() {
@@ -105,7 +116,7 @@ function AppShell() {
     <Routes>
       <Route path="/dashboard" element={<RoleDashboard />} />
       <Route path="/welcome" element={<DashboardPage />} />
-      <Route path="/leads" element={<LeadsPage />} />
+      <Route path="/leads" element={<ModeRedirect instancesTo="/prospects"><LeadsPage /></ModeRedirect>} />
       <Route path="/research" element={
         <ProtectedRoute roles={ADMINS_AND_MANAGERS}><ResearchPage /></ProtectedRoute>
       } />
@@ -118,12 +129,12 @@ function AppShell() {
       <Route path="/agent-runs" element={
         <ProtectedRoute roles={ADMINS_AND_MANAGERS}><AgentRunsPage /></ProtectedRoute>
       } />
-      <Route path="/prospecting" element={<ProspectingPage />} />
+      <Route path="/prospecting" element={<ModeRedirect instancesTo="/prospects"><ProspectingPage /></ModeRedirect>} />
       <Route path="/conversion" element={<ConversionWorkspace />} />
       <Route path="/billing" element={<ProtectedRoute roles={['tenant_admin']}><BillingPage /></ProtectedRoute>} />
       <Route path="/strategist" element={<StrategistPage />} />
       {/* The SDR Campaigns pages are hidden for now; Voice Campaigns is the campaign page. */}
-      <Route path="/campaigns/*" element={<Navigate to="/voice-campaigns" replace />} />
+      <Route path="/campaigns/*" element={<OldCampaignRouteRedirect />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/catalog" element={<FeatureRoute features={["product_catalog"]} name="Catalog"><CatalogPage /></FeatureRoute>} />
       <Route path="/meetings" element={<MeetingsPage />} />
@@ -255,14 +266,17 @@ function App() {
           {/* <Route path="/agent-performance" element={<ExecAppShell><ProtectedRoute roles={ADMINS_AND_MANAGERS}><AgentPerformancePage /></ProtectedRoute></ExecAppShell>} /> */}
           <Route path="/sheets-sync" element={<SidebarShell><ProtectedRoute roles={ADMINS_AND_MANAGERS}><GoogleSheetsSyncPage /></ProtectedRoute></SidebarShell>} />
           <Route path="/weight-config" element={<SidebarShell><ProtectedRoute roles={ADMINS}><WeightConfigPage /></ProtectedRoute></SidebarShell>} />
-          <Route path="/knowledge-base" element={<ExecAppShell><ProtectedRoute roles={ADMINS}><KnowledgeBasePage /></ProtectedRoute></ExecAppShell>} />
+          <Route path="/knowledge-base" element={<KnowledgeBaseRoute />} />
 
-          <Route path="/voice_agent" element={<SidebarShell><VoiceAgentPage /></SidebarShell>} />
+          <Route path="/voice_agent" element={<SidebarShell><VoiceAgentModeRedirect /></SidebarShell>} />
           {/* The Hiring agent (AGENT_ROUTES.hiring): tenant users with hiring.view; the page checks the agent is available. */}
           <Route path="/hiring_agent/*" element={<SidebarShell><HiringRoute /></SidebarShell>} />
           <Route path="/voice-campaigns" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaigns /></FeatureRoute></SidebarShell>} />
           <Route path="/voice-campaigns/new" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><CampaignBuilderPage /></FeatureRoute></SidebarShell>} />
           <Route path="/voice-campaigns/:campaignId" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaignDetail /></FeatureRoute></SidebarShell>} />
+          <Route path="/prospects" element={<SidebarShell><ModeRedirect legacyTo="/prospecting"><ProspectsHub /></ModeRedirect></SidebarShell>} />
+          <Route path="/call-logs" element={<SidebarShell><ModeRedirect legacyTo="/voice_agent?tab=logs"><CallLogsList /></ModeRedirect></SidebarShell>} />
+          <Route path="/single-call" element={<SidebarShell><ModeRedirect legacyTo="/voice_agent?tab=single"><SingleCallPage /></ModeRedirect></SidebarShell>} />
           {/* <Route path="/calls" element={<SidebarShell><CallsPage /></SidebarShell>} /> */}
           <Route path="/*" element={<AppShell />} />
         </Routes>

@@ -8,13 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { errorText } from '@/components/admin/userBits';
 import {
   getAgentCatalog, getAgentInstanceVersion, getBuilderLanguages, listAgentInstances, listAvailableAgentTypes, listAvailableAgents,
+  getVoiceCampaigns, listOwnPhoneNumbers,
 } from '@/lib/api';
+import { accountReadiness } from '@/lib/campaignRefusals';
 import { useAuth } from '@/lib/AuthContext';
 import { agentConfigRoute, agentRoute, agentTypeLabel, canonicalAgentType, isConfigurableAgentType } from '@/lib/agents';
 import {
   INSTANCE_STATES, INSTANCE_STATE_LABELS, activeSummary, instanceState, languageNames,
 } from '@/lib/agentInstances';
-import { CAMPAIGN_FEATURES, agentInstancesAvailable, canCreateCampaigns, canManageBilling, featuresEnabled } from '@/lib/rbac';
+import { CAMPAIGN_FEATURES, agentInstancesAvailable, canCreateCampaigns, canManageBilling, featureOn, featuresEnabled } from '@/lib/rbac';
 import { formatDateTime, displayTimeZone } from '@/lib/ops';
 import { cn } from '@/lib/utils';
 import { Pill } from '@/components/setup/SetupUi';
@@ -51,14 +53,17 @@ const SETUP_HINTS = {
 const STATE_TONES = { not_set_up: 'warn', draft: 'warn', active: 'good', not_in_plan: 'neutral' };
 
 /** One agent type with its configuration state (agent instances). */
-function AgentTypeCard({ agentType, name, description, instance, payload, languages, user, primary }) {
+function AgentTypeCard({ agentType, name, description, instance, payload, languages, user, primary, phoneNumbers = [] }) {
   const state = instanceState(instance);
   const summary = state === INSTANCE_STATES.ACTIVE ? activeSummary(instance, payload) : null;
   const configure = agentConfigRoute(agentType);
   const campaigns = agentType === 'sdr_outbound' && canCreateCampaigns(user) && featuresEnabled(user, CAMPAIGN_FEATURES);
+  const canConfigure = agentInstancesAvailable(user);
   const Icon = TYPE_ICONS[agentType] || Bot;
   const badge = (
-    <Pill tone={STATE_TONES[state]} data-testid={`agent-state-${agentType}`}>{INSTANCE_STATE_LABELS[state]}</Pill>
+    <Pill tone={canConfigure ? STATE_TONES[state] : 'neutral'} data-testid={`agent-state-${agentType}`}>
+      {canConfigure ? INSTANCE_STATE_LABELS[state] : 'Managed by your admin'}
+    </Pill>
   );
   const cardClass = cn('flex flex-col gap-3 rounded-2xl border bg-card p-6',
     primary && state === INSTANCE_STATES.NOT_SET_UP ? 'border-2 border-primary' : 'border-border');
@@ -83,8 +88,9 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
           Last edited {summary.editedAt ? formatDateTime(summary.editedAt, displayTimeZone(user)) : '—'}
           {payload?.persona?.gender || voice ? ` · Voice: ${voice || 'default'}${payload?.persona?.gender ? ` (${payload.persona.gender})` : ''}` : ''}
         </p>
+        {agentType === 'sdr_inbound' && <InboundNumberStatus phoneNumbers={phoneNumbers} />}
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
-          <Button asChild variant="outline"><Link to={configure}>Edit configuration</Link></Button>
+          {canConfigure && <Button asChild variant="outline"><Link to={configure}>Edit configuration</Link></Button>}
           {campaigns && <Button asChild><Link to="/voice-campaigns/new">New campaign</Link></Button>}
         </div>
       </article>
@@ -102,11 +108,18 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
       <h2 className="text-lg font-semibold">{name}</h2>
       <p className="flex-1 text-sm text-muted-foreground">{description}</p>
       {SETUP_HINTS[agentType] && <p className="text-sm text-muted-foreground">{SETUP_HINTS[agentType]}</p>}
-      <Button asChild variant={primary ? 'default' : 'outline'} className="w-full">
+      {agentType === 'sdr_inbound' && <InboundNumberStatus phoneNumbers={phoneNumbers} />}
+      {canConfigure ? <Button asChild variant={primary ? 'default' : 'outline'} className="w-full">
         <Link to={configure}>{state === INSTANCE_STATES.DRAFT ? 'Continue setup' : 'Set up agent'}</Link>
-      </Button>
+      </Button> : <p className="text-sm text-muted-foreground">Your Tenant Admin or Manager manages agent setup.</p>}
     </article>
   );
+}
+
+function InboundNumberStatus({ phoneNumbers }) {
+  const numbers = phoneNumbers.filter((number) => number.inbound_mode === 'shared');
+  return numbers.length ? <p className="text-sm text-muted-foreground">Answers: {numbers.map((number) => number.phone_number || number.label || 'number not synced yet').join(', ')}</p>
+    : <p className="text-sm text-muted-foreground">Ask your platform admin to connect a number.</p>;
 }
 
 /** Agents the organisation cannot use: one dashed card naming them all. */
@@ -137,6 +150,9 @@ export default function AgentsPage() {
   const [instances, setInstances] = useState(null);
   const [languages, setLanguages] = useState([]);
   const configurable = agentInstancesAvailable(user);
+  const newMode = featureOn(user, 'agent_instances');
+  const [phoneNumbers, setPhoneNumbers] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,10 +167,15 @@ export default function AgentsPage() {
   }, []);
 
   useEffect(() => {
-    if (!configurable) { setInstances(null); return undefined; }
+    if (!newMode) { setInstances(null); return undefined; }
     let cancelled = false;
     (async () => {
       try {
+        if (!configurable) {
+          const [typesRes, catalogRes] = await Promise.all([listAvailableAgentTypes(), getAgentCatalog().catch(() => ({ data: [] }))]);
+          if (!cancelled) setInstances({ byType: {}, payloads: {}, types: typesRes.data || [], catalog: catalogRes.data || [] });
+          return;
+        }
         // The agent types the tenant uses (Inbound SDR included, with `usable`) and the whole catalog (Not in plan).
         const [rowsRes, typesRes, catalogRes] = await Promise.all([
           listAgentInstances(), listAvailableAgentTypes(), getAgentCatalog().catch(() => ({ data: [] })),
@@ -173,13 +194,30 @@ export default function AgentsPage() {
       }
     })();
     getBuilderLanguages().then((r) => { if (!cancelled) setLanguages(r.data || []); }).catch(() => {});
+    if (newMode) {
+      listOwnPhoneNumbers().then((r) => { if (!cancelled) setPhoneNumbers(r.data || []); }).catch(() => {});
+      // Paused campaigns carry the reason calling is blocked (agent_not_ready, no_caller_id, shared_assistants_off).
+      Promise.resolve().then(() => getVoiceCampaigns()).then((r) => { if (!cancelled) setCampaigns(r?.data?.campaigns || []); }).catch(() => {});
+    }
     return () => { cancelled = true; };
-  }, [configurable]);
+  }, [configurable, newMode]);
 
-  const useTypes = configurable && instances && !instances.failed;
-  const waiting = !agents || (configurable && !instances);
+  const useTypes = newMode && Boolean(instances);
+  const waiting = !agents || (newMode && !instances);
+
+  const outboundEntry = instances?.types?.find((entry) => (entry.agent_type || canonicalAgentType(entry.key)) === 'sdr_outbound');
+  const readiness = useTypes && !instances.failed ? accountReadiness({
+    sharedMode: featureOn(user, 'shared_assistants'),
+    outboundUsable: Boolean(outboundEntry?.usable),
+    published: configurable ? instances.byType?.sdr_outbound?.published_version != null : null,
+    numbers: phoneNumbers,
+    platformCallerId: featureOn(user, 'allow_platform_caller_id'),
+    campaigns,
+    user,
+  }) : [];
 
   const cards = (() => {
+    if (newMode && instances?.failed) return [];
     if (!useTypes) return (agents || []).map((agent) => <LegacyCard key={agent.id} agent={agent} />);
     const shown = new Set(instances.types.map((entry) => entry.id));
     const typeOf = (entry) => entry.agent_type || canonicalAgentType(entry.key);
@@ -197,7 +235,7 @@ export default function AgentsPage() {
         list.push(
           <AgentTypeCard key={entry.id} agentType={type} name={agentTypeLabel(type)} primary={type === 'sdr_outbound'}
             description={TYPE_DESCRIPTIONS[type] || entry.description}
-            instance={instances.byType[type]} payload={instances.payloads[type]} languages={languages} user={user} />,
+            instance={instances.byType[type]} payload={instances.payloads[type]} languages={languages} user={user} phoneNumbers={phoneNumbers || []} />,
         );
       }
     });
@@ -207,7 +245,7 @@ export default function AgentsPage() {
   })();
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6" data-testid="agents-page">
+    <div className="ops max-w-6xl mx-auto space-y-6" data-testid="agents-page">
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Agents</h1>
         <p className="mt-1 text-muted-foreground">
@@ -215,9 +253,21 @@ export default function AgentsPage() {
         </p>
       </div>
       {useTypes && <h2 className="text-lg font-semibold">Your agents</h2>}
+      {useTypes && !instances.failed && readiness.length > 0 && (
+        <div role="status" className="ops-tone ops-tone-warn space-y-1 rounded-xl px-4 py-3 text-sm" data-testid="calling-readiness">
+          {readiness.map((issue) => (
+            <p key={issue.code}>
+              <span className="font-semibold">{issue.title}.</span>{' '}
+              {issue.fix?.to ? <Link className="underline" to={issue.fix.to}>{issue.fix.label}</Link> : issue.fix?.label}
+            </p>
+          ))}
+        </div>
+      )}
 
       {waiting ? (
         <div className="flex justify-center py-10" aria-busy="true"><Loader2 className="w-5 h-5 animate-spin text-primary" aria-label="Loading agents" /></div>
+      ) : instances?.failed ? (
+        <Card className="card-base p-8 text-center text-sm text-muted-foreground" role="alert">Agent setup couldn't be loaded. Refresh the page to try again.</Card>
       ) : cards.length === 0 ? (
         <Card className="card-base p-8 text-center text-sm text-muted-foreground">
           No agents are available to your organisation yet. Ask your platform administrator to enable one.

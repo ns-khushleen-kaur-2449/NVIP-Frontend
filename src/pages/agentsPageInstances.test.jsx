@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
   getAgentCatalog: jest.fn(),
   getAgentInstanceVersion: jest.fn(),
   getBuilderLanguages: jest.fn(),
+  listOwnPhoneNumbers: jest.fn(),
 }));
 
 const SDR = { id: 'a-1', key: 'sdr', name: 'SmartSDR', industry: 'Sales', description: 'Outbound sales calls' };
@@ -33,6 +34,7 @@ beforeEach(() => {
     { id: 'a-9', key: 'real_estate', name: 'Real estate', agent_type: null, usable: false, has_screen: true },
   ] });
   api.getBuilderLanguages.mockResolvedValue({ data: [{ code: 'hi', english_name: 'Hindi' }, { code: 'en', english_name: 'English' }] });
+  api.listOwnPhoneNumbers.mockResolvedValue({ data: [{ id: 'number-1', phone_number: '+15550000000', inbound_mode: 'fixed' }] });
 });
 
 test('agent_instances off: the cards open the agents\' screens as before, nothing new is asked', async () => {
@@ -43,9 +45,11 @@ test('agent_instances off: the cards open the agents\' screens as before, nothin
   expect(screen.queryByTestId('agent-card-sdr_inbound')).not.toBeInTheDocument();
 });
 
-test('a Sales Rep keeps the old cards even with the flag on', async () => {
+test('a Sales Rep sees the new agent cards without configuration controls', async () => {
   renderWithAuth(<AgentsPage />, { user: { ...USERS.rep, ...ON } });
-  expect(await screen.findByTestId('agent-card-sdr')).toBeInTheDocument();
+  expect(await screen.findByTestId('agent-card-sdr_outbound')).toBeInTheDocument();
+  expect(screen.getByTestId('agent-state-sdr_outbound')).toHaveTextContent('Managed by your admin');
+  expect(screen.queryByRole('link', { name: 'Set up agent' })).not.toBeInTheDocument();
   expect(api.listAgentInstances).not.toHaveBeenCalled();
 });
 
@@ -75,12 +79,12 @@ test('a draft only: Continue setup', async () => {
   expect(screen.getByTestId('agent-state-sdr_outbound')).toHaveTextContent('Not set up');
 });
 
-test('a 403 from agent instances falls back to the old cards', async () => {
+test('an agent-instance API refusal does not mix legacy cards into the new mode', async () => {
   api.listAgentInstances.mockRejectedValue({ response: { status: 403 } });
   renderWithAuth(<AgentsPage />, { user: { ...USERS.manager, ...ON } });
-  await waitFor(() => expect(screen.getByTestId('agent-card-sdr')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Agent setup couldn't be loaded"));
   expect(screen.queryByTestId('agent-state-sdr_outbound')).not.toBeInTheDocument();
-  expect(screen.getAllByRole('link', { name: 'Open' })).toHaveLength(2);
+  expect(screen.queryByTestId('agent-card-sdr')).not.toBeInTheDocument();
 });
 
 test('Not in plan: an unusable Inbound SDR and catalog agents the tenant cannot use', async () => {

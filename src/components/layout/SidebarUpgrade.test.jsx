@@ -51,6 +51,29 @@ it('updates the plan as soon as the Billing page reports a new one', async () =>
   expect(screen.getByTestId('current-plan')).toHaveTextContent('You are on the Pro plan');
 });
 
+it('uses only the new pipeline navigation when agent instances are enabled', () => {
+  renderWithAuth(<Sidebar />, { user: { ...USERS.manager, features: { agent_instances: true } }, path: '/dashboard' });
+  const names = screen.getAllByRole('link').map((link) => link.textContent.trim()).filter(Boolean);
+  expect(names).toEqual(expect.arrayContaining([
+    'Dashboard', 'Agents', 'Campaigns', 'Prospects', 'Product catalog', 'Call logs', 'Single call',
+    'Inbox', 'Meetings', 'Operations', 'Settings',
+  ]));
+  // Shared assistants off: the Assistant builder still drives calls, so it stays in the menu.
+  expect(names).toContain('Assistant builder');
+  // The Knowledge Base is hidden in the new setup.
+  expect(names).not.toContain('Knowledge Base');
+  expect(screen.queryByRole('button', { name: 'Voice Agent' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Create Agent' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'CSV Call Campaign' })).not.toBeInTheDocument();
+});
+
+it('new mode with shared assistants: no Knowledge Base (hidden in the new setup) and no Assistant builder', () => {
+  renderWithAuth(<Sidebar />, { user: { ...USERS.tenant_admin, features: { agent_instances: true, shared_assistants: true } }, path: '/dashboard' });
+  const names = screen.getAllByRole('link').map((link) => link.textContent.trim()).filter(Boolean);
+  expect(names).not.toContain('Knowledge Base');
+  expect(names).not.toContain('Assistant builder');
+});
+
 it('marks Upgrade Plan active on the billing page', async () => {
   renderWithAuth(<Sidebar />, { user: USERS.tenant_admin, path: '/billing' });
   expect(screen.getByRole('link', { name: /Upgrade Plan/ })).toHaveAttribute('aria-current', 'page');

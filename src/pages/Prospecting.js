@@ -9,11 +9,17 @@ import ProspectQuickSearch from '@/components/prospecting/ProspectQuickSearch';
 import SavedSearches from '@/components/prospecting/SavedSearches';
 import { getApolloStatus } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
-import { canCreateCampaigns, featureEnabled } from '@/lib/rbac';
+import { canCreateCampaigns, featureEnabled, featureOn } from '@/lib/rbac';
 import { FeatureOff } from '@/components/auth/FeatureRoute';
 
 // Where "Add to Lead-to-Campaign Builder" lands; VoiceAgent reads `fromProspecting` from the history state.
 export const CAMPAIGN_BUILDER_PATH = '/voice_agent?tab=builder';
+
+/** A pick from the finder ({ id, name, phone, ... }, lib/prospectSelection) as a prospect row for the new builder. */
+export const pickToProspect = (pick) => ({
+  prospect_id: pick.id, full_name: pick.name, phone: pick.phone, email: pick.email || null, city: pick.city || null,
+  stage: pick.stage || null, created_at: pick.created_at || null,
+});
 
 export default function ProspectingPage() {
   // Roles as the backend sends them at login. They only decide what is offered on screen;
@@ -21,10 +27,12 @@ export default function ProspectingPage() {
   const { user } = useAuth();
   const role = user?.role;
   const navigate = useNavigate();
+  const newMode = featureOn(user, 'agent_instances');
   // Only campaign creators are offered the hand-off; POST /api/campaigns enforces it.
   const sendToBuilder = canCreateCampaigns(user)
-    ? (picked) => navigate(CAMPAIGN_BUILDER_PATH, {
-      state: { fromProspecting: picked },
+    ? (picked) => navigate(newMode ? '/voice-campaigns/new' : CAMPAIGN_BUILDER_PATH, {
+      // The new builder reads prospect rows (prospect_id, full_name, ...); the old one takes the picks as they are.
+      state: { fromProspecting: newMode ? picked.map(pickToProspect) : picked },
     })
     : null;
   const savedSearchesAvailable = featureEnabled(user, 'ai_filtering');
@@ -83,7 +91,7 @@ export default function ProspectingPage() {
         <h1 className="font-display text-2xl font-semibold flex items-center gap-2">
           <Search className="w-5 h-5 text-primary" /> Prospecting
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Every prospect you have is listed below. Narrow it with a filter in plain English or a saved search, tick the ones to call, and add them to the Lead-to-Campaign Builder.</p>
+        <p className="text-sm text-muted-foreground mt-1">Every prospect you have is listed below. Narrow it with a filter in plain English or a saved search, tick the ones to call, and add them to {newMode ? 'a new campaign' : 'the Lead-to-Campaign Builder'}.</p>
       </div>
 
       <ProspectQuickSearch />
