@@ -268,7 +268,7 @@ export default function CallLogsList({ assistantId = '', assistantName = '', onC
                     <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-muted-foreground" /> {log.phone_number || '--'}</span>
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-muted-foreground" /> {formatDuration(log.duration_seconds)}</span>
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-muted-foreground" /> {formatTime(log.created_at)}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-muted-foreground" /> {formatTime(log.started_at || log.created_at)}</span>
                       {log.recording_url && log.recording_url !== 'rawRecordingUploadDisabled' && <span className="flex items-center gap-1"><Mic className="w-3 h-3 text-[#F87217]" /> Rec</span>}
                     </div>
                   </div>
