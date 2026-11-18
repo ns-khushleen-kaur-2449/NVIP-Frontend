@@ -42,6 +42,7 @@ import AgentsPage from "@/pages/Agents";
 import AgentConfigPage from "@/pages/agentConfig/AgentConfigPage";
 import CampaignBuilderPage from "@/pages/campaignBuilder/CampaignBuilderPage";
 import { HiringRoute } from "@/pages/hiring/HiringAgent";
+import { RealEstateRoute } from "@/pages/realEstate/RealEstateAgent";
 import RequirePermission from "@/components/auth/RequirePermission";
 import { CAMPAIGN_FEATURES, PERMISSIONS, homePath } from "@/lib/rbac";
 import FeatureRoute from "@/components/auth/FeatureRoute";
@@ -271,6 +272,8 @@ function App() {
           <Route path="/voice_agent" element={<SidebarShell><VoiceAgentModeRedirect /></SidebarShell>} />
           {/* The Hiring agent (AGENT_ROUTES.hiring): tenant users with hiring.view; the page checks the agent is available. */}
           <Route path="/hiring_agent/*" element={<SidebarShell><HiringRoute /></SidebarShell>} />
+          {/* The Real Estate agent (AGENT_ROUTES.real_estate): tenant users with real_estate.view; the page checks the agent is available. */}
+          <Route path="/real_estate_agent/*" element={<SidebarShell><RealEstateRoute /></SidebarShell>} />
           <Route path="/voice-campaigns" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaigns /></FeatureRoute></SidebarShell>} />
           <Route path="/voice-campaigns/new" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><CampaignBuilderPage /></FeatureRoute></SidebarShell>} />
           <Route path="/voice-campaigns/:campaignId" element={<SidebarShell><FeatureRoute features={CAMPAIGN_FEATURES} name="Voice campaigns"><VoiceCampaignDetail /></FeatureRoute></SidebarShell>} />

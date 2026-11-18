@@ -17,6 +17,8 @@ const OWN_NUMBER_WORDS = {
   needs_review: 'needing review',
   not_interviewed: 'not interviewed',
   awaiting_result: 'awaiting the summary',
+  site_visits_booked: 'site visits booked',
+  with_knowledge_base: 'with a knowledge base',
 };
 
 /** An agent's own non-zero numbers as one line, e.g. "2 interviews completed · 1 needing review"; "" when none. */
