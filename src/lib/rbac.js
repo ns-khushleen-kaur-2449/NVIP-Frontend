@@ -234,6 +234,14 @@ export function featureEnabled(actor, key) {
 // a missing key here means off, never on.
 export const OFF_BY_DEFAULT_FEATURES = Object.freeze(['agent_instances', 'shared_assistants', 'allow_platform_caller_id']);
 
+/**
+ * The signed-in tenant is in shared-assistant mode: the one place the UI reads it, always from the session's
+ * /api/auth/me `features` (the backend's core.features.is_shared_mode decides the value).
+ */
+export function isSharedMode(actor) {
+  return featureOn(actor, 'shared_assistants');
+}
+
 /** For the off-by-default features: on only when /api/auth/me says `true`. */
 export function featureOn(actor, key) {
   if (OFF_BY_DEFAULT_FEATURES.includes(key)) return actor?.features?.[key] === true;

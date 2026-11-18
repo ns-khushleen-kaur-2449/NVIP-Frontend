@@ -1,5 +1,6 @@
 // Why a campaign paused or skipped leads before dialling, in plain words with where to fix it.
-// Codes from the backend's dialer (calls/dialer.py): agent_not_ready and no_caller_id pause the campaign
+// Codes from the backend's dialer (calls/dialer.py): agent_not_ready, no_caller_id and call_context_key_not_set pause
+// the campaign
 // (campaigns.pause_reason_code); call_variables_missing skips a contact (skip_reason missing_call_details).
 // The detail ("missing: company_name, agent_name") is always the server's own text.
 
@@ -22,6 +23,11 @@ export const REFUSALS = Object.freeze({
   shared_assistants_off: {
     title: 'Shared assistants were turned off for this account',
     fix: () => ({ label: 'Choose an assistant for this campaign, or ask your admin to turn shared assistants back on' }),
+  },
+  // CALL_CONTEXT_KEYS is not set on the platform: nothing the tenant can fix.
+  call_context_key_not_set: {
+    title: "Calls can't be placed: the platform's call signing isn't set up",
+    fix: () => ({ label: 'Contact your platform administrator, then Resume the campaign' }),
   },
   missing_call_details: {
     title: 'Some leads were skipped because details are missing',
@@ -55,7 +61,8 @@ export function campaignRefusals(campaign, contacts = [], user = null) {
 }
 
 // Pause reasons that mean no call of the tenant can be placed until someone fixes the account (Agents-page banner).
-export const ACCOUNT_REFUSALS = Object.freeze(['agent_not_ready', 'no_caller_id', 'shared_assistants_off']);
+export const ACCOUNT_REFUSALS = Object.freeze(['agent_not_ready', 'no_caller_id', 'shared_assistants_off',
+  'call_context_key_not_set']);
 
 /**
  * Why calling is blocked for the account right now, from real facts only: [{ code, title, fix }].

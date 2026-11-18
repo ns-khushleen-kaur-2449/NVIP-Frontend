@@ -16,7 +16,7 @@ import { agentConfigRoute, agentRoute, agentTypeLabel, canonicalAgentType, isCon
 import {
   INSTANCE_STATES, INSTANCE_STATE_LABELS, activeSummary, instanceState, languageNames,
 } from '@/lib/agentInstances';
-import { CAMPAIGN_FEATURES, agentInstancesAvailable, canCreateCampaigns, canManageBilling, featureOn, featuresEnabled } from '@/lib/rbac';
+import { agentInstancesAvailable, CAMPAIGN_FEATURES, canCreateCampaigns, canManageBilling, featureOn, featuresEnabled, isSharedMode } from '@/lib/rbac';
 import { formatDateTime, displayTimeZone } from '@/lib/ops';
 import { cn } from '@/lib/utils';
 import { Pill } from '@/components/setup/SetupUi';
@@ -242,7 +242,7 @@ export default function AgentsPage() {
 
   const outboundEntry = instances?.types?.find((entry) => (entry.agent_type || canonicalAgentType(entry.key)) === 'sdr_outbound');
   const readiness = useTypes && !instances.failed ? accountReadiness({
-    sharedMode: featureOn(user, 'shared_assistants'),
+    sharedMode: isSharedMode(user),
     outboundUsable: Boolean(outboundEntry?.usable),
     published: configurable ? instances.byType?.sdr_outbound?.published_version != null : null,
     numbers: phoneNumbers,

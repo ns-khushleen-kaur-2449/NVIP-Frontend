@@ -24,6 +24,16 @@ describe('refusal reasons', () => {
     expect(screen.getByText(/Ask a Manager or Tenant Admin/)).toBeInTheDocument();
   });
 
+  test('call_context_key_not_set (F-03): a platform problem, no link into agent setup', () => {
+    renderWithAuth(<CampaignRefusals user={USERS.tenant_admin}
+      campaign={paused('call_context_key_not_set', 'Shared calls cannot be signed; configure CALL_CONTEXT_KEYS.')} contacts={[]} />,
+    { user: USERS.tenant_admin });
+    expect(screen.getByText(/platform's call signing isn't set up/)).toBeInTheDocument();
+    expect(screen.getByText('Shared calls cannot be signed; configure CALL_CONTEXT_KEYS.')).toBeInTheDocument();
+    expect(screen.getByText(/Contact your platform administrator/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open agent configuration' })).not.toBeInTheDocument();
+  });
+
   test('no_caller_id: tells a tenant user to contact the administrator', () => {
     renderWithAuth(<CampaignRefusals user={USERS.tenant_admin} campaign={paused('no_caller_id', null)} contacts={[]} />,
       { user: USERS.tenant_admin });

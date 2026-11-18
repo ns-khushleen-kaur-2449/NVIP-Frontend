@@ -3,7 +3,7 @@
 
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { featureOn } from '@/lib/rbac';
+import { featureOn, isSharedMode } from '@/lib/rbac';
 import VoiceAgentPage from '@/pages/VoiceAgent';
 
 /** `to` with the current query string (and hash) kept; params already in `to` win. */
@@ -47,7 +47,7 @@ export function VoiceAgentModeRedirect() {
   if (tab === 'campaigns') return go('/voice-campaigns');
   if (tab === 'single') return go('/single-call');
   if (tab === 'kb') return go('/agents'); // the Knowledge Base is hidden in NEW MODE
-  if (tab === 'create') return featureOn(user, 'shared_assistants') ? go('/agents/sdr_outbound') : <VoiceAgentPage />;
+  if (tab === 'create') return isSharedMode(user) ? go('/agents/sdr_outbound') : <VoiceAgentPage />;
   return <VoiceAgentPage />; // requests, and any tab without a new home
 }
 

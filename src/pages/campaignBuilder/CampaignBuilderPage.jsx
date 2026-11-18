@@ -23,7 +23,7 @@ import {
   isOverridden, requiredChecklist,
 } from '@/lib/campaignBrief';
 import { PLATFORM_RULES, PREVIEW_NOTE, greetingValues, renderGreeting } from '@/lib/agentInstances';
-import { agentInstancesAvailable, canCreateCampaigns, featureOn } from '@/lib/rbac';
+import { agentInstancesAvailable, canCreateCampaigns, isSharedMode } from '@/lib/rbac';
 import { cn } from '@/lib/utils';
 import { ChoiceField, ListField, SelectField, TextField } from '@/pages/agentConfig/fields';
 
@@ -484,7 +484,7 @@ function ReviewStep({ form, settings, leads, defaults, assistant, checklist, lim
  */
 export default function CampaignBuilderPage() {
   const { user } = useAuth();
-  const sharedMode = featureOn(user, 'shared_assistants');
+  const sharedMode = isSharedMode(user);
   const navigate = useNavigate();
   const location = useLocation();
   const defaults = useAgentDefaults(user);

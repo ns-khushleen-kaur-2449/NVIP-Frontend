@@ -54,6 +54,7 @@ import { RealEstateRoute } from "@/pages/realEstate/RealEstateAgent";
 import RequirePermission from "@/components/auth/RequirePermission";
 import { CAMPAIGN_FEATURES, PERMISSIONS, homePath } from "@/lib/rbac";
 import FeatureRoute from "@/components/auth/FeatureRoute";
+import FeatureLossWatcher from "@/components/auth/FeatureLossWatcher";
 import AuthGate from "@/components/auth/AuthGate";
 import StepUpDialog from "@/components/auth/StepUpDialog";
 import InboxPage from "@/pages/Inbox";
@@ -258,6 +259,8 @@ function App() {
     <NextThemesBridge>
     <BrowserRouter>
       <AuthProvider>
+        {/* A Super Admin switch change seen by the /me refresh: leave a page that is no longer allowed (F-02). */}
+        <FeatureLossWatcher />
         <AuthGate>
         <SuperAdminBoundary>
         <Routes>

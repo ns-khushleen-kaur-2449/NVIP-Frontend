@@ -2,7 +2,7 @@
 // (backend app/features/agent_instances, routes /api/v1/agent-instances). Pure helpers; the screens live in
 // pages/agentConfig. Every rule here mirrors the backend; the backend enforces them.
 
-import { featureOn } from '@/lib/rbac';
+import { isSharedMode } from '@/lib/rbac';
 
 // ── State of an agent type on the Agents page ──
 
@@ -35,7 +35,7 @@ export const VERSION_STATUS_LABELS = Object.freeze({ draft: 'Draft', published: 
 
 /** The message after a publish, from the tenant's shared_assistants flag (never assumed). */
 export function publishedModeMessage(user) {
-  return featureOn(user, 'shared_assistants')
+  return isSharedMode(user)
     ? 'Live on your next calls.'
     : 'Saved. Your calls still use the Assistant builder configuration.';
 }
