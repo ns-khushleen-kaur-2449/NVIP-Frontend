@@ -5,6 +5,7 @@ const STYLE = {
   sdr_outbound: 'bg-sky-500/10 text-sky-600 border-sky-500/25',
   sdr_inbound: 'bg-violet-500/10 text-violet-600 border-violet-500/25',
   hiring: 'bg-teal-500/10 text-teal-600 border-teal-500/25',
+  real_estate: 'bg-amber-500/10 text-amber-700 border-amber-500/25',
 };
 
 /** The agent type a call ran as (Outbound SDR / Inbound SDR / Hiring), from lib/agents.js callAgentType. */

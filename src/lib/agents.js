@@ -12,6 +12,7 @@ export const AGENT_ROUTES = Object.freeze({
   // Inbound SDR runs on SDR's pack but has its own configuration screen (no campaigns).
   sdr_inbound: '/agents/sdr_inbound',
   hiring: '/hiring_agent',
+  real_estate: '/real_estate_agent',
 });
 
 export const agentRoute = (agent) => AGENT_ROUTES[agent?.key] || null;
@@ -26,12 +27,13 @@ export const AGENT_TYPE_LABELS = Object.freeze({
   sdr_outbound: 'Outbound SDR',
   sdr_inbound: 'Inbound SDR',
   hiring: 'Hiring',
+  real_estate: 'Real Estate',
 });
 
 /** "Outbound SDR" for `sdr` or `sdr_outbound`; an unknown type is shown as it is. */
 export const agentTypeLabel = (key) => AGENT_TYPE_LABELS[canonicalAgentType(key)] || key || 'Unknown';
 
-/** Agent types configured through agent instances (Hiring keeps its own screens). */
+/** Agent types configured through agent instances (Hiring and Real Estate keep their own screens). */
 export const CONFIGURABLE_AGENT_TYPES = Object.freeze(['sdr_outbound', 'sdr_inbound']);
 export const isConfigurableAgentType = (key) => CONFIGURABLE_AGENT_TYPES.includes(canonicalAgentType(key));
 
@@ -79,6 +81,8 @@ export const AGENT_PROBLEM_LABELS = Object.freeze({
   call_context_key_not_set: 'The call-context signing key is not set',
   intake_assistant_not_registered: 'No intake assistant is registered',
   recovery_not_running: 'Call recovery is not running (the campaign runner is off)',
+  outbound_assistant_not_registered: 'No outbound assistant is registered',
+  assistant_version_not_imported: "The assistant's version 1 has not been imported",
 });
 
 export const problemLabel = (code) => AGENT_PROBLEM_LABELS[code] || code;

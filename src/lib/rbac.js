@@ -47,6 +47,9 @@ export const PERMISSIONS = Object.freeze({
   HIRING_VIEW: 'hiring.view',
   HIRING_MANAGE: 'hiring.manage',
   HIRING_CALL: 'hiring.call',
+  // The Real Estate agent, like Hiring: everyone in a tenant reads; Tenant Admins and Managers also place calls.
+  REAL_ESTATE_VIEW: 'real_estate.view',
+  REAL_ESTATE_CALL: 'real_estate.call',
   // The platform control area (/admin). Super Admin only (backend SUPER_ADMIN_PERMISSIONS).
   ADMIN_ACCESS: 'admin.access',
   PLATFORM_OVERVIEW_VIEW: 'platform.overview.view',
@@ -66,10 +69,10 @@ export const ROLE_PERMISSIONS = Object.freeze({
   super_admin: Object.freeze([P.TENANTS_MANAGE, P.USERS_VIEW, P.USERS_CREATE, P.USERS_MANAGE, P.DASHBOARD_PLATFORM,
     P.AGENTS_VIEW, P.AGENTS_MANAGE, P.ADMIN_ACCESS, P.PLATFORM_OVERVIEW_VIEW, P.PLATFORM_TOOLS_MANAGE]),
   tenant_admin: Object.freeze([P.USERS_VIEW, P.USERS_CREATE, P.USERS_MANAGE, P.TEAMS_VIEW, P.TEAMS_MANAGE, P.DASHBOARD_TENANT,
-    P.AGENTS_VIEW, P.HIRING_VIEW, P.HIRING_MANAGE, P.HIRING_CALL]),
+    P.AGENTS_VIEW, P.HIRING_VIEW, P.HIRING_MANAGE, P.HIRING_CALL, P.REAL_ESTATE_VIEW, P.REAL_ESTATE_CALL]),
   manager: Object.freeze([P.USERS_VIEW, P.USERS_CREATE, P.USERS_MANAGE, P.TEAMS_VIEW, P.DASHBOARD_TEAM, P.AGENTS_VIEW,
-    P.HIRING_VIEW, P.HIRING_MANAGE, P.HIRING_CALL]),
-  rep: Object.freeze([P.DASHBOARD_OWN, P.AGENTS_VIEW, P.HIRING_VIEW]),
+    P.HIRING_VIEW, P.HIRING_MANAGE, P.HIRING_CALL, P.REAL_ESTATE_VIEW, P.REAL_ESTATE_CALL]),
+  rep: Object.freeze([P.DASHBOARD_OWN, P.AGENTS_VIEW, P.HIRING_VIEW, P.REAL_ESTATE_VIEW]),
 });
 
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
