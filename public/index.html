@@ -25,13 +25,13 @@
         <title>NVIP — Netsmartz Voice Intelligence Platform</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
             <script>
-          /* Apply the saved (or OS) theme before first paint — keep the key in sync with src/context/ThemeContext.jsx. */
+          /* Apply the saved theme before first paint. The app's one theme is next-themes' (storageKey
+             'smartsdr-theme', default dark, in src/App.js); NextThemesBridge in src/context/ThemeContext.jsx keeps
+             data-theme in step with it afterwards. */
           (function () {
             var t = null;
-            try { t = localStorage.getItem('nvip_theme'); } catch (e) {}
-            if (t !== 'light' && t !== 'dark') {
-              t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
+            try { t = localStorage.getItem('smartsdr-theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') t = 'dark';
             document.documentElement.setAttribute('data-theme', t);
           })();
         </script>

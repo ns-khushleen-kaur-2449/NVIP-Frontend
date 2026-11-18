@@ -18,7 +18,15 @@ import LoginPage from "@/pages/Login";
 import AgentRunsPage from "@/pages/AgentRuns";
 import VoiceCampaigns from "@/components/voice/VoiceCampaigns";
 import VoiceCampaignDetail from "@/components/voice/VoiceCampaignDetail";
-import LandingPage from "@/pages/LandingPage";
+// NVIP public marketplace (the agent cards from predev). The SmartSDR LandingPage is no longer the home page;
+// the file is kept (pages/LandingPage.js).
+import PublicLayout from "@/layouts/PublicLayout";
+import AgentCatalog from "@/pages/public/AgentCatalog";
+import AgentDetail from "@/pages/public/AgentDetail";
+import PricingPage from "@/pages/public/Pricing";
+import HowItWorks from "@/pages/public/HowItWorks";
+import RequestAccess from "@/pages/public/RequestAccess";
+import { NextThemesBridge } from "@/context/ThemeContext";
 import MarketplaceListingsPage from "@/pages/MarketplaceListings";
 import MarketplaceDetailsPage from "@/pages/MarketplaceDetails";
 // import AdminDashboardPage from "@/pages/AdminDashboard";
@@ -74,7 +82,7 @@ function KnowledgeBaseRoute() {
   return <ExecAppShell><ProtectedRoute roles={ADMINS}><KnowledgeBasePage /></ProtectedRoute></ExecAppShell>;
 }
 
-/** Shows LandingPage for guests; redirects logged-in users home (/admin/overview for a Super Admin, else /dashboard) */
+/** Shows the NVIP agent catalog (cards) for guests; redirects logged-in users home (/admin/overview for a Super Admin, else /dashboard) */
 function SmartRoot() {
   const { user, token, loading } = useAuth();
   if (loading) {
@@ -85,7 +93,7 @@ function SmartRoot() {
     );
   }
   if (user || token) return <Navigate to={homePath(user)} replace />;
-  return <LandingPage />;
+  return <AgentCatalog />;
 }
 
 // Pages that get the persistent left Sidebar instead of the TopBar. Everything
@@ -247,6 +255,7 @@ function SidebarShell({ children }) {
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="smartsdr-theme">
+    <NextThemesBridge>
     <BrowserRouter>
       <AuthProvider>
         {/* A Super Admin switch change seen by the /me refresh: leave a page that is no longer allowed (F-02). */}
@@ -254,7 +263,18 @@ function App() {
         <AuthGate>
         <SuperAdminBoundary>
         <Routes>
-          <Route path="/" element={<SmartRoot />} />
+          {/* NVIP public pages (predev cards). /marketplace/:slug, not /agents/:slug: /agents/:agentType is an
+              agent's configuration in the app. A card's "In your workspace" panel leads signed-in users to /agents. */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<SmartRoot />} />
+            <Route path="/marketplace/:slug" element={<AgentDetail />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/request-demo" element={<RequestAccess kind="demo" />} />
+            <Route path="/request-quote" element={<RequestAccess kind="quote" />} />
+          </Route>
+          {/* predev's mock sign-in is replaced by the real one. */}
+          <Route path="/signin" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/marketplace" element={<Navigate to="/" replace />} />
@@ -291,6 +311,7 @@ function App() {
       <StepUpDialog />
       <Toaster position="bottom-right" />
     </BrowserRouter>
+    </NextThemesBridge>
     </ThemeProvider>
   );
 }

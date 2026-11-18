@@ -13,12 +13,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAuth } from '@/lib/AuthContext';
 import ThemeToggle from '@/components/shared/ThemeToggle';
 import BrandLockup, { NetsmartzMark } from '@/components/shared/BrandLockup';
-import { canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, featureOn, isSharedMode, voiceTabEnabled } from '@/lib/rbac';
+import {
+  canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, featureOn, hasPermission,
+  isSharedMode, PERMISSIONS, voiceTabEnabled,
+} from '@/lib/rbac';
 
 const APP_NAV = [
   { path: '/dashboard',   label: 'Dashboard',    icon: LayoutDashboard },
-  // The agents this organisation may use (the backend filters the list; every role may view it).
-  { path: '/agents',      label: 'Agents',       icon: Bot },
+  // The agents this organisation may use (the backend filters the list). Shown only with agents.view, the
+  // permission the /agents route requires; otherwise the link would lead straight to the 403 page.
+  { path: '/agents',      label: 'Agents',       icon: Bot,
+    requires: (user) => hasPermission(user, PERMISSIONS.AGENTS_VIEW) },
 ];
 
 // Secondary surfaces, listed below Voice Agent.
@@ -156,7 +161,7 @@ export function Sidebar() {
 
         <ScrollArea className="flex-1 px-3 py-2">
           <nav className="flex flex-col gap-0.5">
-            {(agentInstancesMode ? newModeNav.filter((item) => !item.requires || item.requires()) : APP_NAV).map((item) => {
+            {(agentInstancesMode ? newModeNav : APP_NAV).filter((item) => !item.requires || item.requires(user)).map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
               const Icon = item.icon;
               const link = (

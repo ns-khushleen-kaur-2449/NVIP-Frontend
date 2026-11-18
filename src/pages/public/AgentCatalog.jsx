@@ -10,7 +10,8 @@ import { AgentTile, AsyncBoundary, ButtonLink, EmptyState } from '../../componen
 function AgentCard({ agent }) {
   return (
     <Link
-      to={`/agents/${agent.slug}`}
+      // /marketplace, not /agents: in the app /agents/:agentType is an agent's configuration (e.g. /agents/sdr_outbound).
+      to={`/marketplace/${agent.slug}`}
       className={cn(
         'group flex flex-col rounded-2xl bg-[var(--nv-surface)] p-7 transition-shadow hover:shadow-lg',
         agent.popular ? 'border-2 border-[var(--nv-orange)]' : 'border border-[var(--nv-line)]',

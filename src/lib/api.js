@@ -55,6 +55,13 @@ const _addAuthInterceptor = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
+      // FastAPI answers an unknown route with exactly {"detail": "Not Found"}; the backend's own 404s always name
+      // what is missing ("Prospect not found"). So this one is an endpoint the backend has not built yet: show a
+      // plain message instead of the raw "Not Found". The status stays 404, so callers can still check it.
+      const data = error.response?.data;
+      if (error.response?.status === 404 && data?.detail === 'Not Found') {
+        error.response.data = { ...data, detail: 'This feature is not available yet.' };
+      }
       const action = error.response?.headers?.['x-auth-required-action'];
       // A high-risk action without a fresh step-up: ask for a code, then send the same request once more.
       if (error.response?.status === 403 && action === STEP_UP_REQUIRED && error.config && !error.config._steppedUp) {

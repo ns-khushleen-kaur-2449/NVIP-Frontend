@@ -79,7 +79,7 @@ export default function AppRoutes() {
       <Route element={<PublicLayout />}>
         <Route index element={<AgentCatalog />} />
         <Route path="agents" element={<Navigate to="/" replace />} />
-        <Route path="agents/:slug" element={<AgentDetail />} />
+        <Route path="marketplace/:slug" element={<AgentDetail />} />
         <Route path="pricing" element={<Pricing />} />
         <Route path="how-it-works" element={<HowItWorks />} />
         <Route path="request-demo" element={<RequestAccess kind="demo" />} />

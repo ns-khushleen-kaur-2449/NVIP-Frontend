@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { Menu, X, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../components/Logo';
 import ThemeToggle from '../components/ThemeToggle';
 import { ButtonLink } from '../components/primitives';
-import { useSession } from '../context/SessionContext';
-import { homeFor } from '../config/roles';
+import { AuthContext } from '@/lib/AuthContext';
+import { homePath } from '@/lib/rbac';
 
 const LINKS = [
   { to: '/', label: 'Agents', end: true },
@@ -16,7 +16,11 @@ const LINKS = [
 
 export default function PublicLayout() {
   const [open, setOpen] = useState(false);
-  const { user, role } = useSession();
+  // The real sign-in (lib/AuthContext). Read without useAuth() so the page also renders where no AuthProvider is
+  // mounted (the predev route tests); there it is simply signed out.
+  const auth = useContext(AuthContext);
+  const signedIn = Boolean(auth?.user || auth?.token);
+  const workspace = homePath(auth?.user);
 
   const linkClass = ({ isActive }) =>
     cn(
@@ -35,9 +39,9 @@ export default function PublicLayout() {
           </nav>
           <div className="ml-auto hidden md:flex items-center gap-5">
             <ThemeToggle />
-            {user
-              ? <Link to={homeFor(role)} className={quietLink}>Go to workspace</Link>
-              : <Link to="/signin" className={quietLink}>Sign in</Link>}
+            {signedIn
+              ? <Link to={workspace} className={quietLink}>Go to workspace</Link>
+              : <Link to="/login" className={quietLink}>Sign in</Link>}
             <ButtonLink to="/request-demo"><Phone className="h-4 w-4" aria-hidden /> Book a demo</ButtonLink>
           </div>
           <div className="ml-auto flex items-center gap-2 md:hidden">
@@ -69,8 +73,8 @@ export default function PublicLayout() {
               {LINKS.map((l) => (
                 <NavLink key={l.to} to={l.to} end={l.end} className={linkClass} onClick={() => setOpen(false)}>{l.label}</NavLink>
               ))}
-              <Link to={user ? homeFor(role) : '/signin'} className={quietLink} onClick={() => setOpen(false)}>
-                {user ? 'Go to workspace' : 'Sign in'}
+              <Link to={signedIn ? workspace : '/login'} className={quietLink} onClick={() => setOpen(false)}>
+                {signedIn ? 'Go to workspace' : 'Sign in'}
               </Link>
               <ButtonLink to="/request-demo" onClick={() => setOpen(false)}>Book a demo</ButtonLink>
             </nav>
