@@ -8,6 +8,12 @@
  * When an agent's own backend is ready, its type-specific screens are plugged
  * in via src/agents/<type>/ — see src/agents/index.js.
  *
+ * `backend` links a card to the NVIP-Backend agent catalog (`agents.key`) and
+ * agent type it runs on. Mind the names: this catalog's `sdr` card is the
+ * *Inbound* SDR, while the backend's `sdr` key is *Outbound* SDR
+ * (agent type `sdr_outbound`). `agentType: null` means no backend agent exists
+ * yet, so the workspace shows the card as "Coming soon".
+ *
  * Prices are placeholders (doc §13: final amounts need commercial sign-off).
  */
 import { PhoneCall, Megaphone, MessageSquare, UserSearch, House } from 'lucide-react';
@@ -32,6 +38,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.RECEPTIONIST,
     slug: 'ai-receptionist',
+    backend: { catalogKey: 'receptionist', agentType: null },
     name: 'AI Receptionist',
     shortName: 'Receptionist',
     category: 'support',
@@ -48,6 +55,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.OUTBOUND,
     slug: 'outbound-lead-gen',
+    backend: { catalogKey: 'sdr', agentType: 'sdr_outbound' },
     name: 'Outbound Lead Gen',
     shortName: 'Outbound',
     category: 'sales',
@@ -64,6 +72,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.SDR,
     slug: 'inbound-voice-sdr',
+    backend: { catalogKey: 'sdr_inbound', agentType: 'sdr_inbound' },
     name: 'Inbound Voice SDR',
     shortName: 'SDR',
     category: 'sales',
@@ -81,6 +90,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.HIRING,
     slug: 'hiring-recruitment',
+    backend: { catalogKey: 'hiring', agentType: 'hiring' },
     name: 'Hiring / Recruitment',
     shortName: 'Hiring',
     category: 'recruitment',
@@ -97,6 +107,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.REAL_ESTATE,
     slug: 'real-estate',
+    backend: { catalogKey: 'real_estate', agentType: null },
     name: 'Real Estate Agent',
     shortName: 'Real Estate',
     category: 'real_estate',
@@ -143,3 +154,15 @@ export const TIERS = {
 
 export const getAgentByType = (type) => AGENTS.find((a) => a.type === type);
 export const getAgentBySlug = (slug) => AGENTS.find((a) => a.slug === slug);
+
+/**
+ * The catalog card for a backend catalog key or agent type:
+ * `sdr` / `sdr_outbound` → Outbound Lead Gen, `sdr_inbound` → Inbound Voice SDR, `hiring` → Hiring.
+ */
+export function getAgentByBackendKey(key) {
+  if (!key) return undefined;
+  return AGENTS.find((a) => a.backend.catalogKey === key || (a.backend.agentType !== null && a.backend.agentType === key));
+}
+
+/** Whether the agent has a backend agent type, i.e. a tenant can actually use it in the workspace today. */
+export const runsOnBackend = (agent) => Boolean(agent?.backend?.agentType);

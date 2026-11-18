@@ -13,10 +13,15 @@ import {
 } from './mocks';
 import { ROLES } from '../config/roles';
 
+/**
+ * The public marketplace reads config/agents.js, not the backend: NVIP-Backend has no anonymous catalog endpoint
+ * (`GET /api/v1/agents` is Super Admin only and returns catalog rows, not these cards). What a signed-in tenant may
+ * use comes from `GET /api/v1/agents/catalog` (lib/api.js `getAgentCatalog`), read by the pages that need it.
+ */
 export const marketplaceApi = {
-  listAgents: () => call(() => http.get('/agents'), () => AGENTS),
-  getAgent: (slug) => call(() => http.get(`/agents/${slug}`), () => AGENTS.find((a) => a.slug === slug) ?? null),
-  getTiers: (type) => call(() => http.get(`/agents/${type}/tiers`), () => TIERS[type] ?? []),
+  listAgents: async () => AGENTS,
+  getAgent: async (slug) => AGENTS.find((a) => a.slug === slug) ?? null,
+  getTiers: async (type) => TIERS[type] ?? [],
 };
 
 export const accessApi = {

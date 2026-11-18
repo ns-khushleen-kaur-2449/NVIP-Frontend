@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Bot, Loader2, Lock, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
+import { Bot, Loader2, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,11 +20,22 @@ import { CAMPAIGN_FEATURES, agentInstancesAvailable, canCreateCampaigns, canMana
 import { formatDateTime, displayTimeZone } from '@/lib/ops';
 import { cn } from '@/lib/utils';
 import { Pill } from '@/components/setup/SetupUi';
+import { AGENTS as NVIP_AGENTS, getAgentByBackendKey, runsOnBackend } from '@/config/agents';
 
 const TYPE_DESCRIPTIONS = {
   sdr_outbound: 'Calls your prospects from campaigns, qualifies interest, books meetings and sends brochures.',
   sdr_inbound: 'Answers calls to your number, qualifies callers and books demos. Reuses your business details and catalog.',
 };
+
+/** The NVIP catalog icon of a backend agent (config/agents.js: `sdr` -> Outbound Lead Gen, ...); else a robot. */
+function AgentIcon({ agentKey }) {
+  const Icon = getAgentByBackendKey(agentKey)?.icon || Bot;
+  return (
+    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <Icon className="h-5 w-5" />
+    </span>
+  );
+}
 
 /** Today's card: the agent and a link to its screen. */
 function LegacyCard({ agent }) {
@@ -32,10 +43,15 @@ function LegacyCard({ agent }) {
   return (
     <Card className="card-base p-5 flex flex-col gap-3" data-testid={`agent-card-${agent.key}`}>
       <div className="flex items-start justify-between gap-2">
-        <h2 className="font-semibold">{agent.name}</h2>
+        <div className="flex items-center gap-3 min-w-0">
+          <AgentIcon agentKey={agent.key} />
+          <h2 className="font-semibold">{agent.name}</h2>
+        </div>
         {agent.industry && <Badge variant="outline" className="text-[11px]">{agent.industry}</Badge>}
       </div>
-      <p className="text-sm text-muted-foreground flex-1">{agent.description || 'No description.'}</p>
+      <p className="text-sm text-muted-foreground flex-1">
+        {agent.description || getAgentByBackendKey(agent.key)?.summary || 'No description.'}
+      </p>
       {route ? (
         <Button asChild className="bg-primary text-primary-foreground self-start"><Link to={route}>Open</Link></Button>
       ) : (
@@ -45,7 +61,6 @@ function LegacyCard({ agent }) {
   );
 }
 
-const TYPE_ICONS = { sdr_outbound: PhoneOutgoing, sdr_inbound: PhoneIncoming };
 const SETUP_HINTS = {
   sdr_outbound: 'Setup takes about 10 minutes · 8 steps',
   sdr_inbound: 'Setup takes about 5 minutes after Outbound',
@@ -59,7 +74,6 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
   const configure = agentConfigRoute(agentType);
   const campaigns = agentType === 'sdr_outbound' && canCreateCampaigns(user) && featuresEnabled(user, CAMPAIGN_FEATURES);
   const canConfigure = agentInstancesAvailable(user);
-  const Icon = TYPE_ICONS[agentType] || Bot;
   const badge = (
     <Pill tone={canConfigure ? STATE_TONES[state] : 'neutral'} data-testid={`agent-state-${agentType}`}>
       {canConfigure ? INSTANCE_STATE_LABELS[state] : 'Managed by your admin'}
@@ -100,9 +114,7 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
   return (
     <article className={cardClass} data-testid={`agent-card-${agentType}`}>
       <div className="flex items-start justify-between gap-2">
-        <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
-        </span>
+        <AgentIcon agentKey={agentType} />
         {badge}
       </div>
       <h2 className="text-lg font-semibold">{name}</h2>
@@ -120,6 +132,29 @@ function InboundNumberStatus({ phoneNumbers }) {
   const numbers = phoneNumbers.filter((number) => number.inbound_mode === 'shared');
   return numbers.length ? <p className="text-sm text-muted-foreground">Answers: {numbers.map((number) => number.phone_number || number.label || 'number not synced yet').join(', ')}</p>
     : <p className="text-sm text-muted-foreground">Ask your platform admin to connect a number.</p>;
+}
+
+/**
+ * An NVIP catalog agent with no backend agent type yet (Receptionist, Real Estate): shown so the workspace lists the
+ * whole lineup, never as something to open. "View details" opens its public brochure (/marketplace/:slug).
+ */
+function ComingSoonCard({ agent }) {
+  const Icon = agent.icon;
+  return (
+    <article className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-card/50 p-6" data-testid={`agent-card-nvip-${agent.type}`}>
+      <div className="flex items-start justify-between gap-2">
+        <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <Icon className="h-5 w-5" />
+        </span>
+        <Pill>Coming soon</Pill>
+      </div>
+      <h2 className="text-lg font-semibold">{agent.name}</h2>
+      <p className="flex-1 text-sm text-muted-foreground">{agent.summary}</p>
+      <Link to={`/marketplace/${agent.slug}`} className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline">
+        View details<span className="sr-only"> about {agent.name}</span>
+      </Link>
+    </article>
+  );
 }
 
 /** Agents the organisation cannot use: one dashed card naming them all. */
@@ -244,6 +279,15 @@ export default function AgentsPage() {
     return list;
   })();
 
+  // NVIP catalog agents the backend has no agent for, and that no backend list above mentions (by key or type).
+  const backendKeys = new Set([
+    ...(agents || []).map((a) => a.key),
+    ...[...(instances?.types || []), ...(instances?.catalog || [])].flatMap((e) => [e.key, e.agent_type]),
+  ].filter(Boolean));
+  const comingSoon = waiting || instances?.failed ? [] : NVIP_AGENTS.filter(
+    (agent) => !runsOnBackend(agent) && !backendKeys.has(agent.backend.catalogKey),
+  );
+
   return (
     <div className="ops max-w-6xl mx-auto space-y-6" data-testid="agents-page">
       <div>
@@ -274,6 +318,15 @@ export default function AgentsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{cards}</div>
+      )}
+
+      {comingSoon.length > 0 && (
+        <section className="space-y-3" aria-labelledby="nvip-more-agents" data-testid="nvip-coming-soon">
+          <h2 id="nvip-more-agents" className="text-lg font-semibold">More NVIP agents</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {comingSoon.map((agent) => <ComingSoonCard key={agent.type} agent={agent} />)}
+          </div>
+        </section>
       )}
     </div>
   );

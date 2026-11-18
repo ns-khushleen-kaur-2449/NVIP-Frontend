@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useTheme as useNextTheme } from 'next-themes';
 
 /**
  * Light / dark theme. The choice is written to <html data-theme="…"> (which
@@ -8,7 +9,25 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
  */
 export const THEME_KEY = 'nvip_theme';
 
-const ThemeContext = createContext(null);
+export const ThemeContext = createContext(null);
+
+/**
+ * Inside the full app (App.js) the theme belongs to next-themes, which the SDR screens use. This gives the NVIP
+ * pages (ThemeToggle, the --nv-* tokens) that same one theme instead of a second, separate switch: it mirrors
+ * next-themes into <html data-theme> and answers useTheme() from it. Render it inside next-themes' provider.
+ */
+export function NextThemesBridge({ children }) {
+  const { resolvedTheme, setTheme } = useNextTheme();
+  const theme = resolvedTheme === 'light' ? 'light' : 'dark';
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme]);
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
 
 function systemTheme() {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
