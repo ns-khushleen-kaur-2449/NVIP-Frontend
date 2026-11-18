@@ -121,6 +121,8 @@ function AppShell() {
   const useSidebar = SIDEBAR_SECTION_PATHS.some(
     (p) => location.pathname === p || location.pathname.startsWith(p + '/')
   );
+  // An agent's setup (/agents/sdr_outbound) is a full-screen editor with its own steps column: no app sidebar or top bar.
+  const fullScreen = /^\/agents\/[^/]+\/?$/.test(location.pathname);
 
   const routes = (
     <Routes>
@@ -169,6 +171,10 @@ function AppShell() {
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
+
+  if (fullScreen) {
+    return <div className="min-h-screen bg-background">{routes}</div>;
+  }
 
   if (useSidebar) {
     return (
