@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import OpsButton from '@/components/ops/OpsButton';
 import ConfirmDialog from '@/components/ops/ConfirmDialog';
@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { ReviewStep, STEP_PANELS, fieldPropsFor, stepForPath, stepsFor } from './steps';
 import StaleDraftDialog from './StaleDraftDialog';
 import VersionHistory from './VersionHistory';
-import { SetupHeader, StepRail } from '@/components/setup/SetupUi';
+import PreviewPanel from './PreviewPanel';
 
 export const AUTOSAVE_MS = 1000;
 const BUILDER_LINK = '/voice_agent?tab=create';
@@ -57,6 +57,7 @@ export function AgentConfigEditor({ agentType, user }) {
   const [instance, setInstance] = useState(null);
   const [draft, setDraft] = useState(null);
   const [payload, setPayload] = useState({});
+  const [savedAt, setSavedAt] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [errors, setErrors] = useState({});
@@ -137,6 +138,7 @@ export function AgentConfigEditor({ agentType, user }) {
     try {
       await updateAgentInstanceDraft(agentType, current.version, payloadRef.current);
       setSaveStatus('saved');
+      setSavedAt(new Date());
       setSaveError(null);
       setErrors({});
       return true;
@@ -299,16 +301,18 @@ export function AgentConfigEditor({ agentType, user }) {
   // ── Render ──
 
   const label = agentTypeLabel(agentType);
-  if (state === 'loading') return <div className="space-y-3"><Skeleton className="h-16" /><SkeletonRows rows={4} label="Loading the agent" /></div>;
-  if (state === 'error') return <ErrorState message={stateMessage} onRetry={load} />;
+  if (state === 'loading') return <Framed><div className="space-y-3"><Skeleton className="h-16" /><SkeletonRows rows={4} label="Loading the agent" /></div></Framed>;
+  if (state === 'error') return <Framed><ErrorState message={stateMessage} onRetry={load} /></Framed>;
   if (state === 'disabled') {
-    return <EmptyState title="Agent configuration isn't enabled for your account" body={stateMessage}
-      action={<Link className="underline" to={BUILDER_LINK}>Use the Assistant builder</Link>} />;
+    return <Framed><EmptyState title="Agent configuration isn't enabled for your account" body={stateMessage}
+      action={<Link className="underline" to={BUILDER_LINK}>Use the Assistant builder</Link>} /></Framed>;
   }
   if (state === 'not_in_plan') {
     return (
-      <EmptyState title={`${label} isn't in your plan`} body={stateMessage}
-        action={canManageBilling(user) ? <Link className="underline" to="/billing">See plans</Link> : 'Ask your Tenant Admin about plans.'} />
+      <Framed>
+        <EmptyState title={`${label} isn't in your plan`} body={stateMessage}
+          action={canManageBilling(user) ? <Link className="underline" to="/billing">See plans</Link> : 'Ask your Tenant Admin about plans.'} />
+      </Framed>
     );
   }
 
@@ -327,66 +331,85 @@ export function AgentConfigEditor({ agentType, user }) {
   };
   const published = instance?.published_version != null;
   const status = editing
-    ? `Draft v${draft.version}${draft.base_version ? ` (from v${draft.base_version})` : ''}`
+    ? `Editing draft ${draft.version}${draft.base_version ? ` (from v${draft.base_version})` : ''}`
     : published ? `Version ${instance.published_version} is live` : 'Not set up yet';
+  const savedTime = savedAt ? savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
   return (
-    <div className="ops mx-auto max-w-7xl space-y-6" data-testid="agent-config">
-      <SetupHeader crumbs={[{ label: 'Agents', to: '/agents' }, { label }]}
-        title={mode === 'wizard' ? `Set up ${label}` : label}
-        aside={(
-          <>
-            <span className="text-sm text-muted-foreground">{status}</span>
-            <SaveIndicator status={saveStatus} error={saveError} />
-            {editing && mode === 'tabs' && (
-              <OpsButton variant="primary" busy={busy === 'publish'} onClick={() => publish()}>Publish</OpsButton>
-            )}
-          </>
-        )} />
+    // Full screen (App.js shows no app sidebar here): steps and versions | the step | what the agent will say.
+    <div className="ops min-h-screen lg:grid lg:grid-cols-[270px_minmax(0,1fr)_380px]" data-testid="agent-config">
+      <aside className="border-b border-border px-5 py-6 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
+        <Link to="/agents" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Agents
+        </Link>
+        <h1 id="setup-title" tabIndex={-1} className="mt-5 text-xl font-bold tracking-tight focus:outline-none">
+          {mode === 'wizard' ? `Set up ${label}` : label}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {status}{editing && savedTime && saveStatus === 'saved' ? ` · autosaved ${savedTime}` : ''}
+        </p>
+        <div className="mt-1 min-h-[1rem]">{saveStatus !== 'saved' && <SaveIndicator status={saveStatus} error={saveError} />}</div>
+        {editing && mode === 'tabs' && (
+          <OpsButton variant="primary" size="sm" className="mt-3" busy={busy === 'publish'} onClick={() => publish()}>Publish</OpsButton>
+        )}
 
-      {publishedNote && <div role="status" className="ops-tone ops-tone-good rounded-2xl px-4 py-3 text-sm font-semibold">{publishedNote}</div>}
-      {rebaseNote && (
-        <div role="status" className="ops-tone ops-tone-info rounded-2xl px-4 py-3 text-sm" data-testid="rebase-note">
-          Your draft now starts from version {rebaseNote.version}.{' '}
-          {rebaseNote.applied.length + rebaseNote.conflicts.length} of your edits were re-applied
-          {rebaseNote.conflicts.length ? `; ${rebaseNote.conflicts.length} were also changed in that version and are highlighted` : ''}
-          {rebaseNote.dropped.length ? `; ${rebaseNote.dropped.length} no longer exist (${rebaseNote.dropped.join(', ')})` : ''}.
-        </div>
-      )}
-      {!editing && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4">
-          <p className="text-sm">
-            {published
-              ? 'You are viewing the live version. Editing makes a draft; it goes live only when you publish it.'
-              : 'Start setup creates a draft. Nothing reaches calls until you publish.'}
-          </p>
-          <OpsButton variant="primary" busy={busy === 'start'} onClick={startEditing}>
-            {published ? 'Edit configuration' : 'Start setup'}
-          </OpsButton>
-        </div>
-      )}
+        <nav aria-label={mode === 'wizard' ? 'Setup steps' : 'Configuration'} className="mt-5">
+          <ol className="space-y-0.5">
+            {steps.map((s, i) => {
+              const active = s.id === step.id;
+              return (
+                <li key={s.id}>
+                  <button type="button" onClick={() => go(s.id)} aria-current={active ? 'step' : undefined}
+                    className={cn('flex w-full items-center rounded-lg px-3 py-2 text-left text-[0.95rem] transition-colors',
+                      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                      active ? 'bg-primary/10 font-semibold text-primary' : 'text-foreground/85 hover:bg-muted')}>
+                    <span aria-hidden="true">{i + 1} ·&nbsp;</span>{s.label}
+                    {visited.has(s.id) && !active && <Check className="ml-auto h-3.5 w-3.5 text-emerald-500" aria-label="done" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <StepRail steps={steps} current={step.id} done={visited} onSelect={go}
-            label={mode === 'wizard' ? 'Setup steps' : 'Configuration'} />
-          <details className="rounded-2xl border border-border bg-card p-4" data-testid="version-history">
-            <summary className="cursor-pointer text-sm font-semibold">Version history</summary>
-            <div className="mt-3 space-y-2">
-              <VersionHistory versions={instance?.versions || []} user={user} busy={Boolean(busy)}
-                canRestore={!editing} onView={view} onRestore={restore} />
-              {editing && instance?.versions?.length > 1 && (
-                <p className="text-xs text-muted-foreground">Publish or discard the open draft to restore another version.</p>
-              )}
+        <div className="mt-6 border-t border-border pt-5" data-testid="version-history">
+          <h2 className="text-sm font-semibold text-muted-foreground">Versions</h2>
+          <VersionHistory versions={instance?.versions || []} user={user} busy={Boolean(busy)}
+            canRestore={!editing} editingVersion={draft?.version} onView={view} onRestore={restore} />
+          {editing && instance?.versions?.length > 1 && (
+            <p className="mt-2 text-xs text-muted-foreground">Publish or discard the open draft to restore another version.</p>
+          )}
+        </div>
+      </aside>
+
+      <main className="min-w-0 px-5 py-8 sm:px-10">
+        <div className="mx-auto max-w-3xl space-y-5">
+          {publishedNote && <div role="status" className="ops-tone ops-tone-good rounded-2xl px-4 py-3 text-sm font-semibold">{publishedNote}</div>}
+          {rebaseNote && (
+            <div role="status" className="ops-tone ops-tone-info rounded-2xl px-4 py-3 text-sm" data-testid="rebase-note">
+              Your draft now starts from version {rebaseNote.version}.{' '}
+              {rebaseNote.applied.length + rebaseNote.conflicts.length} of your edits were re-applied
+              {rebaseNote.conflicts.length ? `; ${rebaseNote.conflicts.length} were also changed in that version and are highlighted` : ''}
+              {rebaseNote.dropped.length ? `; ${rebaseNote.dropped.length} no longer exist (${rebaseNote.dropped.join(', ')})` : ''}.
             </div>
-          </details>
-        </div>
+          )}
+          {!editing && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4">
+              <p className="text-sm">
+                {published
+                  ? 'You are viewing the live version. Editing makes a draft; it goes live only when you publish it.'
+                  : 'Start setup creates a draft. Nothing reaches calls until you publish.'}
+              </p>
+              <OpsButton variant="primary" busy={busy === 'start'} onClick={startEditing}>
+                {published ? 'Edit configuration' : 'Start setup'}
+              </OpsButton>
+            </div>
+          )}
 
-        <div className="min-w-0 space-y-5">
           <div aria-label={step.label}>
             <StepPanel {...panelProps} />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-5">
             <div className="flex gap-2">
               {index > 0 && <OpsButton variant="outline" onClick={() => go(steps[index - 1].id)}>Back</OpsButton>}
               {editing && <OpsButton variant="outline" onClick={() => save().then((ok) => ok && toast.success('Draft saved'))}>Save draft</OpsButton>}
@@ -399,7 +422,13 @@ export function AgentConfigEditor({ agentType, user }) {
             )}
           </div>
         </div>
-      </div>
+      </main>
+
+      <aside className="border-t border-border px-5 py-8 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-l lg:border-t-0"
+        aria-label="Preview">
+        <PreviewPanel agentType={agentType} payload={payload} context={context}
+          versionLabel={editing ? `Draft ${draft.version}` : published ? `Version ${instance.published_version}` : null} />
+      </aside>
 
       <StaleDraftDialog stale={stale} draftVersion={draft?.version} canForce={canForcePublish(user)}
         onRebase={rebase} onForce={() => publish({ force: true })} onCancel={() => setStale(null)} />
@@ -422,6 +451,18 @@ export function AgentConfigEditor({ agentType, user }) {
   );
 }
 
+/** A page that is not the editor (a refusal, loading): centred, with the way back (there is no app sidebar here). */
+function Framed({ children }) {
+  return (
+    <div className="ops mx-auto max-w-3xl px-5 py-8">
+      <Link to="/agents" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Agents
+      </Link>
+      <div className="mt-6">{children}</div>
+    </div>
+  );
+}
+
 /** /agents/:agentType — gated by agent type, the agent_instances feature and the role. */
 export default function AgentConfigPage() {
   const { agentType: raw } = useParams();
@@ -439,7 +480,7 @@ export default function AgentConfigPage() {
   } else if (!canConfigureAgents(user)) {
     body = <EmptyState title="Managers and Tenant Admins set up agents" action={<Link className="underline" to="/agents">Back to agents</Link>} />;
   } else {
-    body = <AgentConfigEditor key={agentType} agentType={agentType} user={user} />;
+    return <AgentConfigEditor key={agentType} agentType={agentType} user={user} />;
   }
-  return <div className="mx-auto max-w-7xl">{body}</div>;
+  return <Framed>{body}</Framed>;
 }

@@ -571,6 +571,30 @@
   --nv-chrome-border: var(--nv-line);
 }
 
+/* Public site (marketing pages under PublicLayout): in dark mode a warm near-black instead of the workspace's slate,
+   as in the NVIP landing design. Scoped to .nv-public, so the signed-in app keeps its own dark theme. */
+:root[data-theme='dark'] .nv-public {
+  --nv-bg:          #0C0A09;
+  --nv-surface:     #15110F;
+  --nv-surface-2:   #110E0C;  /* alternate section band */
+  --nv-feature-bg:  #15110F;
+  --nv-orange:      #F0883E;
+  --nv-orange-2:    #F49A57;
+  --nv-orange-ink:  #F0883E;
+  --nv-orange-soft: #2A1B11;
+  --nv-ink:         #F3EEE7;
+  --nv-muted:       #B5ACA2;
+  --nv-line:        #2A231E;
+  --nv-success:     #86D9AE;
+  --nv-success-bg:  #13281E;
+  --nv-neutral-bg:  #231D19;
+  --nv-chrome-bg:     #0C0A09;
+  --nv-chrome-fg:     #F3EEE7;
+  --nv-chrome-muted:  #CFC6BC;
+  --nv-chrome-hover:  #1C1714;
+  --nv-chrome-border: #221C18;
+}
+
 body {
   margin: 0;
   color: var(--nv-ink);

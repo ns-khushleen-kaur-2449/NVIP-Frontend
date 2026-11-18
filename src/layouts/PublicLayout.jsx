@@ -1,18 +1,37 @@
 import { useContext, useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
-import { Menu, X, Phone } from 'lucide-react';
+import { Link, Outlet } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Logo from '../components/Logo';
 import ThemeToggle from '../components/ThemeToggle';
-import { ButtonLink } from '../components/primitives';
 import { AuthContext } from '@/lib/AuthContext';
+import { NetsmartzLogo } from '@/components/shared/BrandLockup';
 import { homePath } from '@/lib/rbac';
 
+// Sections of the landing page (pages/public/AgentCatalog.jsx); from another public page they open the home page there.
 const LINKS = [
-  { to: '/', label: 'Agents', end: true },
-  { to: '/pricing', label: 'Pricing' },
-  { to: '/how-it-works', label: 'How it works' },
+  { hash: '#agents', label: 'Agents' },
+  { hash: '#how-it-works', label: 'How it works' },
+  { hash: '#trust', label: 'Trust & security' },
 ];
+
+/** netsmartz | NVIP, as in the landing design. */
+export function PublicLogo({ className }) {
+  return (
+    <Link to="/" className={cn('flex items-center gap-2.5', className)} aria-label="NVIP by netsmartz, home">
+      {/* The real Netsmartz logo (light and dark versions follow the theme), as on the sign-in page. */}
+      <NetsmartzLogo className="h-8 sm:h-9" />
+      <span className="h-6 w-px bg-[var(--nv-chrome-border)]" aria-hidden />
+      <span className="mk-display text-lg font-semibold text-[var(--nv-orange)]">NVIP</span>
+    </Link>
+  );
+}
+
+export const pillButton = (variant = 'primary') => cn(
+  'mk-display inline-flex items-center justify-center rounded-full px-5 h-11 text-[0.95rem] font-semibold transition-colors',
+  variant === 'primary' && 'bg-[var(--nv-orange)] text-[#1A0E05] hover:bg-[var(--nv-orange-2)]',
+  variant === 'outline' && 'border border-[var(--nv-line)] text-[var(--nv-ink)] hover:border-[var(--nv-orange)]',
+  variant === 'dark' && 'bg-[#1A120C] text-white hover:bg-black',
+);
 
 export default function PublicLayout() {
   const [open, setOpen] = useState(false);
@@ -21,28 +40,23 @@ export default function PublicLayout() {
   const auth = useContext(AuthContext);
   const signedIn = Boolean(auth?.user || auth?.token);
   const workspace = homePath(auth?.user);
-
-  const linkClass = ({ isActive }) =>
-    cn(
-      'font-medium transition-colors',
-      isActive ? 'text-[var(--nv-chrome-fg)]' : 'text-[var(--nv-chrome-muted)] hover:text-[var(--nv-chrome-fg)]',
-    );
-  const quietLink = 'font-semibold text-[var(--nv-chrome-muted)] hover:text-[var(--nv-chrome-fg)]';
+  const navLink = 'mk-display font-medium text-[var(--nv-chrome-muted)] transition-colors hover:text-[var(--nv-chrome-fg)]';
+  const account = signedIn
+    ? <Link to={workspace} className={navLink}>Go to workspace</Link>
+    : <Link to="/login" className={navLink}>Sign in</Link>;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-30 border-b border-[var(--nv-chrome-border)] bg-[var(--nv-chrome-bg)]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center gap-8">
-          <Logo />
-          <nav className="hidden md:flex items-center gap-7" aria-label="Main">
-            {LINKS.map((l) => <NavLink key={l.to} to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>)}
+    <div className="nv-public min-h-screen flex flex-col bg-[var(--nv-bg)] text-[var(--nv-ink)]">
+      <header className="sticky top-0 z-30 border-b border-[var(--nv-chrome-border)] bg-[var(--nv-chrome-bg)]/95 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 h-[5.25rem] flex items-center gap-8">
+          <PublicLogo />
+          <nav className="hidden md:flex flex-1 items-center justify-center gap-7" aria-label="Main">
+            {LINKS.map((l) => <Link key={l.hash} to={{ pathname: '/', hash: l.hash }} className={navLink}>{l.label}</Link>)}
           </nav>
-          <div className="ml-auto hidden md:flex items-center gap-5">
+          <div className="ml-auto hidden md:flex items-center gap-4">
             <ThemeToggle />
-            {signedIn
-              ? <Link to={workspace} className={quietLink}>Go to workspace</Link>
-              : <Link to="/login" className={quietLink}>Sign in</Link>}
-            <ButtonLink to="/request-demo"><Phone className="h-4 w-4" aria-hidden /> Book a demo</ButtonLink>
+            {account}
+            <Link to="/request-demo" className={pillButton('primary')}>Book a demo</Link>
           </div>
           <div className="ml-auto flex items-center gap-2 md:hidden">
             <ThemeToggle />
@@ -71,12 +85,16 @@ export default function PublicLayout() {
           <div className="overflow-hidden">
             <nav className="border-t border-[var(--nv-chrome-border)] px-4 py-4 flex flex-col gap-4" aria-label="Main">
               {LINKS.map((l) => (
-                <NavLink key={l.to} to={l.to} end={l.end} className={linkClass} onClick={() => setOpen(false)}>{l.label}</NavLink>
+                <Link key={l.hash} to={{ pathname: '/', hash: l.hash }} className={navLink} onClick={() => setOpen(false)}>
+                  {l.label}
+                </Link>
               ))}
-              <Link to={signedIn ? workspace : '/login'} className={quietLink} onClick={() => setOpen(false)}>
+              <Link to={signedIn ? workspace : '/login'} className={navLink} onClick={() => setOpen(false)}>
                 {signedIn ? 'Go to workspace' : 'Sign in'}
               </Link>
-              <ButtonLink to="/request-demo" onClick={() => setOpen(false)}>Book a demo</ButtonLink>
+              <Link to="/request-demo" className={cn(pillButton('primary'), 'self-start')} onClick={() => setOpen(false)}>
+                Book a demo
+              </Link>
             </nav>
           </div>
         </div>
@@ -87,9 +105,11 @@ export default function PublicLayout() {
       </main>
 
       <footer className="border-t border-[var(--nv-line)] py-8 text-sm text-[var(--nv-muted)]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row gap-2 justify-between">
-          <span>© {new Date().getFullYear()} Netsmartz · Voice Intelligence Platform</span>
-          <span>Built on Twilio · Vapi · ElevenLabs · Nylas</span>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row gap-3 justify-between">
+          <span>NVIP is built by Netsmartz · since 1999</span>
+          <nav className="flex gap-5" aria-label="Footer">
+            <Link to="/request-quote" className="text-[var(--nv-orange)] underline underline-offset-4 hover:no-underline">Contact</Link>
+          </nav>
         </div>
       </footer>
     </div>

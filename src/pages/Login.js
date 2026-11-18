@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import HeroWave3D from '@/components/marketing/HeroWave3D';
 import ThemeToggle from '@/components/shared/ThemeToggle';
-import { NetsmartzLogo, SmartSDRWordmark } from '@/components/shared/BrandLockup';
+import { NetsmartzLogo } from '@/components/shared/BrandLockup';
 import { cn } from '@/lib/utils';
 import { homePath } from '@/lib/rbac';
 import { CodeInput, codeError } from '@/components/auth/MfaParts';
@@ -29,9 +29,9 @@ const writeRememberedEmail = (email) => {
 };
 
 const FEATURES = [
-  { icon: AudioLines, t: 'Intelligent Voice Agents', d: 'Automate and scale your conversations.' },
-  { icon: Activity, t: 'Real-time Call Insights', d: 'Analyze, qualify and score every call.' },
-  { icon: ShieldCheck, t: 'Secure & Reliable', d: 'Built for enterprise-grade security.' },
+  { icon: AudioLines, t: 'Agents set up once', d: 'Every campaign and number uses the same setup' },
+  { icon: Activity, t: 'Results on every call', d: 'Transcript, outcome and a lead score you can override' },
+  { icon: ShieldCheck, t: 'Your data stays yours', d: 'Each organisation is isolated at the database level' },
 ];
 
 /* Faint connected-node network running down the brand panel's inner edge, so it
@@ -174,13 +174,15 @@ export default function LoginPage() {
           <div className="flex max-w-full items-center self-start">
             <NetsmartzLogo className="h-12 sm:h-14 lg:h-[4.5rem] xl:h-20" />
           </div>
-          <SmartSDRWordmark className="mt-5 text-[2.5rem] text-[var(--ink)] sm:text-[2.9rem] lg:mt-7 lg:text-[3.4rem] xl:text-[3.9rem]" />
+          <span className="mk-display mt-5 whitespace-nowrap text-[2.5rem] font-semibold leading-none tracking-tight text-[var(--ink)] sm:text-[2.9rem] lg:mt-7 lg:text-[3.4rem] xl:text-[3.9rem]">
+            NV<span className="text-[var(--pine)]">IP</span>
+          </span>
 
           <p className="mk-display mt-4 text-[1.15rem] font-medium leading-snug text-[var(--ink)]/90 lg:mt-6 lg:text-[1.4rem]">
-            Your AI-Powered Voice Agent Workspace
+            Netsmartz Voice Intelligence Platform
           </p>
           <p className="mt-3 hidden max-w-[32rem] text-[0.98rem] leading-relaxed text-[var(--mist)] lg:block">
-            Turn every conversation into insights. SmartSDR helps real estate teams qualify, analyze, and score calls using AI.
+            Your outbound and inbound voice agents, campaigns and call results in one workspace.
           </p>
 
           <ul className="mt-10 hidden max-w-[30rem] space-y-5 lg:block">
@@ -198,6 +200,7 @@ export default function LoginPage() {
               </motion.li>
             ))}
           </ul>
+          <p className="mt-12 hidden text-xs text-[var(--mist)] lg:block">Netsmartz · since 1999</p>
         </motion.div>
       </section>
 
@@ -206,7 +209,7 @@ export default function LoginPage() {
         <div className="mx-auto flex w-full max-w-[26rem] items-center justify-between lg:max-w-none">
           <Link to="/" className="group flex w-fit items-center gap-2 rounded-md text-sm text-[var(--mist)] transition-colors hover:text-[var(--pine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pine)]">
             <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-            Back to Home
+            Back to home
           </Link>
           <ThemeToggle />
         </div>
@@ -253,12 +256,12 @@ export default function LoginPage() {
                 </div>
               </form>
             ) : (<>
-            <h1 className="mk-display text-[1.9rem] font-semibold leading-tight text-[var(--ink)]">Welcome back</h1>
-            <p className="mt-1.5 text-sm text-[var(--mist)]">Sign in to your Voice Agent workspace.</p>
+            <h1 className="mk-display text-[1.9rem] font-semibold leading-tight text-[var(--ink)]">Sign in to NVIP</h1>
+            <p className="mt-1.5 text-sm text-[var(--mist)]">Use the email your admin invited.</p>
 
             <form onSubmit={handleSubmit} className="mt-7 space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="login-email" className="block text-sm font-semibold text-[var(--ink)]">Email address</label>
+                <label htmlFor="login-email" className="block text-sm font-semibold text-[var(--ink)]">Email</label>
                 <div className="relative">
                   <input id="login-email" type="email" autoComplete="email" placeholder="you@company.com" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -271,7 +274,7 @@ export default function LoginPage() {
                 <label htmlFor="login-password" className="block text-sm font-semibold text-[var(--ink)]">Password</label>
                 <div className="relative">
                   <input id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
-                    placeholder="Enter your password" value={password}
+                    placeholder="Your password" value={password}
                     onChange={e => setPassword(e.target.value)}
                     className={cn(fieldClass, 'pr-12', 'no-native-reveal')} data-testid="login-password-input" required />
                   <LockKeyhole className={fieldIconClass} aria-hidden="true" />
@@ -287,7 +290,7 @@ export default function LoginPage() {
                 <label className="flex cursor-pointer select-none items-center gap-2 text-[var(--mist)] transition-colors hover:text-[var(--ink)]">
                   <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
                     className="h-4 w-4 cursor-pointer rounded accent-[var(--pine)]" data-testid="login-remember-checkbox" />
-                  Remember me
+                  Keep me signed in
                 </label>
                 <button type="button" onClick={() => setShowResetHelp((v) => !v)} aria-expanded={showResetHelp}
                   aria-controls="login-reset-help"
@@ -320,9 +323,15 @@ export default function LoginPage() {
                     </svg>
                     Signing in...
                   </span>
-                ) : 'Sign In'}
+                ) : 'Sign in'}
               </button>
             </form>
+            <p className="mt-6 text-center text-sm text-[var(--mist)]">
+              New to NVIP?{' '}
+              <Link to="/request-demo" className="font-semibold text-[var(--pine)] underline underline-offset-4 hover:text-[var(--pine-2)]">
+                Book a demo
+              </Link>
+            </p>
             </>)}
           </motion.div>
         </div>

@@ -149,9 +149,13 @@ describe('publishing', () => {
 
   test('version history: gaps in the numbers are fine; author names come from the API', async () => {
     renderEditor(admin);
-    expect(await screen.findByTestId('version-5')).toHaveTextContent('Draft');
-    expect(screen.getByTestId('version-4')).toHaveTextContent('Published');
+    // The compact list: the open draft is "Editing", the published version "Live"; while a draft is open an older
+    // version cannot be restored, so it shows as superseded.
+    expect(await screen.findByTestId('version-5')).toHaveTextContent('Draft 5');
+    expect(screen.getByTestId('version-5')).toHaveTextContent('Editing');
+    expect(screen.getByTestId('version-4')).toHaveTextContent('Live');
     expect(screen.getByTestId('version-2')).toHaveTextContent('Superseded');
+    expect(screen.queryByRole('button', { name: /Restore/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId('version-3')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('version-4')).toHaveTextContent('Tara Admin'));
   });
@@ -198,7 +202,7 @@ describe('feature gating', () => {
     renderEditor(admin);
     await userEvent.click(await screen.findByRole('button', { name: 'Edit configuration' }));
     expect(await screen.findByRole('button', { name: 'Discard draft' })).toBeInTheDocument();
-    expect(screen.getByText('Draft v5 (from v2)')).toBeInTheDocument();
+    expect(screen.getByText(/Editing draft 5 \(from v2\)/)).toBeInTheDocument();
   });
 });
 
@@ -228,5 +232,17 @@ describe('business details (step 1)', () => {
     expect(await screen.findByText('Your Tenant Admin edits these details.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save business details' })).not.toBeInTheDocument();
     expect(await screen.findByTestId('own-numbers')).toHaveTextContent('number not synced yet');
+  });
+});
+
+describe('full-screen layout', () => {
+  test('steps, versions and the preview of what the agent will say', async () => {
+    renderEditor(admin);
+    expect(await screen.findByRole('link', { name: /Agents/ })).toHaveAttribute('href', '/agents');
+    expect(screen.getByRole('button', { name: 'Business details' })).toBeInTheDocument(); // "1 · " is not read out
+    const preview = screen.getByTestId('agent-preview');
+    expect(preview).toHaveTextContent('What the agent will say');
+    expect(preview).toHaveTextContent('Draft 5');
+    expect(preview).toHaveTextContent('Sent with the call');
   });
 });
