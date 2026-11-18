@@ -13,9 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAuth } from '@/lib/AuthContext';
 import ThemeToggle from '@/components/shared/ThemeToggle';
 import BrandLockup, { NetsmartzMark } from '@/components/shared/BrandLockup';
-import {
-  canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, featureOn, voiceTabEnabled,
-} from '@/lib/rbac';
+import { canManageBilling, canUseAdmin, canViewAssistants, canViewOperations, featureEnabled, featureOn, isSharedMode, voiceTabEnabled } from '@/lib/rbac';
 
 const APP_NAV = [
   { path: '/dashboard',   label: 'Dashboard',    icon: LayoutDashboard },
@@ -131,7 +129,7 @@ export function Sidebar() {
     { path: '/catalog', label: 'Product catalog', icon: Package, requires: () => featureEnabled(user, 'product_catalog') },
     // While shared assistants are off, calls still use the Assistant builder's configuration.
     { path: '/voice_agent?tab=create', label: 'Assistant builder', icon: Mic,
-      requires: () => canViewAssistants(user) && !featureOn(user, 'shared_assistants') },
+      requires: () => canViewAssistants(user) && !isSharedMode(user) },
     { path: '/call-logs', label: 'Call logs', icon: Phone },
     { path: '/single-call', label: 'Single call', icon: PhoneCall },
     { path: '/inbox', label: 'Inbox', icon: InboxIcon },

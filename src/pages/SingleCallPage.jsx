@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
 import { getAgentInstance, getAssistants, getProspects, getVoiceCampaigns, initiateSmartsdrCall, listAvailableAgentTypes } from '@/lib/api';
-import { canConfigureAgents, canCreateCampaigns, featureOn } from '@/lib/rbac';
+import { canConfigureAgents, canCreateCampaigns, isSharedMode } from '@/lib/rbac';
 import { REFUSALS } from '@/lib/campaignRefusals';
 
 /**
@@ -15,7 +15,7 @@ import { REFUSALS } from '@/lib/campaignRefusals';
  */
 export default function SingleCallPage() {
   const { user } = useAuth();
-  const sharedMode = featureOn(user, 'shared_assistants');
+  const sharedMode = isSharedMode(user);
   const [assistants, setAssistants] = useState([]);
   // shared mode: null while checking, { ok, reason } after.
   const [readiness, setReadiness] = useState(null);

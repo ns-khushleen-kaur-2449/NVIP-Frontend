@@ -81,6 +81,12 @@ describe('account readiness (Agents-page banner)', () => {
     expect(issues.map((i) => i.code)).toEqual(['not_published', 'no_caller_id', 'shared_assistants_off']);
   });
 
+  test('a missing platform signing key paused a campaign: shown on the banner (F-03)', () => {
+    const issues = accountReadiness({ ...base,
+      campaigns: [{ status: 'paused', paused_by_kind: 'system', pause_reason_code: 'call_context_key_not_set' }] });
+    expect(issues.map((i) => i.code)).toEqual(['call_context_key_not_set']);
+  });
+
   test('the platform caller ID covers a tenant with no number; shared assistants off: nothing to check', () => {
     expect(accountReadiness({ ...base, numbers: [], platformCallerId: true })).toEqual([]);
     expect(accountReadiness({ ...base, sharedMode: false, published: false, numbers: [] })).toEqual([]);

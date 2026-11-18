@@ -6,6 +6,11 @@ import { creatableRoles as creatableRolesOf, hasPermission } from '@/lib/rbac';
 
 const AuthContext = createContext(null);
 
+/** How often a signed-in session re-reads /api/auth/me (feature switches, role, permissions). */
+export const SESSION_REFRESH_MS = 5 * 60 * 1000;
+/** A window focus re-reads it too, but not more often than this. */
+export const FOCUS_REFRESH_MIN_MS = 15 * 1000;
+
 const TOKEN_KEY = 'estateops_token';
 const USER_KEY = 'estateops_user';
 
@@ -52,7 +57,8 @@ export function AuthProvider({ children }) {
   const [requiredAction, setRequiredAction] = useState(null);
 
   const storeUser = useCallback((next) => {
-    setUser(next);
+    // An unchanged answer keeps the same object, so a periodic re-read doesn't re-run every effect keyed on `user`.
+    setUser((previous) => (previous && next && JSON.stringify(previous) === JSON.stringify(next) ? previous : next));
     if (next) localStorage.setItem(USER_KEY, JSON.stringify(next));
     else localStorage.removeItem(USER_KEY);
     setRequiredAction(actionFor(next));
@@ -90,6 +96,30 @@ export function AuthProvider({ children }) {
     }
     refreshMe().finally(() => setLoading(false));
   }, [refreshMe]);
+
+  // Feature switches a Super Admin changes reach a signed-in user without a fresh sign-in: /api/auth/me is read again
+  // when the window regains focus (at most every FOCUS_REFRESH_MIN_MS) and every SESSION_REFRESH_MS while signed in.
+  // A change shows on focus at once, otherwise within SESSION_REFRESH_MS; this is only the screen, the backend enforces
+  // every switch on each request regardless. A failed read keeps the current user (refreshMe signs out only on 401).
+  useEffect(() => {
+    if (!token) return undefined;
+    let last = Date.now();
+    const refresh = (force) => {
+      if (document.visibilityState === 'hidden') return;
+      if (!force && Date.now() - last < FOCUS_REFRESH_MIN_MS) return;
+      last = Date.now();
+      refreshMe();
+    };
+    const onFocus = () => refresh(false);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    const timer = setInterval(() => refresh(true), SESSION_REFRESH_MS);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+      clearInterval(timer);
+    };
+  }, [token, refreshMe]);
 
   // Any request the server refuses with a required action (see api.js) switches the screen.
   useEffect(() => {
