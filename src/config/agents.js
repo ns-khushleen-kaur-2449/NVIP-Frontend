@@ -16,7 +16,7 @@
  *
  * Prices are placeholders (doc §13: final amounts need commercial sign-off).
  */
-import { PhoneCall, Megaphone, MessageSquare, UserSearch, House } from 'lucide-react';
+import { PhoneCall, Megaphone, MessageSquare, UserSearch, House, LayoutGrid, TrendingUp, Headset, Building2 } from 'lucide-react';
 
 export const AGENT_TYPES = {
   RECEPTIONIST: 'receptionist',
@@ -27,11 +27,11 @@ export const AGENT_TYPES = {
 };
 
 export const CATEGORIES = [
-  { id: 'all', label: 'All agents' },
-  { id: 'sales', label: 'Sales' },
-  { id: 'recruitment', label: 'Recruitment' },
-  { id: 'support', label: 'Support' },
-  { id: 'real_estate', label: 'Real Estate' },
+  { id: 'all', label: 'All agents', icon: LayoutGrid },
+  { id: 'sales', label: 'Sales', icon: TrendingUp },
+  { id: 'recruitment', label: 'Recruitment', icon: UserSearch },
+  { id: 'support', label: 'Support', icon: Headset },
+  { id: 'real_estate', label: 'Real Estate', icon: Building2 },
 ];
 
 export const AGENTS = [

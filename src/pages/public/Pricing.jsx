@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { AGENTS, TIERS } from '../../config/agents';
 import { AgentTile, ButtonLink, Panel } from '../../components/primitives';
@@ -8,6 +10,12 @@ import { AgentTile, ButtonLink, Panel } from '../../components/primitives';
  * once the commercial team signs them off.
  */
 export default function Pricing() {
+  // Links like /pricing#inbound-voice-sdr (landing page) land on that agent's tiers.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
+  }, [hash]);
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
       <div className="text-center max-w-2xl mx-auto">
