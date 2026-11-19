@@ -9,10 +9,7 @@ import { useAuth } from '@/lib/AuthContext';
 import HeroWave3D from '@/components/marketing/HeroWave3D';
 import ThemeToggle from '@/components/shared/ThemeToggle';
 import { NetsmartzLogo } from '@/components/shared/BrandLockup';
-<<<<<<< Updated upstream
-=======
 import OrbStage from '@/components/landing/OrbStage';
->>>>>>> Stashed changes
 import { cn } from '@/lib/utils';
 import { homePath } from '@/lib/rbac';
 import { CodeInput, codeError } from '@/components/auth/MfaParts';
@@ -33,15 +30,9 @@ const writeRememberedEmail = (email) => {
 };
 
 const FEATURES = [
-<<<<<<< Updated upstream
-  { icon: AudioLines, t: 'Agents set up once', d: 'Every campaign and number uses the same setup' },
-  { icon: Activity, t: 'Results on every call', d: 'Transcript, outcome and a lead score you can override' },
-  { icon: ShieldCheck, t: 'Your data stays yours', d: 'Each organisation is isolated at the database level' },
-=======
   { icon: AudioLines, t: 'Intelligent Voice Agents', d: 'Automate and scale your conversations.' },
   { icon: Activity, t: 'Real-time Call Insights', d: 'Analyze, qualify and score every call.' },
   { icon: ShieldCheck, t: 'Secure & Reliable', d: 'Enterprise-grade security and compliance.' },
->>>>>>> Stashed changes
 ];
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
@@ -154,64 +145,12 @@ export default function LoginPage() {
         <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(to_top,var(--l-bg),transparent)] opacity-60" />
       </div>
 
-<<<<<<< Updated upstream
-      {/* ── Brand panel: follows the theme, sits above the form on small screens ── */}
-      <section className="relative text-[var(--ink)] lg:min-h-screen">
-        <NeuralNetwork animate={!reducedMotion}
-          className="pointer-events-none absolute right-0 top-1/2 -z-10 hidden w-[220px] -translate-y-1/2 opacity-80 lg:block xl:w-[260px] [mask-image:linear-gradient(to_left,black_35%,transparent_95%)]" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative mx-auto flex max-w-[34rem] flex-col px-6 pb-10 pt-8 sm:px-10 sm:pt-10 lg:mx-0 lg:min-h-screen lg:max-w-none lg:justify-center lg:px-16 lg:py-14 xl:px-24">
-          {/* The logo gets its own box: as a direct child of this flex column it
-              would be stretched to the column's full width. */}
-          <div className="flex max-w-full items-center self-start">
-            <NetsmartzLogo className="h-12 sm:h-14 lg:h-[4.5rem] xl:h-20" />
-          </div>
-          <span className="mk-display mt-5 whitespace-nowrap text-[2.5rem] font-semibold leading-none tracking-tight text-[var(--ink)] sm:text-[2.9rem] lg:mt-7 lg:text-[3.4rem] xl:text-[3.9rem]">
-            NV<span className="text-[var(--pine)]">IP</span>
-          </span>
-
-          <p className="mk-display mt-4 text-[1.15rem] font-medium leading-snug text-[var(--ink)]/90 lg:mt-6 lg:text-[1.4rem]">
-            Netsmartz Voice Intelligence Platform
-          </p>
-          <p className="mt-3 hidden max-w-[32rem] text-[0.98rem] leading-relaxed text-[var(--mist)] lg:block">
-            Your outbound and inbound voice agents, campaigns and call results in one workspace.
-          </p>
-
-          <ul className="mt-10 hidden max-w-[30rem] space-y-5 lg:block">
-            {FEATURES.map((f, i) => (
-              <motion.li key={f.t} className="flex items-start gap-4"
-                initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.25 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(248,114,23,0.4)] bg-white/70 text-[var(--pine)] dark:bg-[rgba(248,114,23,0.07)]">
-                  <f.icon className="h-5 w-5" strokeWidth={1.75} />
-                </span>
-                <span className="pt-0.5">
-                  <span className="block text-[0.98rem] font-semibold text-[var(--ink)]">{f.t}</span>
-                  <span className="mt-0.5 block text-sm text-[var(--mist)]">{f.d}</span>
-                </span>
-              </motion.li>
-            ))}
-          </ul>
-          <p className="mt-12 hidden text-xs text-[var(--mist)] lg:block">Netsmartz · since 1999</p>
-        </motion.div>
-      </section>
-
-      {/* ── Sign-in panel: follows the theme ── */}
-      <section className="relative flex flex-1 flex-col px-5 py-8 sm:px-10 lg:min-h-screen lg:pl-0 lg:pr-12 lg:py-10">
-        <div className="mx-auto flex w-full max-w-[26rem] items-center justify-between lg:max-w-none">
-          <Link to="/" className="group flex w-fit items-center gap-2 rounded-md text-sm text-[var(--mist)] transition-colors hover:text-[var(--pine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pine)]">
-            <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-            Back to home
-=======
       {/* ── Top bar ── */}
       <header className="relative z-10 mx-auto flex w-full max-w-[90rem] items-center justify-end gap-4 px-5 pt-5 sm:px-8 sm:pt-7 lg:px-12">
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <Link to="/" className="group flex items-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium text-[var(--l-muted)] transition-colors hover:text-[var(--l-ink)]">
             <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" aria-hidden="true" />
             Back to Home
->>>>>>> Stashed changes
           </Link>
           <ThemeToggle className="h-10 w-10 border-[var(--l-field-line)] text-[var(--l-muted)] hover:text-[var(--l-link)]" />
         </div>
@@ -302,21 +241,12 @@ export default function LoginPage() {
                 </div>
               </form>
             ) : (<>
-<<<<<<< Updated upstream
-            <h1 className="mk-display text-[1.9rem] font-semibold leading-tight text-[var(--ink)]">Sign in to NVIP</h1>
-            <p className="mt-1.5 text-sm text-[var(--mist)]">Use the email your admin invited.</p>
-
-            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-              <div className="space-y-1.5">
-                <label htmlFor="login-email" className="block text-sm font-semibold text-[var(--ink)]">Email</label>
-=======
             <h1 className="text-[1.9rem] font-bold leading-tight tracking-[-0.025em] sm:text-[2.1rem]">Welcome to NVIP</h1>
             <p className="mt-2 text-[0.98rem] text-[var(--l-muted)]">Sign in to your AI Voice Agent workspace.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <label htmlFor="login-email" className="block text-sm font-semibold">Email address</label>
->>>>>>> Stashed changes
                 <div className="relative">
                   <input id="login-email" type="email" autoComplete="email" placeholder="Enter your email" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -329,7 +259,7 @@ export default function LoginPage() {
                 <label htmlFor="login-password" className="block text-sm font-semibold">Password</label>
                 <div className="relative">
                   <input id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
-                    placeholder="Your password" value={password}
+                    placeholder="Enter your password" value={password}
                     onChange={e => setPassword(e.target.value)}
                     className={cn(fieldClass, 'pr-12', 'no-native-reveal')} data-testid="login-password-input" required />
                   <LockKeyhole className={fieldIconClass} aria-hidden="true" />
@@ -344,13 +274,8 @@ export default function LoginPage() {
               <div className="flex items-center justify-between gap-4 text-sm">
                 <label className="flex cursor-pointer select-none items-center gap-2.5 text-[var(--l-muted)] transition-colors hover:text-[var(--l-ink)]">
                   <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
-<<<<<<< Updated upstream
-                    className="h-4 w-4 cursor-pointer rounded accent-[var(--pine)]" data-testid="login-remember-checkbox" />
-                  Keep me signed in
-=======
                     className="h-4 w-4 cursor-pointer rounded accent-[#FE7725]" data-testid="login-remember-checkbox" />
                   Remember me
->>>>>>> Stashed changes
                 </label>
                 <button type="button" onClick={() => setShowResetHelp((v) => !v)} aria-expanded={showResetHelp}
                   aria-controls="login-reset-help" className={linkButton}>
@@ -374,10 +299,6 @@ export default function LoginPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                     </svg>
                     Signing in...
-<<<<<<< Updated upstream
-                  </span>
-                ) : 'Sign in'}
-=======
                   </>
                 ) : (
                   <>
@@ -385,12 +306,11 @@ export default function LoginPage() {
                     <ArrowRight className="h-[18px] w-[18px] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
                   </>
                 )}
->>>>>>> Stashed changes
               </button>
             </form>
-            <p className="mt-6 text-center text-sm text-[var(--mist)]">
+            <p className="mt-6 text-center text-sm text-[var(--l-muted)]">
               New to NVIP?{' '}
-              <Link to="/request-demo" className="font-semibold text-[var(--pine)] underline underline-offset-4 hover:text-[var(--pine-2)]">
+              <Link to="/request-demo" className="font-semibold text-[var(--l-link)] underline underline-offset-4 transition-colors hover:text-[var(--l-ink)]">
                 Book a demo
               </Link>
             </p>

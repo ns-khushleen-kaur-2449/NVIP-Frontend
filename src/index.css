@@ -652,6 +652,8 @@ body {
   --nv-on-orange: #0B1220;
   --nv-btn-radius: 9999px;
   --nv-neutral-bg: #FFF2E8;
+  --nv-success: #28703F;
+  --nv-success-bg: #E3F1E7;
   --nv-feature-bg: var(--nvp-navy);
   --nv-feature-raised: var(--nvp-navy-3);
   --nv-feature-fg: var(--nvp-navy-fg);
@@ -690,6 +692,8 @@ body {
   --nv-orange-ink: #FF9555;
   --nv-orange-soft: #2A1A10;
   --nv-neutral-bg: #1B1E29;
+  --nv-success: #74C893;
+  --nv-success-bg: #1F3328;
   --nv-chrome-bg: rgba(11, 12, 17, 0.84);
   --nv-chrome-fg: #F2F3F7;
   --nv-chrome-muted: #A6ABBA;
