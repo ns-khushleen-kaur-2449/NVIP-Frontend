@@ -43,7 +43,9 @@ export default function CallPreviewView({ preview, loading, error, title = 'Open
   if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
   if (!preview) return <p className="text-sm text-muted-foreground" aria-live="polite">{loading ? 'Loading the preview…' : 'No preview yet.'}</p>;
   const settings = preview.call_settings || {};
-  const values = preview.variable_values || {};
+  // What the agent knows: the tenant's and campaign's own values (the server never sends a tenant the prompt).
+  const sections = Object.entries(preview.tenant_sections || {});
+  const offer = preview.tenant_sections?.campaign_section?.value;
   return (
     <div className={cn('space-y-3', loading && 'opacity-60')} aria-busy={loading} data-testid="call-preview">
       <div>
@@ -52,10 +54,10 @@ export default function CallPreviewView({ preview, loading, error, title = 'Open
           {preview.first_message ? `“${preview.first_message}”` : "The assistant's own opening line."}
         </p>
       </div>
-      {values.campaign_section && (
+      {offer && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Offer the agent receives</p>
-          <p className="mt-1 whitespace-pre-line text-sm">{values.campaign_section}</p>
+          <p className="mt-1 whitespace-pre-line text-sm">{offer}</p>
         </div>
       )}
       {preview.mode === 'shared' && (
@@ -74,9 +76,23 @@ export default function CallPreviewView({ preview, loading, error, title = 'Open
           {preview.warnings.map((w) => <li key={w}>{w}</li>)}
         </ul>
       )}
+      {showPrompt && sections.length > 0 && (
+        <details className="text-xs" data-testid="agent-knows">
+          <summary className="cursor-pointer font-medium">What the agent knows</summary>
+          <dl className="mt-2 space-y-2">
+            {sections.map(([key, section]) => (
+              <div key={key}>
+                <dt className="font-semibold text-muted-foreground">{section.label}</dt>
+                <dd className="whitespace-pre-line">{section.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
+      {/* Only a Super Admin's response carries the full prompt. */}
       {showPrompt && preview.rendered_prompt && (
         <details className="text-xs">
-          <summary className="cursor-pointer font-medium">Full prompt for this call</summary>
+          <summary className="cursor-pointer font-medium">Full prompt (platform)</summary>
           <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 font-sans" data-testid="rendered-prompt">{preview.rendered_prompt}</pre>
         </details>
       )}
