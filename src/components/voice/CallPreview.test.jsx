@@ -7,8 +7,9 @@ import CallPreviewView from '@/components/voice/CallPreview';
 import useCallPreview, { PREVIEW_DELAY_MS } from '@/hooks/useCallPreview';
 
 const SHARED = {
-  mode: 'shared', first_message: 'Hi Rohan, this is Neha from Acme Textiles.', rendered_prompt: 'You are Neha.\nRules: ...',
-  variable_values: { campaign_section: 'Current offer: 10% off' },
+  mode: 'shared', first_message: 'Hi Rohan, this is Neha from Acme Textiles.',
+  tenant_sections: { campaign_section: { label: 'Offer', value: '10% off' },
+    company_name: { label: 'Company', value: 'Acme Textiles' } },
   call_settings: { voice: { provider: '11labs', voiceId: 'neha' }, transcriber: { language: 'en' }, maxDurationSeconds: 480, voicemailMessage: 'x' },
   caller_id: { source: 'tenant_number', number: '+911234567890' },
   missing_required: [{ code: 'missing_call_details', label: 'Missing call details the assistant needs', fields: ['lead_first_name'] }],
@@ -19,13 +20,16 @@ describe('the view', () => {
   test('shows what the server built, the checklist and the warnings', () => {
     render(<CallPreviewView preview={SHARED} loading={false} error={null} />);
     expect(screen.getByTestId('server-first-message')).toHaveTextContent('“Hi Rohan, this is Neha from Acme Textiles.”');
-    expect(screen.getByText('Current offer: 10% off')).toBeInTheDocument();
+    expect(screen.getAllByText('10% off')[0]).toBeInTheDocument();
     const sent = screen.getByRole('list', { name: 'Still needed' });
     expect(within(sent).getByText(/Missing call details the assistant needs: lead_first_name/)).toBeInTheDocument();
     expect(screen.getByText('11labs · neha')).toBeInTheDocument();
     expect(screen.getByText('8 min')).toBeInTheDocument();
     expect(screen.getByText('+911234567890')).toBeInTheDocument();
-    expect(screen.getByTestId('rendered-prompt')).toHaveTextContent('You are Neha.');
+    // A tenant sees what the agent knows, never the prompt.
+    expect(screen.getByTestId('agent-knows')).toHaveTextContent('What the agent knows');
+    expect(screen.getByTestId('agent-knows')).toHaveTextContent('Acme Textiles');
+    expect(screen.queryByTestId('rendered-prompt')).not.toBeInTheDocument();
     expect(screen.getByText('Sample lead: Asha (made up).')).toBeInTheDocument();
   });
 
@@ -46,6 +50,11 @@ describe('the view', () => {
     rerender(<CallPreviewView loading />);
     expect(screen.getByText('Loading the preview…')).toBeInTheDocument();
   });
+});
+
+test('a Super Admin response with the prompt shows it too', () => {
+  render(<CallPreviewView preview={{ ...SHARED, rendered_prompt: 'You are Neha.' }} />);
+  expect(screen.getByTestId('rendered-prompt')).toHaveTextContent('You are Neha.');
 });
 
 describe('the hook', () => {

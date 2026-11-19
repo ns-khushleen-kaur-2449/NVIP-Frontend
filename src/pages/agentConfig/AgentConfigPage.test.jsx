@@ -49,7 +49,7 @@ const INSTANCE = {
 // What the server preview answers (POST /api/v1/agent-instances/{type}/preview): shown as is, never rendered here.
 const SERVER_PREVIEW = {
   mode: 'shared', first_message: 'Hi Asha, this is Riya from Acme Motors. Is now a good time?',
-  rendered_prompt: 'You are Riya, calling on behalf of Acme Motors.', variable_values: { agent_name: 'Riya' },
+  tenant_sections: { agent_name: { label: 'Agent name', value: 'Riya' } },
   call_settings: { transcriber: { language: 'en' }, maxDurationSeconds: 480 },
   caller_id: { source: 'tenant_number', number: '+911234567890' },
   missing_required: [{ code: 'agent_not_ready', label: 'The agent is missing details every call needs', fields: ['call_purpose'] }],
