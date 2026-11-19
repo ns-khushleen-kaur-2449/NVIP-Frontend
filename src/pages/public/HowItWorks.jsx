@@ -1,19 +1,5 @@
 import { ButtonLink, Panel } from '../../components/primitives';
-
-const STEPS = [
-  { title: 'Book a demo', body: 'Talk to a sandboxed agent — same voice stack, no writes to real systems.' },
-  { title: 'Pick a package', body: 'Order a tier yourself, or accept a custom quote for enterprise volumes.' },
-  { title: 'We provision it', body: 'Your workspace, agent instance and phone number are created automatically.' },
-  { title: 'Connect & configure', body: 'Link your CRM, ATS or calendar with OAuth, then tune prompts and rules.' },
-  { title: 'Test, then go live', body: 'Run test calls, pass the acceptance checklist, and approve activation.' },
-];
-
-const STACK = [
-  { name: 'Twilio', role: 'Phone numbers, call control and SMS' },
-  { name: 'Vapi', role: 'Real-time conversation, speech-to-text, interruptions' },
-  { name: 'ElevenLabs', role: 'Natural, brandable voices' },
-  { name: 'Nylas', role: 'Calendar booking and email across Google, Outlook, Exchange' },
-];
+import { GO_LIVE_STEPS as STEPS, VOICE_STACK as STACK } from '../../config/platform';
 
 export default function HowItWorks() {
   return (
@@ -23,7 +9,7 @@ export default function HowItWorks() {
         {STEPS.map((s, i) => (
           <li key={s.title}>
             <Panel className="h-full p-5">
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-[var(--nv-orange)] text-sm font-bold text-white">{i + 1}</div>
+              <div className="grid h-8 w-8 place-items-center rounded-full bg-[var(--nv-orange)] text-sm font-bold text-[var(--nv-on-orange,#fff)]">{i + 1}</div>
               <div className="mt-3 font-semibold">{s.title}</div>
               <p className="mt-1 text-sm text-[var(--nv-muted)]">{s.body}</p>
             </Panel>

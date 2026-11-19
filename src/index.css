@@ -619,3 +619,245 @@ body {
   font-weight: 700;
   font-size: 0.75rem;
 }
+
+/* ====== NVIP public site ======
+   Light: the approved mockup. Warm cream page, white cards, Netsmartz orange (#FE7725), navy ink.
+   Dark: near-black lit with orange, like the SmartSDR site.
+   Scoped to .nv-public (PublicLayout) so the signed-in workspace keeps its own look.
+   Text on orange is navy (7:1); white on #FE7725 fails AA. Large orange text uses --nvp-orange-text (AA large). */
+.nv-public {
+  color-scheme: light;
+  --nvp-navy: #0B1220;
+  --nvp-navy-2: #111A2E;
+  --nvp-navy-3: #18233B;
+  --nvp-navy-line: rgba(255, 255, 255, 0.11);
+  --nvp-navy-fg: #F3F5F9;
+  --nvp-navy-muted: #A9B3C6;
+  --nvp-orange-text: #E4580B;
+  --nvp-focus: #AD4A0C;
+  --nvp-shadow-card: 0 1px 2px rgba(120, 53, 15, 0.05), 0 16px 36px -22px rgba(120, 53, 15, 0.28);
+  --nvp-shadow-lift: 0 30px 56px -28px rgba(254, 119, 37, 0.55), 0 16px 30px -20px rgba(120, 53, 15, 0.25);
+  --nvp-shadow-chip: 0 18px 36px -18px rgba(120, 53, 15, 0.32), 0 2px 6px -2px rgba(120, 53, 15, 0.08);
+
+  --nv-bg: #FFF8F3;
+  --nv-surface: #FFFFFF;
+  --nv-surface-2: #FFF2E8;
+  --nv-line: #F1E1D3;
+  --nv-ink: #141A33;
+  --nv-muted: #535B70;
+  --nv-orange: #FE7725;
+  --nv-orange-2: #FF8A45;
+  --nv-orange-ink: #AD4A0C;
+  --nv-orange-soft: #FFEADB;
+  --nv-on-orange: #0B1220;
+  --nv-btn-radius: 9999px;
+  --nv-neutral-bg: #FFF2E8;
+  --nv-feature-bg: var(--nvp-navy);
+  --nv-feature-raised: var(--nvp-navy-3);
+  --nv-feature-fg: var(--nvp-navy-fg);
+  --nv-feature-muted: var(--nvp-navy-muted);
+  --nv-feature-border: rgba(255, 255, 255, 0.2);
+  --nv-chrome-bg: rgba(255, 248, 243, 0.86);
+  --nv-chrome-fg: #141A33;
+  --nv-chrome-muted: #535B70;
+  --nv-chrome-hover: #FFEEE2;
+  --nv-chrome-raised: #FFFFFF;
+  --nv-chrome-border: #F1E1D3;
+
+  background: var(--nv-bg);
+  color: var(--nv-ink);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.nv-public[data-nv-theme='dark'] {
+  color-scheme: dark;
+  --nvp-navy: #06070B;
+  --nvp-navy-2: #101219;
+  --nvp-navy-3: #171A23;
+  --nvp-navy-line: rgba(255, 255, 255, 0.09);
+  --nvp-orange-text: #FF8A45;
+  --nvp-focus: #FF9555;
+  --nvp-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px -20px rgba(0, 0, 0, 0.75);
+  --nvp-shadow-lift: 0 30px 56px -28px rgba(254, 119, 37, 0.45), 0 18px 32px -20px rgba(0, 0, 0, 0.8);
+  --nvp-shadow-chip: 0 18px 36px -18px rgba(0, 0, 0, 0.8), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+
+  --nv-bg: #0B0C11;
+  --nv-surface: #13151D;
+  --nv-surface-2: #171A23;
+  --nv-line: #262A37;
+  --nv-ink: #F2F3F7;
+  --nv-muted: #A6ABBA;
+  --nv-orange-ink: #FF9555;
+  --nv-orange-soft: #2A1A10;
+  --nv-neutral-bg: #1B1E29;
+  --nv-chrome-bg: rgba(11, 12, 17, 0.84);
+  --nv-chrome-fg: #F2F3F7;
+  --nv-chrome-muted: #A6ABBA;
+  --nv-chrome-hover: #1B1E29;
+  --nv-chrome-raised: #13151D;
+  --nv-chrome-border: #22252F;
+}
+
+/* Deep navy band: the tokens flip so primitives (buttons, panels, chips) read correctly on it. */
+.nv-public .nvp-band {
+  --nv-ink: var(--nvp-navy-fg);
+  --nv-muted: var(--nvp-navy-muted);
+  --nv-surface: var(--nvp-navy-2);
+  --nv-surface-2: var(--nvp-navy-3);
+  --nv-line: var(--nvp-navy-line);
+  --nv-orange-ink: #FF9555;
+  --nv-orange-soft: rgba(254, 119, 37, 0.14);
+  --nv-neutral-bg: var(--nvp-navy-3);
+  --nv-chrome-fg: var(--nvp-navy-fg);
+  --nv-chrome-muted: var(--nvp-navy-muted);
+  --nv-chrome-hover: var(--nvp-navy-3);
+  --nv-chrome-border: var(--nvp-navy-line);
+  --nvp-orange-text: #FF8A45;
+  --nvp-focus: #FF9555;
+  background: var(--nvp-navy);
+  color: var(--nv-ink);
+}
+.nv-public[data-nv-theme='dark'] .nvp-band { border-block: 1px solid #171A23; }
+
+/* The closing call to action: an orange panel. Navy is the action colour on it. */
+.nv-public .nvp-cta {
+  --nv-ink: #0B1220;
+  --nv-muted: #3B2414;
+  --nv-orange: #0B1220;
+  --nv-orange-2: #1D2843;
+  --nv-on-orange: #FFFFFF;
+  --nv-surface: #FFFFFF;
+  --nv-surface-2: #FFF1E7;
+  --nv-line: rgba(11, 18, 32, 0.08);
+  --nvp-focus: #0B1220;
+  background:
+    radial-gradient(70% 120% at 88% 0%, rgba(255, 178, 127, 0.75), transparent 60%),
+    linear-gradient(135deg, #FE7725 0%, #F7691A 100%);
+  color: var(--nv-ink);
+}
+
+.nv-public :focus-visible { outline: 2px solid var(--nvp-focus); outline-offset: 3px; }
+.nv-public ::selection { background: rgba(254, 119, 37, 0.3); color: inherit; }
+
+body:has(.nv-public) { background: #FFF8F3; }
+body:has(.nv-public[data-nv-theme='dark']) { background: #0B0C11; }
+html:has(.nv-public) { scrollbar-color: #E3C9B5 #FFF8F3; }
+html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.nv-public) { scroll-behavior: smooth; }
+}
+
+/* Hero light: warm wash and the orange glow the orb sits in. Dark adds the SmartSDR grid. */
+.nv-public .nvp-hero-bg {
+  background:
+    radial-gradient(40% 52% at 76% 44%, rgba(254, 119, 37, 0.2), transparent 70%),
+    radial-gradient(55% 60% at 8% 0%, rgba(255, 205, 170, 0.5), transparent 70%),
+    linear-gradient(180deg, #FFEFE3 0%, var(--nv-bg) 92%);
+}
+.nv-public[data-nv-theme='dark'] .nvp-hero-bg {
+  background:
+    radial-gradient(38% 52% at 76% 44%, rgba(254, 119, 37, 0.2), transparent 70%),
+    radial-gradient(45% 60% at 0% 8%, rgba(254, 119, 37, 0.16), transparent 70%),
+    var(--nv-bg);
+}
+.nvp-hero-grid { display: none; }
+.nv-public[data-nv-theme='dark'] .nvp-hero-grid {
+  display: block;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(70% 80% at 50% 30%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(70% 80% at 50% 30%, #000 30%, transparent 80%);
+}
+
+/* Type: Inter, bold and tight. */
+.nvp-wordmark {
+  font-size: clamp(2.5rem, 2rem + 1.6vw, 3.5rem);
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+}
+.nvp-display {
+  font-size: clamp(2rem, 1.45rem + 1.7vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.nvp-h2 {
+  font-size: clamp(2rem, 1.5rem + 1.7vw, 2.85rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.nvp-lede { font-size: clamp(1.05rem, 1rem + 0.25vw, 1.2rem); line-height: 1.6; text-wrap: pretty; }
+
+/* Logo variants follow the public theme. */
+.nvp-logo-dark { display: none; }
+.nv-public[data-nv-theme='dark'] .nvp-logo-light { display: none; }
+.nv-public[data-nv-theme='dark'] .nvp-logo-dark { display: block; }
+
+/* Hero chips drift slowly; the orb carries the main motion. */
+@keyframes nvp-drift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -7px, 0); } }
+.nvp-drift { animation: nvp-drift 7s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes nvp-bar { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+.nvp-bars > span { transform-origin: center; animation: nvp-bar 1.1s ease-in-out infinite; }
+.nvp-bars > span:nth-child(2) { animation-delay: -0.35s; }
+.nvp-bars > span:nth-child(3) { animation-delay: -0.7s; }
+.nvp-bars > span:nth-child(4) { animation-delay: -0.2s; }
+.nvp-bars[data-idle='true'] > span { animation-play-state: paused; transform: scaleY(0.35); }
+@keyframes nvp-pulse { 0% { box-shadow: 0 0 0 0 rgba(254, 119, 37, 0.55); } 100% { box-shadow: 0 0 0 9px rgba(254, 119, 37, 0); } }
+.nvp-live { animation: nvp-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nvp-drift, .nvp-bars > span, .nvp-live { animation: none; }
+}
+
+/* ====== NVIP sign-in page (/login) ======
+   Dark is the reference look: near-black, orange light, a glass card. Light is the public site's cream.
+   Follows the app theme (next-themes puts .dark on <html>). Labels on orange are navy for AA. */
+.nv-login {
+  --l-bg: #FFF8F3;
+  --l-ink: #141A33;
+  --l-muted: #535B70;
+  --l-card: rgba(255, 255, 255, 0.84);
+  --l-card-line: rgba(254, 119, 37, 0.28);
+  --l-field: #FFFFFF;
+  --l-field-line: #EAD8CA;
+  --l-orange-text: #E4580B;
+  --l-link: #AD4A0C;
+  --l-tile: #FFEADB;
+  --l-glow: rgba(254, 119, 37, 0.22);
+  --l-card-shadow: 0 40px 80px -44px rgba(120, 53, 15, 0.45), 0 18px 40px -28px rgba(254, 119, 37, 0.35);
+  background: var(--l-bg);
+  color: var(--l-ink);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.dark .nv-login {
+  --l-bg: #07080B;
+  --l-ink: #F2F3F7;
+  --l-muted: #A6ABBA;
+  --l-card: rgba(17, 18, 24, 0.78);
+  --l-card-line: rgba(254, 119, 37, 0.38);
+  --l-field: rgba(9, 10, 14, 0.85);
+  --l-field-line: #2A2D38;
+  --l-orange-text: #FF8A45;
+  --l-link: #FF9555;
+  --l-tile: rgba(254, 119, 37, 0.1);
+  --l-glow: rgba(254, 119, 37, 0.26);
+  --l-card-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95), 0 24px 60px -34px rgba(254, 119, 37, 0.45);
+}
+.nv-login :focus-visible { outline: 2px solid var(--l-link); outline-offset: 3px; }
+.nv-login ::selection { background: rgba(254, 119, 37, 0.3); }
+.nvl-grid { display: none; }
+.dark .nvl-grid {
+  display: block;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(70% 70% at 35% 40%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(70% 70% at 35% 40%, #000 25%, transparent 80%);
+}

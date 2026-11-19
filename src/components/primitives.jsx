@@ -10,8 +10,10 @@ import { LIFECYCLE_META } from '../lib/lifecycle';
 
 /* ---------- Buttons ---------- */
 
+// --nv-on-orange and --nv-btn-radius default to the workspace look (white text, pill); the public
+// site overrides them (navy text for AA contrast on orange, 8px corners) inside .nv-public.
 const BUTTON_VARIANTS = {
-  primary: 'bg-[var(--nv-orange)] text-white hover:bg-[var(--nv-orange-2)] shadow-sm',
+  primary: 'bg-[var(--nv-orange)] text-[var(--nv-on-orange,#fff)] hover:bg-[var(--nv-orange-2)] shadow-sm',
   secondary: 'bg-[var(--nv-surface)] text-[var(--nv-ink)] border border-[var(--nv-line)] hover:bg-[var(--nv-surface-2)]',
   ghost: 'text-[var(--nv-orange-ink)] hover:bg-[var(--nv-orange-soft)]',
   // Outline button for feature panels; follows the theme.
@@ -26,7 +28,8 @@ const BUTTON_SIZES = {
 
 function buttonClass(variant = 'primary', size = 'md', className) {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors',
+    'inline-flex items-center justify-center gap-2 rounded-[var(--nv-btn-radius,9999px)] font-semibold',
+    'transition-[background-color,color,border-color,box-shadow,transform] duration-200 active:translate-y-px',
     'disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap',
     BUTTON_VARIANTS[variant], BUTTON_SIZES[size], className,
   );
@@ -146,15 +149,18 @@ export function GuardrailChips({ guardrails = [] }) {
   );
 }
 
-export function AgentTile({ agent, solid = false, size = 'md' }) {
+/** tone: 'soft' (orange tint, default), 'neutral' (ink on a quiet surface), or `solid` for the highlighted agent. */
+export function AgentTile({ agent, solid = false, tone = 'soft', size = 'md' }) {
   if (!agent) return null;
   const Icon = agent.icon;
   const box = size === 'sm' ? 'h-9 w-9 rounded-lg' : 'h-12 w-12 rounded-xl';
+  const toneClass = solid
+    ? 'bg-[var(--nv-orange)] text-[var(--nv-on-orange,#fff)]'
+    : tone === 'neutral'
+      ? 'bg-[var(--nv-surface-2)] text-[var(--nv-ink)]'
+      : 'bg-[var(--nv-orange-soft)] text-[var(--nv-orange-ink)]';
   return (
-    <div className={cn(
-      'grid place-items-center shrink-0', box,
-      solid ? 'bg-[var(--nv-orange)] text-white' : 'bg-[var(--nv-orange-soft)] text-[var(--nv-orange-ink)]',
-    )}>
+    <div className={cn('grid place-items-center shrink-0', box, toneClass)}>
       <Icon className={size === 'sm' ? 'h-4 w-4' : 'h-6 w-6'} aria-hidden />
     </div>
   );
