@@ -3,10 +3,25 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, CircleCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CATEGORIES } from '@/config/agents';
+import { AGENTS, CATEGORIES, runsOnBackend } from '@/config/agents';
 import { AsyncBoundary, ButtonLink, EmptyState } from '@/components/primitives';
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
+/** An agent with a backend agent type is live; the rest are on the way (config/agents.js). */
+function StatusBadge({ agent }) {
+  const available = runsOnBackend(agent.backend ? agent : AGENTS.find((a) => a.type === agent.type));
+  return (
+    <span
+      className={cn(
+        'rounded-full px-2.5 py-0.5 text-[0.72rem] font-semibold',
+        available ? 'bg-[var(--nv-success-bg)] text-[var(--nv-success)]' : 'bg-[var(--nv-surface-2)] text-[var(--nv-muted)]',
+      )}
+    >
+      {available ? 'Available' : 'Coming soon'}
+    </span>
+  );
+}
+
 const TILT_QUERY = '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)';
 
 /** Tilt only with a real mouse and when the visitor has not asked for reduced motion. */
@@ -77,7 +92,10 @@ function AgentCard({ agent, tilt }) {
           <Icon className="h-7 w-7" strokeWidth={1.8} />
         </span>
         <div className="min-w-0 pt-1">
-          <h3 className="text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">{agent.name}</h3>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h3 className="text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">{agent.name}</h3>
+            <StatusBadge agent={agent} />
+          </div>
           <p className="mt-1.5 text-[0.95rem] leading-relaxed text-[var(--nv-muted)]">{agent.summary}</p>
         </div>
       </div>

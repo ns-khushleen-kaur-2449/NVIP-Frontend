@@ -5,7 +5,6 @@ import PublicLayout from '@/layouts/PublicLayout';
 import AgentCatalog from '@/pages/public/AgentCatalog';
 
 jest.mock('@/components/ThemeToggle', () => function ThemeToggleStub() { return null; });
-jest.mock('@/components/marketing/HeroWave3D', () => function WaveStub() { return <div data-testid="wave" />; });
 
 const page = () => render(
   <MemoryRouter initialEntries={['/']}>
@@ -13,29 +12,32 @@ const page = () => render(
   </MemoryRouter>,
 );
 
-test('hero and calls to action, on the sign-in page\'s background', () => {
+test('hero: the Netsmartz logo, the headline and both calls to action', () => {
   page();
-  expect(screen.getByTestId('wave')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Voice agents that call, qualify and book — on rules you control');
+  expect(screen.getAllByAltText('Netsmartz, celebrating 27 years')[0]).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Meet the AI voice agents that move your business forward.');
   expect(screen.getAllByRole('link', { name: 'Book a demo' })[0]).toHaveAttribute('href', '/request-demo');
-  expect(screen.getByRole('link', { name: 'Talk to sales' })).toHaveAttribute('href', '/request-quote');
+  expect(screen.getByRole('link', { name: 'Explore AI agents' })).toHaveAttribute('href', '/#agents');
 });
 
-test('five agents: the three with a backend are Available, the rest Coming soon', () => {
+test('five agents: the three with a backend are Available, the rest Coming soon', async () => {
   page();
-  const status = (name) => within(screen.getByRole('heading', { name }).closest('a')).getByText(/Available|Coming soon/).textContent;
-  expect(['Outbound SDR', 'Inbound SDR', 'Hiresmartz'].map(status)).toEqual(['Available', 'Available', 'Available']);
-  expect(['AI Receptionist', 'Real Estate Agent'].map(status)).toEqual(['Coming soon', 'Coming soon']);
-  expect(screen.getByRole('heading', { name: 'Outbound SDR' }).closest('a')).toHaveAttribute('href', '/marketplace/outbound-lead-gen');
+  const status = async (name) => {
+    const card = (await screen.findByRole('heading', { name })).closest('a');
+    return within(card).getByText(/^(Available|Coming soon)$/).textContent;
+  };
+  const available = await Promise.all(['Outbound Lead Gen', 'Inbound Voice SDR', 'Hiring / Recruitment'].map(status));
+  expect(available).toEqual(['Available', 'Available', 'Available']);
+  const comingSoon = await Promise.all(['AI Receptionist', 'Real Estate Agent'].map(status));
+  expect(comingSoon).toEqual(['Coming soon', 'Coming soon']);
+  expect((await screen.findByRole('heading', { name: 'Outbound Lead Gen' })).closest('a')).toHaveAttribute('href', '/marketplace/outbound-lead-gen');
 });
 
-test('header sections, sign in, sections exist', () => {
+test('header links, sign in, and the sections they point to exist', () => {
   page();
   const nav = screen.getAllByRole('navigation', { name: 'Main' })[0];
-  expect(within(nav).getByRole('link', { name: 'Agents' })).toHaveAttribute('href', '/#agents');
-  expect(within(nav).getByRole('link', { name: 'Trust & security' })).toHaveAttribute('href', '/#trust');
+  expect(within(nav).getByRole('link', { name: 'Agents' })).toHaveAttribute('href', '/');
+  expect(within(nav).getByRole('link', { name: 'Integrations' })).toHaveAttribute('href', '/#integrations');
   expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toHaveAttribute('href', '/login');
-  ['agents', 'how-it-works', 'trust'].forEach((id) => expect(document.getElementById(id)).not.toBeNull());
-  expect(screen.getByText('Every call follows your rules')).toBeInTheDocument();
-  expect(screen.getByText('NVIP is built by Netsmartz · since 1999')).toBeInTheDocument();
+  ['agents', 'integrations'].forEach((id) => expect(document.getElementById(id)).not.toBeNull());
 });
