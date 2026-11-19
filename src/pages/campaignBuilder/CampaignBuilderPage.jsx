@@ -15,14 +15,16 @@ import {
 import { CheckChip, LockedRules, Panel, Pill, SetupHeader, StepPills } from '@/components/setup/SetupUi';
 import useOfferPreview from '@/hooks/useOfferPreview';
 import { useAuth } from '@/lib/AuthContext';
-import { createVoiceCampaign, getAgentInstance, getAgentInstanceVersion, getAssistants, getCatalogItems, getProspects } from '@/lib/api';
+import { createVoiceCampaign, getAgentInstance, getAgentInstanceVersion, getAssistants, getCatalogItems, getProspects, previewCampaign } from '@/lib/api';
 import { toLeadRow } from '@/lib/prospects';
 import { offerSaveError, preflightProblems, previewBody } from '@/lib/campaignOffer';
 import {
   BRIEF_LIMITS, GOALS, MAX_KEY_POINTS, callingLimitConflicts, campaignBriefFields, emptyBriefForm, goalLabel,
   isOverridden, requiredChecklist,
 } from '@/lib/campaignBrief';
-import { PLATFORM_RULES, PREVIEW_NOTE, greetingValues, renderGreeting } from '@/lib/agentInstances';
+import { PLATFORM_RULES } from '@/lib/agentInstances';
+import CallPreviewView from '@/components/voice/CallPreview';
+import useCallPreview from '@/hooks/useCallPreview';
 import { agentInstancesAvailable, canCreateCampaigns, isSharedMode } from '@/lib/rbac';
 import { cn } from '@/lib/utils';
 import { ChoiceField, ListField, SelectField, TextField } from '@/pages/agentConfig/fields';
@@ -184,20 +186,38 @@ function LeadPicker({ leads, loading, selected, setSelected, onImported }) {
   );
 }
 
+// ── The server preview (POST /api/campaigns/preview): the same campaign body a launch sends ──
+
+/** The fields of the campaign body that shape a call, as `submit` sends them (one place for both). */
+function callShape(form, settings, defaults, sharedMode) {
+  return {
+    ...campaignBriefFields(form, { defaultQuestions: defaults.payload?.qualification_questions || [] }),
+    ...(!sharedMode && settings.assistantId ? { assistant_id: settings.assistantId } : {}),
+    timezone: settings.timeZone.trim(),
+  };
+}
+
+/** The server's preview of the call to `lead` (its prospect id), asked 500 ms after the last edit. */
+function useLeadPreview(shape, lead) {
+  const body = { ...shape, ...(lead?.id ? { prospect_id: lead.id } : {}) };
+  return useCallPreview(() => previewCampaign(body), JSON.stringify(body));
+}
+
 // ── Step 2: configure ──
 
-function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantId, sharedMode, timeZone }) {
+function PreviewColumn({ form, leads, checklist, assistantId, sharedMode, timeZone, shape }) {
   const [leadId, setLeadId] = useState('');
   const lead = leads.find((l) => String(l.id) === leadId) || leads[0];
-  const opener = defaults.payload?.opener?.first_message || assistant?.first_message || '';
-  const values = greetingValues({ payload: defaults.payload, lead: { ...lead, first_name: leadFirstName(lead) }, callPurpose: form.callPurpose });
+  const server = useLeadPreview(shape, lead);
   const offerOn = form.offer.enabled && Boolean(form.offer.text.trim());
-  const { preview, loading, error } = useOfferPreview(
+  // Own-assistant tenants: the offer as the old offer builder phrases it (the shared call shows its offer section).
+  const { preview: offer, loading, error } = useOfferPreview(
     previewBody({ offer: { offering_name: form.spokenName, offer_text: form.offer.text, valid_until: form.offer.validUntil },
       assistantId, name: form.name.trim(), timeZone }),
-    offerOn && (Boolean(assistantId) || sharedMode),
+    offerOn && Boolean(assistantId) && !sharedMode,
   );
-  const missing = checklist.filter((i) => !i.done);
+  // What the form itself still lacks (name, leads...): the server knows only what reaches the call.
+  const formGaps = checklist.filter((i) => !i.done).map((i) => ({ code: i.key, label: i.label }));
   const facts = [leadCompany(lead), lead?.job_title, lead?.city].filter(Boolean).join(' · ');
   return (
     <aside className="space-y-4 lg:sticky lg:top-4" aria-label="Preview">
@@ -210,19 +230,14 @@ function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantI
         </label>
       )}>
         <div aria-live="polite" className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Opening line</p>
-            <p className="mt-1 rounded-xl bg-muted px-3 py-2.5 text-sm" data-testid="opening-preview">
-              {opener ? `“${renderGreeting(opener, values)}”` : "The agent's own opening line."}
-            </p>
-          </div>
-          {form.offer.enabled && (
+          <CallPreviewView {...server} extraMissing={formGaps} showPrompt={false} />
+          {!sharedMode && form.offer.enabled && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Offer the agent receives</p>
               {!assistantId ? <p className="text-sm text-muted-foreground">Choose an assistant to see it.</p>
                 : !offerOn ? <p className="text-sm text-muted-foreground">Write the offer to see it.</p>
                   : error ? <p role="alert" className="text-sm text-red-600">{error}</p>
-                    : preview ? <OfferPreview preview={preview} /> : loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+                    : offer ? <OfferPreview preview={offer} /> : loading && <p className="text-sm text-muted-foreground">Loading…</p>}
             </div>
           )}
           {lead && (
@@ -231,12 +246,6 @@ function PreviewColumn({ form, leads, assistant, defaults, checklist, assistantI
               <p className="mt-1 text-sm">{facts || 'Name and phone only.'}</p>
             </div>
           )}
-          <div data-testid="required-checklist" className={cn('flex items-start gap-2 rounded-xl px-3 py-2 text-sm font-semibold',
-            missing.length ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400')}>
-            {missing.length ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
-            <span>{missing.length ? `Still needed: ${missing.map((i) => i.label.toLowerCase()).join(', ')}` : 'All required details are filled'}</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground">{PREVIEW_NOTE}</p>
         </div>
       </Panel>
       <Panel title="Locked by the platform"><LockedRules rules={PLATFORM_RULES} /></Panel>
@@ -297,7 +306,7 @@ function ConfigureStep({ form, setForm, settings, setSettings, assistants, share
           <CallingWindowFields value={settings.callingWindow} onChange={(callingWindow) => setSettings((s) => ({ ...s, callingWindow }))} />
           {limits?.window && (
             <p className="mt-1 text-xs text-muted-foreground" data-testid="agent-limits">
-              Agent limit: {limits.window.days.join(', ')} {limits.window.start_time}–{limits.window.end_time}, at most {limits.max_attempts_per_lead} attempts.
+              Your agent's suggested limits: {limits.window.days.join(', ')} {limits.window.start_time}–{limits.window.end_time}, at most {limits.max_attempts_per_lead} attempts. Not enforced yet.
             </p>
           )}
         </div>
@@ -399,8 +408,19 @@ function Stat({ label, value, sub }) {
   );
 }
 
-function ReviewStep({ form, settings, leads, defaults, assistant, checklist, limitConflicts, check, start, setStart, submitting, onSubmit, problems, error }) {
-  const opener = defaults.payload?.opener?.first_message || assistant?.first_message || '';
+/** One lead's opening, from the server preview. */
+function SampleOpening({ shape, lead, shown }) {
+  const { preview, loading, error } = useLeadPreview(shape, lead);
+  return (
+    <p data-testid="sample-opening" className={cn('rounded-xl bg-muted px-4 py-3 text-sm', !shown && 'sr-only')}>
+      {error ? <span role="alert" className="text-red-600">{error}</span>
+        : preview ? (preview.first_message ? `“${preview.first_message}”` : "The assistant's own opening line.")
+          : loading ? 'Loading…' : '—'}
+    </p>
+  );
+}
+
+function ReviewStep({ form, settings, leads, checklist, limitConflicts, check, start, setStart, submitting, onSubmit, problems, error, shape }) {
   const samples = leads.slice(0, 3);
   const [sample, setSample] = useState(0);
   const lead = samples[sample];
@@ -442,13 +462,8 @@ function ReviewStep({ form, settings, leads, defaults, assistant, checklist, lim
                 ))}
               </div>
             )}
-            {samples.map((l) => (
-              <p key={l.id} data-testid="sample-opening" className={cn('rounded-xl bg-muted px-4 py-3 text-sm', l !== lead && 'sr-only')}>
-                {opener ? `“${renderGreeting(opener, greetingValues({ payload: defaults.payload, lead: { ...l, first_name: leadFirstName(l) }, callPurpose: form.callPurpose }))}”`
-                  : "The agent's own opening line."}
-              </p>
-            ))}
-            <p className="text-[11px] text-muted-foreground">{PREVIEW_NOTE}</p>
+            {samples.map((l) => <SampleOpening key={l.id} shape={shape} lead={l} shown={l === lead} />)}
+            <p className="text-[11px] text-muted-foreground">Built by the server for each lead, as the call will be placed.</p>
           </Panel>
         </div>
         <aside className="space-y-4">
@@ -546,7 +561,6 @@ export default function CampaignBuilderPage() {
   useEffect(() => {
     setSettings((s) => (s.assistantId || !callable.length ? s : { ...s, assistantId: (callable.find((a) => a.is_live) || callable[0]).vapi_assistant_id }));
   }, [callable]);
-  const assistant = callable.find((a) => a.vapi_assistant_id === settings.assistantId);
 
   let plannedStart = null;
   try { plannedStart = start.mode === 'scheduled' ? zonedToIso(start.date, start.time, settings.timeZone.trim()) : null; } catch { plannedStart = null; }
@@ -598,6 +612,8 @@ export default function CampaignBuilderPage() {
     setStep(next);
     setTimeout(() => document.getElementById('setup-title')?.focus(), 0);
   };
+
+  const shape = callShape(form, settings, defaults, sharedMode);
 
   const submit = async () => {
     const found = configureProblems();
@@ -679,14 +695,14 @@ export default function CampaignBuilderPage() {
               <OpsButton variant="primary" onClick={() => goTo(2)}>Next: Review and launch</OpsButton>
             </div>
           </div>
-          <PreviewColumn form={form} leads={leads} assistant={assistant} defaults={defaults} checklist={checklist}
+          <PreviewColumn form={form} leads={leads} checklist={checklist} shape={shape}
             assistantId={settings.assistantId} sharedMode={sharedMode} timeZone={settings.timeZone.trim()} />
         </div>
       )}
 
       {step === 2 && (
         <>
-          <ReviewStep form={form} settings={settings} leads={leads} defaults={defaults} assistant={assistant} checklist={checklist}
+          <ReviewStep form={form} settings={settings} leads={leads} checklist={checklist} shape={shape}
             limitConflicts={limitConflicts} check={check} start={start} setStart={setStart} submitting={submitting}
             onSubmit={submit} problems={problems} error={errors.scheduledAt} />
           <OpsButton variant="outline" onClick={() => goTo(1)}>Back</OpsButton>

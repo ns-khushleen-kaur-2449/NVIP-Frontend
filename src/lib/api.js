@@ -194,6 +194,9 @@ export const publishAgentInstanceVersion = (agentType, version, { force = false 
   api.post(`${instancePath(agentType)}/versions/${version}/publish`, null, { params: force ? { force: true } : {} });
 // -> { draft, replaced_version, previous_payload }: a fresh draft from the latest published version.
 export const rebaseAgentInstanceDraft = (agentType, version) => api.post(`${instancePath(agentType)}/drafts/${version}/rebase`);
+// F-08: the call this agent would make with version `version_n` (default: open draft, else published), built by the
+// server's own call code. body: { version_n?, prospect_id?, sample_lead?: { first_name, company, timezone, notes } }.
+export const previewAgentInstance = (agentType, body = {}) => api.post(`${instancePath(agentType)}/preview`, body);
 // A new draft copying an older version.
 export const restoreAgentInstanceVersion = (agentType, version) =>
   api.post(`${instancePath(agentType)}/versions/${version}/restore`);
@@ -460,6 +463,11 @@ export const summarizeCall = (id) => api.post(`/api/agents/call-summarize/${id}`
 export const createVoiceCampaign = (data) => api.post('/api/campaigns', data);
 // "What the agent will tell leads": the form's unsaved offer values (voice_campaigns/offer.py; nothing is saved).
 export const previewCampaignOffer = (data) => api.post('/api/campaigns/offer-preview', data);
+// F-08: the call an unsaved campaign (the form's body, as for createVoiceCampaign, plus prospect_id / sample_lead)
+// or a saved one would place; built by the server's own call code, nothing saved.
+export const previewCampaign = (body) => api.post('/api/campaigns/preview', body);
+export const getCampaignPreview = (campaignId, prospectId) =>
+  api.get(`/api/campaigns/${encodeURIComponent(campaignId)}/preview`, { params: prospectId ? { prospect_id: prospectId } : {} });
 // Parses a CSV/XLSX without storing anything; returns { filename, total, skipped_rows, contacts }.
 export const previewCampaignCsv = (file) => {
   const formData = new FormData();
