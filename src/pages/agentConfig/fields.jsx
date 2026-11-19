@@ -1,8 +1,10 @@
 // Labelled form fields for the agent configuration and campaign builder screens. Each field carries
 // `data-field={path}` so a refused save can move focus to it, shows its error (the server's message when it gave
-// one) and, after a rebase, a "changed in the newer version too" note.
+// one) and, after a rebase, a "changed in the newer version too" note. Inside a FieldUseProvider (the server's
+// `fields` metadata: GET /api/v1/agent-instances/{type}, GET /api/v1/business-profile) each field also shows whether
+// it reaches calls; without one (the campaign builder) nothing is shown.
 
-import { useId } from 'react';
+import { createContext, useContext, useId } from 'react';
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +14,30 @@ import { cn } from '@/lib/utils';
 
 const WEEKDAYS = [['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'], ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun']];
 
+// { path: { applied_to_calls, read_only?, set_by? } } from the server. No list of fields lives in the frontend.
+const FieldUseContext = createContext(null);
+export const FieldUseProvider = FieldUseContext.Provider;
+export const NOT_USED_NOTE = 'Saved with your setup. It will reach calls in a later release.';
+
+function useFieldUse(path) {
+  const meta = useContext(FieldUseContext);
+  return path && meta ? meta[path] || null : null;
+}
+
+/** "Used on calls" / "Not used on calls yet", from the server's metadata for `path` (nothing when it has none). */
+export function UseBadge({ path }) {
+  const use = useFieldUse(path);
+  if (!use || use.set_by) return null;
+  return use.applied_to_calls
+    ? <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400" data-testid="use-badge">Used on calls</span>
+    : <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground" data-testid="use-badge">Not used on calls yet</span>;
+}
+
+function UseNote({ path }) {
+  const use = useFieldUse(path);
+  return use && !use.applied_to_calls && !use.set_by ? <p className="mt-1 text-xs text-muted-foreground">{NOT_USED_NOTE}</p> : null;
+}
+
 const show = (value) => {
   if (value == null || value === '') return 'empty';
   if (Array.isArray(value)) return value.length ? value.join(', ') : 'empty';
@@ -20,10 +46,11 @@ const show = (value) => {
 };
 
 /** Error and rebase-conflict notes under a field. */
-export function FieldNotes({ id, error, conflict, hint }) {
+export function FieldNotes({ id, error, conflict, hint, path }) {
   return (
     <>
       {hint && <p id={`${id}-hint`} className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      <UseNote path={path} />
       {conflict && (
         <p className="mt-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-400" data-testid="field-conflict">
           Also changed in the newer published version (it had “{show(conflict.theirs)}”). Your value was kept; check it.
@@ -46,13 +73,14 @@ export function TextField({ label, path, value, onChange, error, conflict, hint,
     <div className={className}>
       <div className="flex items-baseline justify-between gap-2">
         <label htmlFor={id} className="text-sm font-medium">{label}{required && <span aria-hidden="true"> *</span>}</label>
+        <span className="ml-auto"><UseBadge path={path} /></span>
         {counter && maxLength && <span className="text-xs text-muted-foreground" aria-live="polite">{length}/{maxLength}</span>}
       </div>
       <Control id={id} data-field={path} value={value ?? ''} readOnly={readOnly} placeholder={placeholder} type={type}
         maxLength={maxLength} required={required} aria-invalid={Boolean(error)} aria-describedby={describedBy(id, { error, hint })}
         onChange={(e) => onChange?.(type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)}
         className={cn('mt-1', conflict && 'border-amber-500', multiline && 'min-h-[90px]')} />
-      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} />
+      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} path={path} />
     </div>
   );
 }
@@ -62,7 +90,10 @@ export function SelectField({ label, path, value, onChange, options, error, conf
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="text-sm font-medium">{label}</label>
+      <div className="flex items-baseline justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-medium">{label}</label>
+        <UseBadge path={path} />
+      </div>
       <select id={id} data-field={path} value={value ?? ''} disabled={readOnly} aria-invalid={Boolean(error)}
         aria-describedby={describedBy(id, { error, hint })} onChange={(e) => onChange?.(e.target.value || null)}
         className={cn('mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -70,7 +101,7 @@ export function SelectField({ label, path, value, onChange, options, error, conf
         {placeholder !== undefined && <option value="">{placeholder}</option>}
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} />
+      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} path={path} />
     </div>
   );
 }
@@ -80,7 +111,7 @@ export function ChoiceField({ label, path, value, onChange, options, error, conf
   const id = useId();
   return (
     <fieldset aria-describedby={describedBy(id, { error, hint })}>
-      <legend className="text-sm font-medium">{label}</legend>
+      <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-medium">{label}<UseBadge path={path} /></legend>
       <RadioGroup value={value ?? ''} onValueChange={onChange} disabled={readOnly} data-field={path} aria-label={label}
         className={cn('mt-2', cards ? 'grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]' : 'flex flex-wrap gap-4')}>
         {options.map((o) => {
@@ -98,7 +129,7 @@ export function ChoiceField({ label, path, value, onChange, options, error, conf
           );
         })}
       </RadioGroup>
-      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} />
+      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} path={path} />
     </fieldset>
   );
 }
@@ -110,10 +141,11 @@ export function SwitchField({ label, path, checked, onChange, hint, readOnly = f
     <div>
       <div className="flex items-center justify-between gap-3">
         <label htmlFor={id} className="text-sm font-medium">{label}</label>
+        <span className="ml-auto"><UseBadge path={path} /></span>
         <Switch id={id} data-field={path} checked={Boolean(checked)} disabled={readOnly} onCheckedChange={onChange}
           aria-describedby={describedBy(id, { error, hint })} />
       </div>
-      <FieldNotes id={id} error={error} hint={hint} />
+      <FieldNotes id={id} error={error} hint={hint} path={path} />
     </div>
   );
 }
@@ -135,8 +167,9 @@ export function ListField({ label, path, values = [], onChange, error, conflict,
   };
   return (
     <fieldset data-field={path} tabIndex={-1} aria-describedby={describedBy(id, { error, hint })}>
-      <legend className="text-sm font-medium">
-        {label}{(min || max) && <span className="ml-1 text-xs font-normal text-muted-foreground">({min ? `${min}–` : 'up to '}{max})</span>}
+      <legend className="flex w-full items-baseline gap-2 text-sm font-medium">
+        <span>{label}{(min || max) && <span className="ml-1 text-xs font-normal text-muted-foreground">({min ? `${min}–` : 'up to '}{max})</span>}</span>
+        <span className="ml-auto"><UseBadge path={path} /></span>
       </legend>
       <ol className="mt-2 space-y-2">
         {list.map((value, index) => (
@@ -167,7 +200,7 @@ export function ListField({ label, path, values = [], onChange, error, conflict,
           <Plus className="h-4 w-4" aria-hidden="true" /> {addLabel}
         </button>
       )}
-      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} />
+      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} path={path} />
     </fieldset>
   );
 }
@@ -183,7 +216,7 @@ export function WindowField({ label, path, value, onChange, error, conflict, hin
   };
   return (
     <fieldset data-field={path} tabIndex={-1} aria-describedby={describedBy(id, { error, hint })}>
-      <legend className="text-sm font-medium">{label}</legend>
+      <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-medium">{label}<UseBadge path={path} /></legend>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={`${label}: days`}>
         {WEEKDAYS.map(([day, name]) => (
           <button key={day} type="button" disabled={readOnly} aria-pressed={Boolean(window?.days?.includes(day))}
@@ -211,7 +244,7 @@ export function WindowField({ label, path, value, onChange, error, conflict, hin
       ) : (
         <p className="mt-2 text-xs text-muted-foreground">{emptyLabel}</p>
       )}
-      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} />
+      <FieldNotes id={id} error={error} conflict={conflict} hint={hint} path={path} />
     </fieldset>
   );
 }

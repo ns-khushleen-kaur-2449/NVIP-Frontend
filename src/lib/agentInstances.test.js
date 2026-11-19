@@ -1,5 +1,5 @@
 import {
-  configMode, fieldErrors, instanceState, publishProblems, publishedModeMessage, reapplyEdits, renderGreeting,
+  configMode, fieldErrors, instanceState, publishProblems, publishedModeMessage, reapplyEdits,
   setPath, staleDraft,
 } from '@/lib/agentInstances';
 import { agentInstancesAvailable, canForcePublish, featureOn } from '@/lib/rbac';
@@ -106,9 +106,24 @@ describe('server answers', () => {
 
   test('publish checks', () => {
     expect(publishProblems({ persona: { name: 'Riya' }, languages: { primary: 'en' }, qualification_questions: ['a', 'b'] }, 'sdr_outbound'))
-      .toEqual({ qualification_questions: 'Add 3 to 7 qualification questions (now 2)' });
+      .toEqual({ qualification_questions: 'Add 3 to 6 qualification questions (now 2)' });
+    // Inbound SDR has its own questions now (3 to 7), like Outbound SDR.
     expect(publishProblems({ persona: { name: '' }, languages: { primary: 'en' }, inbound: { overflow: { mode: 'transfer' } } }, 'sdr_inbound'))
-      .toEqual({ 'persona.name': 'Give the agent a name', 'inbound.overflow.transfer_number': 'Add the number to transfer to' });
+      .toEqual({ 'persona.name': 'Give the agent a name', 'inbound.overflow.transfer_number': 'Add the number to transfer to',
+        qualification_questions: 'Add 3 to 6 qualification questions (now 0)' });
+    const ready = { persona: { name: 'Riya' }, languages: { primary: 'en' }, qualification_questions: ['a', 'b', 'c'] };
+    expect(publishProblems(ready, 'sdr_inbound')).toEqual({});
+    // At most 6 questions (what a call asks) and 600 characters of extra instructions.
+    expect(publishProblems({ ...ready, qualification_questions: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }, 'sdr_outbound'))
+      .toEqual({ qualification_questions: 'Add 3 to 6 qualification questions (now 7)' });
+    expect(publishProblems({ ...ready, guardrails: { custom_instructions: 'x'.repeat(601) } }, 'sdr_outbound'))
+      .toEqual({ 'guardrails.custom_instructions': 'Shorten the extra instructions to 600 characters (now 601)' });
+    expect(publishProblems({ ...ready, guardrails: { custom_instructions: 'x'.repeat(600) } }, 'sdr_outbound')).toEqual({});
+    // Maximum call length: 60 to 1800 seconds, or empty (the platform's default).
+    [[null, {}], [600, {}], [59, 'bad'], [1801, 'bad']].forEach(([seconds, expected]) => {
+      const problems = publishProblems({ ...ready, call_behaviour: { max_duration_seconds: seconds } }, 'sdr_outbound');
+      expect(Object.keys(problems)).toEqual(expected === 'bad' ? ['call_behaviour.max_duration_seconds'] : []);
+    });
   });
 });
 
@@ -120,9 +135,4 @@ describe('helpers', () => {
     expect(before).toEqual({ a: { b: 1 } });
   });
 
-  test('greetings fill both placeholder styles; unknown ones show as [name]', () => {
-    expect(renderGreeting('Hi {{lead_first_name}}, {agent_name} from {{ company_name }}. {{mystery}}',
-      { lead_first_name: 'Asha', agent_name: 'Riya', company_name: 'Acme' }))
-      .toBe('Hi Asha, Riya from Acme. [mystery]');
-  });
 });

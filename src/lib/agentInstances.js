@@ -149,57 +149,38 @@ export const PLATFORM_RULES = Object.freeze([
   'Books only real calendar slots',
 ]);
 
-// ── Greeting preview (client-side; the final wording is set when the call is placed) ──
-
-/** A made-up lead for the preview, labelled as such wherever it is shown. */
-export const SAMPLE_LEAD = Object.freeze({
-  first_name: 'Asha', last_name: 'Verma', name: 'Asha Verma', company: 'Sample Traders',
-});
-
-export const PREVIEW_NOTE = 'Preview — final wording is set when the call is placed';
-
-/**
- * The values a greeting's placeholders take: the shared assistant's {{company_name}} / {{agent_name}} /
- * {{lead_first_name}} / {{caller_first_name}}, and the builder's {company} / {agent_name} / {customer_name} /
- * {salutation}.
- */
-export function greetingValues({ payload, business, lead = SAMPLE_LEAD, callPurpose } = {}) {
-  const company = business?.company_name || business?.company || '';
-  const agent = payload?.persona?.name || '';
-  const first = lead?.first_name || (lead?.name || '').split(' ')[0] || '';
-  return {
-    company_name: company, company,
-    agent_name: agent,
-    lead_first_name: first, caller_first_name: first, customer_name: lead?.name || first, salutation: first,
-    call_purpose: callPurpose || payload?.opener?.default_call_reason || '',
-  };
-}
-
-/** `text` with {{name}} and {name} placeholders filled; an unknown or empty one is shown as [name]. */
-export function renderGreeting(text, values = {}) {
-  if (!text) return '';
-  const fill = (_, name) => {
-    const value = values[name.trim()];
-    return value ? String(value) : `[${name.trim()}]`;
-  };
-  return text.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, fill).replace(/\{([a-z_]+)\}/gi, fill);
-}
+// Greetings and openings are never rendered here: the server preview builds them (F-08).
 
 // ── Checks before publishing (the backend validates again; these only point at the field) ──
 
-export const QUALIFICATION_LIMITS = Object.freeze({ min: 3, max: 7 });
+// What a call carries (backend agent_instances/schema.py publish_problems): 3 to 6 questions, 600 characters of extra
+// instructions. Older versions may hold more: they still open, with a warning, and cannot be published until trimmed.
+export const QUALIFICATION_LIMITS = Object.freeze({ min: 3, max: 6 });
+export const MAX_CUSTOM_INSTRUCTIONS = 600;
+export const QUESTIONS_OVER_NOTE = `Only the first ${QUALIFICATION_LIMITS.max} are asked on calls. Remove the extra ones to publish.`;
+
+/** Non-blank questions of a list (what a call would ask, before the cap). */
+export const askedQuestions = (list) => (list || []).filter((q) => (q || '').trim());
 
 /** { path: message } for what a publish needs; empty when it can go. */
 export function publishProblems(payload, agentType) {
   const problems = {};
   if (!(payload?.persona?.name || '').trim()) problems['persona.name'] = 'Give the agent a name';
   if (!payload?.languages?.primary) problems['languages.primary'] = 'Choose the primary language';
-  if (agentType === 'sdr_outbound') {
+  if (agentType === 'sdr_outbound' || agentType === 'sdr_inbound') {
     const questions = (payload?.qualification_questions || []).filter((q) => (q || '').trim());
     const { min, max } = QUALIFICATION_LIMITS;
     if (questions.length < min || questions.length > max) {
       problems.qualification_questions = `Add ${min} to ${max} qualification questions (now ${questions.length})`;
     }
+  }
+  const instructions = payload?.guardrails?.custom_instructions || '';
+  if (instructions.length > MAX_CUSTOM_INSTRUCTIONS) {
+    problems['guardrails.custom_instructions'] = `Shorten the extra instructions to ${MAX_CUSTOM_INSTRUCTIONS} characters (now ${instructions.length})`;
+  }
+  const seconds = payload?.call_behaviour?.max_duration_seconds;
+  if (seconds != null && seconds !== '' && !(Number(seconds) >= 60 && Number(seconds) <= 1800)) {
+    problems['call_behaviour.max_duration_seconds'] = 'Set the maximum call length between 60 and 1800 seconds, or leave it empty';
   }
   if (agentType === 'sdr_inbound') {
     const overflow = payload?.inbound?.overflow || {};

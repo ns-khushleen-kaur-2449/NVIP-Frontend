@@ -7,17 +7,20 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import OpsButton from '@/components/ops/OpsButton';
 import { errorMessage } from '@/hooks/useApiAction';
-import { updateBusinessProfile } from '@/lib/api';
+import { getAgentInstance, getAgentInstanceVersion, previewAgentInstance, updateBusinessProfile } from '@/lib/api';
 import { canEditBusinessProfile } from '@/lib/rbac';
 import { displayTimeZone, formatDateTime } from '@/lib/ops';
 import {
-  PLATFORM_RULES, PREVIEW_NOTE, QUALIFICATION_LIMITS, SAMPLE_LEAD, fieldErrors, getPath, greetingValues, languageNames,
-  publishProblems, renderGreeting,
+  MAX_CUSTOM_INSTRUCTIONS, PLATFORM_RULES, QUALIFICATION_LIMITS, QUESTIONS_OVER_NOTE,
+  askedQuestions, fieldErrors, getPath, languageNames,
+  publishProblems,
 } from '@/lib/agentInstances';
 import {
-  ChoiceField, GapNote, ListField, ReadOnlyValue, SelectField, SwitchField, TextField, WindowField,
+  ChoiceField, FieldUseProvider, GapNote, ListField, ReadOnlyValue, SelectField, SwitchField, TextField, WindowField,
 } from './fields';
 import { CheckChip, Panel as SetupPanel } from '@/components/setup/SetupUi';
+import CallPreviewView from '@/components/voice/CallPreview';
+import useCallPreview from '@/hooks/useCallPreview';
 
 const BOTH = ['sdr_outbound', 'sdr_inbound'];
 
@@ -27,7 +30,7 @@ export const STEPS = Object.freeze([
   { id: 'catalog', label: 'Product catalog', types: BOTH, paths: ['inbound.featured_product_ids'] },
   { id: 'identity', label: 'Agent identity', types: BOTH, paths: ['persona', 'voice', 'languages', 'tone', 'opener'] },
   { id: 'campaign_defaults', label: 'Campaign defaults', types: ['sdr_outbound'], paths: ['qualification_questions', 'dispositions', 'extraction_fields'] },
-  { id: 'inbound', label: 'Inbound calls', types: ['sdr_inbound'], paths: ['inbound'] },
+  { id: 'inbound', label: 'Inbound calls', types: ['sdr_inbound'], paths: ['inbound', 'qualification_questions'] },
   { id: 'actions', label: 'Actions and integrations', types: BOTH, paths: ['calendar', 'call_behaviour.tools', 'call_behaviour.transfer_numbers'] },
   { id: 'rules', label: 'Rules and guardrails', types: BOTH, paths: ['calling', 'guardrails'] },
   { id: 'behaviour', label: 'Call behaviour', advanced: true, types: BOTH, paths: ['call_behaviour', 'goal', 'sales_approach', 'conversation_length', 'target_customer'] },
@@ -132,6 +135,8 @@ export function BusinessStep({ context, user }) {
   };
   const business = context.business;
   return (
+    // The profile's own metadata (GET /api/v1/business-profile `fields`): which details reach calls.
+    <FieldUseProvider value={business?.fields || null}>
     <Section title="Business details" badge="Shared with all your agents" action={editable && (
       <OpsButton variant="primary" busy={saving} onClick={save}>Save business details</OpsButton>
     )} note={business?.updated_at && (
@@ -181,6 +186,7 @@ export function BusinessStep({ context, user }) {
         )}
       </div>
     </Section>
+    </FieldUseProvider>
   );
 }
 
@@ -230,13 +236,12 @@ export function IdentityStep({ agentType, payload, context, field }) {
     payload?.languages?.primary);
   const supported = field('languages.supported');
   const voice = payload?.voice || {};
-  const values = greetingValues({ payload, business: context.business });
   return (
     <Section title="Agent identity">
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Agent name" required maxLength={60} {...field('persona.name')} />
         <ChoiceField label="Speaks as" cards options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
-          hint="Sets verb forms in languages that need it (Hindi, Arabic)." {...field('persona.gender')} />
+          hint="Tells the agent to match its voice and to refer to itself this way on calls." {...field('persona.gender')} />
       </div>
       <div className="rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm" data-testid="voice-card">
         <p className="font-semibold">Voice</p>
@@ -268,23 +273,19 @@ export function IdentityStep({ agentType, payload, context, field }) {
           <TextField label="Opening line" multiline maxLength={500} counter
             hint="Placeholders: {{lead_first_name}}, {{agent_name}}, {{company_name}}, {{call_purpose}}."
             {...field('opener.first_message')} />
-          <GreetingPreview label="Opening line" text={payload?.opener?.first_message} values={values} />
+          <PreviewPointer />
         </div>
       )}
     </Section>
   );
 }
 
-/** A greeting rendered client-side for the labelled sample lead. */
-export function GreetingPreview({ label, text, values }) {
+/** Openings are shown by the server preview (the panel on the right), built by the code that places calls. */
+export function PreviewPointer() {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm" aria-live="polite" data-testid="greeting-preview">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label} for sample lead “{SAMPLE_LEAD.name}”
-      </p>
-      <p className="mt-1">{text ? renderGreeting(text, values) : <span className="text-muted-foreground">Nothing yet.</span>}</p>
-      <p className="mt-1 text-[11px] text-muted-foreground">{PREVIEW_NOTE}</p>
-    </div>
+    <p className="text-xs text-muted-foreground" data-testid="preview-pointer">
+      How calls will open, as the server builds them, is in the preview panel (saved changes show within a second).
+    </p>
   );
 }
 
@@ -298,6 +299,7 @@ export function CampaignDefaultsStep({ payload, field }) {
       <ListField label="Default qualification questions" min={min} max={max} reorder addLabel="Add a question" maxLength={200}
         hint="Every campaign starts from these; a campaign can change them for its own calls." {...questions}
         values={questions.value || []} />
+      <QuestionsOver list={questions.value} />
       <ReadOnlyValue label="Dispositions"
         value={payload?.dispositions ? JSON.stringify(payload.dispositions) : "Outbound SDR's standard dispositions"}
         note="Editing dispositions is not available yet." />
@@ -310,11 +312,41 @@ export function CampaignDefaultsStep({ payload, field }) {
 
 // ── 4b. Inbound calls (Inbound SDR) ──
 
-export function InboundStep({ payload, context, field }) {
+/** A saved version with more questions than a call asks (older versions allowed 7). */
+function QuestionsOver({ list }) {
+  return askedQuestions(list).length > QUALIFICATION_LIMITS.max
+    ? <p role="status" className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400" data-testid="questions-over">{QUESTIONS_OVER_NOTE}</p>
+    : null;
+}
+
+/** Outbound SDR's qualification questions (its draft, else its published version), or [] when it has none. */
+async function outboundQuestions() {
+  const instance = (await getAgentInstance('sdr_outbound')).data;
+  const number = instance?.draft_version ?? instance?.published_version;
+  if (number == null) return [];
+  const version = (await getAgentInstanceVersion('sdr_outbound', number)).data;
+  return (version?.payload?.qualification_questions || []).filter((q) => (q || '').trim());
+}
+
+export function InboundStep({ payload, context, field, readOnly }) {
   const overflowMode = payload?.inbound?.overflow?.mode || 'message';
-  const values = greetingValues({ payload, business: context.business });
+  const questions = field('qualification_questions');
+  const { min, max } = QUALIFICATION_LIMITS;
+  const empty = !(questions.value || []).length;
+  // A new Inbound SDR starts from Outbound SDR's questions (once, while the list is empty and editable).
+  useEffect(() => {
+    if (readOnly || !empty) return undefined;
+    let cancelled = false;
+    outboundQuestions().then((list) => { if (!cancelled && list.length) questions.onChange(list.slice(0, max)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [readOnly, empty]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Section title="Inbound calls">
+      <ListField label="Qualification questions" min={min} max={max} reorder addLabel="Add a question" maxLength={200}
+        hint="Asked one at a time when a caller is interested in buying. Starts from your Outbound SDR's questions."
+        {...questions} values={questions.value || []} />
+      <QuestionsOver list={questions.value} />
       <WindowField label="Business hours" emptyLabel="Uses your business profile's hours"
         hint="In your organisation's time zone." {...field('inbound.business_hours')} />
       <TextField label="After hours" multiline maxLength={1000} counter
@@ -334,12 +366,12 @@ export function InboundStep({ payload, context, field }) {
         <div className="space-y-2">
           <TextField label="Greeting for a known caller" multiline maxLength={500}
             hint="{{caller_first_name}}, {{company_name}}, {{agent_name}}" {...field('inbound.known_caller_greeting')} />
-          <GreetingPreview label="Known-caller greeting" text={payload?.inbound?.known_caller_greeting} values={values} />
+          <PreviewPointer />
         </div>
         <div className="space-y-2">
           <TextField label="Greeting for a new caller" multiline maxLength={500}
             hint="{{company_name}}, {{agent_name}}" {...field('inbound.new_caller_greeting')} />
-          <GreetingPreview label="New-caller greeting" text={payload?.inbound?.new_caller_greeting} values={values} />
+          <PreviewPointer />
         </div>
       </div>
     </Section>
@@ -400,22 +432,26 @@ export function RulesStep({ agentType, field }) {
         hint="What the agent says about the call being recorded." {...field('guardrails.recording_disclosure')} />
       <ListField label="Never say" addLabel="Add a phrase" maxLength={200} max={20} {...field('guardrails.never_say')}
         values={field('guardrails.never_say').value || []} />
-      <GapNote>Saved with this version; not every setting is applied to calls yet.</GapNote>
     </Section>
   );
 }
 
 // ── 7. Call behaviour (Advanced) ──
 
-export function BehaviourStep({ payload, field }) {
+export function BehaviourStep({ payload, field, platform }) {
+  const silence = platform?.silence_timeout_seconds;
   return (
     <details className="rounded-2xl border border-border bg-card p-5 sm:p-6" open={false}>
       <summary className="cursor-pointer text-sm font-semibold">Advanced: call behaviour</summary>
       <div className="mt-4 space-y-4">
         <TextField label="Voicemail message" multiline maxLength={500} {...field('call_behaviour.voicemail_message')} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label="Maximum call length (seconds)" type="number" {...field('call_behaviour.max_duration_seconds')} />
-          <TextField label="Silence timeout (seconds)" type="number" {...field('call_behaviour.silence_timeout_seconds')} />
+          <TextField label="Maximum call length (seconds)" type="number" hint="60 to 1800. Empty: the platform's default."
+            {...field('call_behaviour.max_duration_seconds')} />
+          <div data-testid="silence-timeout">
+            <ReadOnlyValue label="Hang up after silence" value={silence != null ? `${silence} seconds` : null}
+              note="Set by the platform" />
+          </div>
           <SelectField label="Sales approach" options={withCurrent(APPROACHES, payload?.sales_approach)} placeholder="Not set"
             {...field('sales_approach')} />
           <SelectField label="Conversation length" options={withCurrent(LENGTHS, payload?.conversation_length)} placeholder="Not set"
@@ -423,8 +459,13 @@ export function BehaviourStep({ payload, field }) {
         </div>
         <TextField label="Target customer" maxLength={300} {...field('target_customer')} />
         <TextField label="End-of-call message" maxLength={300} {...field('call_behaviour.end_call_message')} />
-        <TextField label="Extra instructions" multiline maxLength={2000} counter {...field('guardrails.custom_instructions')} />
-        <GapNote>Saved with this version; not every setting is applied to calls yet.</GapNote>
+        <TextField label="Extra instructions" multiline maxLength={MAX_CUSTOM_INSTRUCTIONS} counter
+          hint={`At most ${MAX_CUSTOM_INSTRUCTIONS} characters: what a call carries.`} {...field('guardrails.custom_instructions')} />
+        {(payload?.guardrails?.custom_instructions || '').length > MAX_CUSTOM_INSTRUCTIONS && (
+          <p role="status" className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400" data-testid="instructions-over">
+            Calls use only the first {MAX_CUSTOM_INSTRUCTIONS} characters (now {(payload.guardrails.custom_instructions || '').length}). Shorten it to publish.
+          </p>
+        )}
       </div>
     </details>
   );
@@ -432,8 +473,15 @@ export function BehaviourStep({ payload, field }) {
 
 // ── 8. Review and test ──
 
-export function ReviewStep({ agentType, payload, context }) {
-  const values = greetingValues({ payload, business: context.business });
+/** Step 8's preview: the server's, for this version (none for a version that is neither draft nor published). */
+function ReviewPreview({ agentType, versionNumber, refreshKey }) {
+  const state = useCallPreview(() => previewAgentInstance(agentType, { version_n: versionNumber }),
+    `${agentType}:${versionNumber}:${refreshKey}`, { enabled: versionNumber != null });
+  if (versionNumber == null) return null;
+  return <CallPreviewView {...state} title={agentType === 'sdr_outbound' ? 'Opening line' : 'New-caller greeting'} />;
+}
+
+export function ReviewStep({ agentType, payload, context, versionNumber, refreshKey }) {
   const problems = Object.values(publishProblems(payload, agentType));
   return (
     <Section title="Review and test">
@@ -454,11 +502,7 @@ export function ReviewStep({ agentType, payload, context }) {
         )}
         <dt className="text-muted-foreground">Calendar booking</dt><dd>{payload?.calendar?.booking_enabled ? 'On' : 'Off'}</dd>
       </dl>
-      {agentType === 'sdr_outbound' ? (
-        <GreetingPreview label="Opening line" text={payload?.opener?.first_message} values={values} />
-      ) : (
-        <GreetingPreview label="New-caller greeting" text={payload?.inbound?.new_caller_greeting} values={values} />
-      )}
+      <ReviewPreview agentType={agentType} versionNumber={versionNumber} refreshKey={refreshKey} />
       <div>
         <p className="text-sm font-medium">Checks</p>
         {problems.length === 0 ? (

@@ -19,6 +19,7 @@ jest.mock('@/lib/api', () => ({
   listOwnPhoneNumbers: jest.fn(),
   getCatalogItems: jest.fn(),
   getBuilderLanguages: jest.fn(),
+  previewAgentInstance: jest.fn(),
 }));
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
 
@@ -45,6 +46,15 @@ const INSTANCE = {
   draft_version: 5, created_at: at, updated_at: at,
   versions: [5, 4, 2].map((n) => ({ ...VERSIONS[n], payload: undefined, created_at: at, created_by: 2, created_by_name: 'Tara Admin' })),
 };
+// What the server preview answers (POST /api/v1/agent-instances/{type}/preview): shown as is, never rendered here.
+const SERVER_PREVIEW = {
+  mode: 'shared', first_message: 'Hi Asha, this is Riya from Acme Motors. Is now a good time?',
+  rendered_prompt: 'You are Riya, calling on behalf of Acme Motors.', variable_values: { agent_name: 'Riya' },
+  call_settings: { transcriber: { language: 'en' }, maxDurationSeconds: 480 },
+  caller_id: { source: 'tenant_number', number: '+911234567890' },
+  missing_required: [{ code: 'agent_not_ready', label: 'The agent is missing details every call needs', fields: ['call_purpose'] }],
+  warnings: ['Sample lead: Asha at Sample Traders (made up).'],
+};
 const STALE = { response: { status: 409, data: { detail: { code: 'stale_draft', base_version: 2, published_version: 4, message: 'stale' } } } };
 
 beforeEach(() => {
@@ -58,6 +68,7 @@ beforeEach(() => {
   ] });
   api.getCatalogItems.mockResolvedValue({ data: { items: [] } });
   api.getBuilderLanguages.mockResolvedValue({ data: [{ code: 'en', english_name: 'English' }] });
+  api.previewAgentInstance.mockResolvedValue({ data: SERVER_PREVIEW });
   api.updateAgentInstanceDraft.mockImplementation((type, n, p) => Promise.resolve({ data: { version: n, payload: p } }));
 });
 
@@ -243,6 +254,11 @@ describe('full-screen layout', () => {
     const preview = screen.getByTestId('agent-preview');
     expect(preview).toHaveTextContent('What the agent will say');
     expect(preview).toHaveTextContent('Draft 5');
-    expect(preview).toHaveTextContent('Sent with the call');
+    // The server's preview of the open draft, shown as it came: opener, settings, checklist, warnings.
+    await waitFor(() => expect(api.previewAgentInstance).toHaveBeenCalledWith('sdr_outbound', { version_n: 5 }), { timeout: 2000 });
+    expect(await within(preview).findByText('“Hi Asha, this is Riya from Acme Motors. Is now a good time?”')).toBeInTheDocument();
+    expect(within(preview).getByText('8 min')).toBeInTheDocument();
+    expect(within(preview).getByText(/The agent is missing details every call needs: call_purpose/)).toBeInTheDocument();
+    expect(within(preview).getByText('Sample lead: Asha at Sample Traders (made up).')).toBeInTheDocument();
   });
 });

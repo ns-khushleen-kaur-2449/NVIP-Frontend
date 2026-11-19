@@ -11,6 +11,7 @@ jest.mock('@/lib/api', () => ({
   getCatalogItems: jest.fn(),
   checkCampaignSchedule: jest.fn(),
   previewCampaignOffer: jest.fn(),
+  previewCampaign: jest.fn(),
   createVoiceCampaign: jest.fn(),
   getAgentInstance: jest.fn(),
   getAgentInstanceVersion: jest.fn(),
@@ -29,6 +30,10 @@ beforeEach(() => {
   api.getCatalogItems.mockResolvedValue({ data: { items: [] } });
   api.checkCampaignSchedule.mockResolvedValue({ data: { warnings: [], retry_defaults: null } });
   api.createVoiceCampaign.mockResolvedValue({ data: { id: 'c-9', total_leads: 2 } });
+  // The server preview (POST /api/campaigns/preview): one opening per lead, built by the server.
+  api.previewCampaign.mockImplementation((body) => Promise.resolve({ data: {
+    mode: 'own_assistant', first_message: `Server opening for ${body.prospect_id || 'nobody'}`, rendered_prompt: null,
+    variable_values: {}, call_settings: {}, missing_required: [], warnings: [] } }));
 });
 
 // Text is set with one change event (not typed key by key) and every step waits for what it needs, so the tests
@@ -75,6 +80,11 @@ test('offer off: its fields are hidden; launch sends goal, priority and the brie
   await user.click(screen.getByRole('button', { name: 'Next: Review and launch' }));
   expect(await screen.findByRole('heading', { name: 'Checks before launch' })).toBeInTheDocument();
   expect(screen.getAllByTestId('sample-opening')).toHaveLength(2);
+  // Each sample opening is the server's, for that lead (no opening is rendered in the browser).
+  expect(await screen.findByText('“Server opening for p-1”')).toBeInTheDocument();
+  const previewed = api.previewCampaign.mock.calls.map(([b]) => b);
+  expect(previewed.some((b) => b.prospect_id === 'p-2' && b.brief?.call_purpose === 'You asked about a service.'
+    && b.assistant_id === 'va-1' && b.goal === 'book_meeting')).toBe(true);
   expect(screen.getByText('2 ready')).toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Launch now' }));

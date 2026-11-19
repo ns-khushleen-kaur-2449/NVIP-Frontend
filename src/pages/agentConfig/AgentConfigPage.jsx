@@ -23,6 +23,7 @@ import { ReviewStep, STEP_PANELS, fieldPropsFor, stepForPath, stepsFor } from '.
 import StaleDraftDialog from './StaleDraftDialog';
 import VersionHistory from './VersionHistory';
 import PreviewPanel from './PreviewPanel';
+import { FieldUseProvider } from './fields';
 
 export const AUTOSAVE_MS = 1000;
 const BUILDER_LINK = '/voice_agent?tab=create';
@@ -323,7 +324,11 @@ export function AgentConfigEditor({ agentType, user }) {
   const index = Math.max(0, steps.findIndex((s) => s.id === stepId));
   const step = steps[index];
   const StepPanel = STEP_PANELS[step.id];
-  const panelProps = { agentType, payload, context, field, readOnly, errors, user };
+  // The version the server preview shows: the open draft, else the published one; asked again after each autosave.
+  const previewVersion = draft?.version ?? instance?.published_version ?? null;
+  const previewKey = savedAt ? savedAt.getTime() : 0;
+  const panelProps = { agentType, payload, context, field, readOnly, errors, user, platform: instance?.platform || {},
+    versionNumber: previewVersion, refreshKey: previewKey };
   const go = (id) => {
     setVisited((v) => new Set([...v, step.id]));
     setStepId(id);
@@ -406,9 +411,12 @@ export function AgentConfigEditor({ agentType, user }) {
             </div>
           )}
 
-          <div aria-label={step.label}>
-            <StepPanel {...panelProps} />
-          </div>
+          {/* Each field's "Used on calls" badge comes from the server (instance `fields`); none is listed here. */}
+          <FieldUseProvider value={instance?.fields || null}>
+            <div aria-label={step.label}>
+              <StepPanel {...panelProps} />
+            </div>
+          </FieldUseProvider>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-5">
             <div className="flex gap-2">
               {index > 0 && <OpsButton variant="outline" onClick={() => go(steps[index - 1].id)}>Back</OpsButton>}
@@ -426,7 +434,7 @@ export function AgentConfigEditor({ agentType, user }) {
 
       <aside className="border-t border-border px-5 py-8 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-l lg:border-t-0"
         aria-label="Preview">
-        <PreviewPanel agentType={agentType} payload={payload} context={context}
+        <PreviewPanel agentType={agentType} versionNumber={previewVersion} refreshKey={previewKey}
           versionLabel={editing ? `Draft ${draft.version}` : published ? `Version ${instance.published_version}` : null} />
       </aside>
 
@@ -441,7 +449,8 @@ export function AgentConfigEditor({ agentType, user }) {
             <DialogTitle>Version {viewing?.version}</DialogTitle>
             <DialogDescription>Read-only. Restoring it makes a new draft; nothing changes until that draft is published.</DialogDescription>
           </DialogHeader>
-          {viewing && <ReviewStep agentType={agentType} payload={viewing.payload} context={context} />}
+          {viewing && <ReviewStep agentType={agentType} payload={viewing.payload} context={context}
+            versionNumber={['draft', 'published'].includes(viewing.status) ? viewing.version : null} refreshKey={0} />}
           {viewing && !editing && viewing.status !== 'draft' && (
             <OpsButton variant="outline" disabled={Boolean(busy)} onClick={() => restore(viewing)}>Restore as a draft</OpsButton>
           )}
