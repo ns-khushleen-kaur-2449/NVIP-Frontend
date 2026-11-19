@@ -14,8 +14,12 @@ describe('agent key -> screen', () => {
   });
 
   test('an agent with no screen yet opens nothing', () => {
-    expect(agentRoute({ key: 'real_estate' })).toBeNull();
+    expect(agentRoute({ key: 'insurance' })).toBeNull();
     expect(agentRoute(null)).toBeNull();
+  });
+
+  test('Real Estate has its own screen', () => {
+    expect(agentRoute({ key: 'real_estate' })).toBe('/real_estate_agent');
   });
 
   test('Hiring keeps its own screen', () => {

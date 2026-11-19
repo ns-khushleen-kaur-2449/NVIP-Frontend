@@ -228,6 +228,17 @@ export const getHiringCallTranscript = (bookingId, callId) =>
 // { url, expires_at }: a short-lived link the <audio> element plays directly; ask again once it expires.
 export const getHiringCallRecording = (bookingId, callId) =>
   api.get(`${HIRING}/bookings/${bookingId}/calls/${callId}/recording`);
+// ── Real Estate agent (backend app/agents/real_estate/router.py) ──
+// real_estate.view reads, real_estate.call places calls, and the organisation must be allowed to use Real Estate (403
+// otherwise). Responses never carry Vapi details.
+const REAL_ESTATE = '/api/v1/real_estate';
+export const listRealEstateCalls = (params) => api.get(`${REAL_ESTATE}/calls`, { params });
+export const getRealEstateCall = (id) => api.get(`${REAL_ESTATE}/calls/${id}`);
+// { lead_name, phone_number, knowledge_base?, idempotency_key }. One key per submit, kept only to retry that submit.
+// 201 placed; 200 that key's call again; 202 sent but not confirmed; 409/422 refused (detail.code); 502/503 not placed.
+export const startRealEstateCall = (data) => api.post(`${REAL_ESTATE}/calls`, data);
+export const getRealEstateCallTranscript = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/transcript`);
+export const getRealEstateCallRecording = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/recording`);
 // Users the caller may see (was /api/auth/users, which never existed).
 export const listUsers = () => authApi.get('/api/users', { params: { page_size: 100 } });
 
