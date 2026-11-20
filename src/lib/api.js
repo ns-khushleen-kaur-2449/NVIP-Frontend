@@ -179,6 +179,10 @@ export const rollbackAgentAssistantVersion = (id, rowId, n) => api.post(`${assis
 export const createAgentAssistantDraftFromTemplate = (id, rowId) => api.post(`${assistantVersions(id, rowId)}/from-template`);
 // The live platform tools this agent's shared assistant may attach by Vapi id (model.toolIds): its code pack's.
 export const listAgentAttachableTools = (id) => api.get(`/api/v1/agents/${id}/attachable-tools`);
+// The agent row's voices per language and gender (settings.voices); only that key changes, follows is kept.
+export const setAgentVoices = (id, voices) => api.put(`/api/v1/agents/${id}/voices`, { voices });
+// What the Assistant Builder would use per approved language and gender: a one-time prefill of the Voices dialog.
+export const getAgentBuilderVoices = () => api.get('/api/v1/agents/voices/builder-defaults');
 export const getAgentHealth = (id) => api.get(`/api/v1/agents/${id}/health`);
 
 // ── Agent instances: the tenant's configured agent per agent type, with versions ──

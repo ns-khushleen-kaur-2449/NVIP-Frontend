@@ -23,6 +23,8 @@ jest.mock('@/lib/api', () => ({
   rollbackAgentAssistantVersion: jest.fn(),
   listAgentAttachableTools: jest.fn(),
   replaceAgentAssistant: jest.fn(),
+  getAgentBuilderVoices: jest.fn(),
+  setAgentVoices: jest.fn(),
 }));
 
 const AGENT = { id: 'a-2', key: 'hiring', name: 'Hiring', industry: 'HR', status: 'active', access_scope: 'selected' };
