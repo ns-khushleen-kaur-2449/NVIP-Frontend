@@ -241,7 +241,7 @@ export function IdentityStep({ agentType, payload, context, field }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Agent name" required maxLength={60} {...field('persona.name')} />
         <ChoiceField label="Speaks as" cards options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
-          hint="Tells the agent to match its voice and to refer to itself this way on calls." {...field('persona.gender')} />
+          hint="Sets how the agent refers to itself. The voice follows this choice unless you pick a voice." {...field('persona.gender')} />
       </div>
       <div className="rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm" data-testid="voice-card">
         <p className="font-semibold">Voice</p>

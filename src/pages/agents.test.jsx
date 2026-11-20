@@ -21,6 +21,8 @@ jest.mock('@/lib/api', () => ({
   registerAgentAssistant: jest.fn(),
   removeAgentAssistant: jest.fn(),
   replaceAgentAssistant: jest.fn(),
+  getAgentBuilderVoices: jest.fn(),
+  setAgentVoices: jest.fn(),
   listAvailableAgents: jest.fn(),
   getAgentHealth: jest.fn(),
 }));
@@ -174,6 +176,18 @@ describe('Agent catalog admin (Super Admin)', () => {
     const hiring = await screen.findByTestId('agent-row-hiring');
     await user.click(within(hiring).getByRole('button', { name: 'Activate' }));
     await waitFor(() => expect(api.updateAgent).toHaveBeenCalledWith('a-2', { status: 'active' }));
+  });
+
+  test('follow again sends only follows (PATCH merges settings; voices have their own PUT)', async () => {
+    const detached = { id: 'a-3', key: 'sdr_inbound', name: 'Inbound SDR', status: 'active', access_scope: 'all', follows: null,
+      settings: { screen: null, voices: { en: { female: { provider: '11labs', voiceId: 'v' } } } } };
+    api.listAgents.mockResolvedValue({ data: [...AGENTS, detached] });
+    const user = userEvent.setup();
+    renderWithAuth(<AgentsAdminPage />, { user: USERS.super_admin });
+    const row = await screen.findByTestId('agent-row-sdr_inbound');
+    await user.click(within(row).getByRole('button', { name: /follow .* again/i }));
+    await user.click(await screen.findByRole('button', { name: 'Follow again' }));
+    await waitFor(() => expect(api.updateAgent).toHaveBeenCalledWith('a-3', { settings: { follows: 'sdr' } }));
   });
 
   test('adding a catalog entry needs a code pack key and a name', async () => {

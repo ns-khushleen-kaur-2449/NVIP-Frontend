@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { errorText } from '@/components/admin/userBits';
 import SharedAssistantVersionsDialog from '@/components/admin/SharedAssistantVersionsDialog';
+import AgentVoicesDialog from '@/components/admin/AgentVoicesDialog';
 import ConfirmDialog from '@/components/ops/ConfirmDialog';
 import {
   createAgent, getAgentAccess, getAgentHealth, listAgentAssistants, listAgents, registerAgentAssistant,
@@ -414,6 +415,7 @@ export default function AgentsAdminPage() {
   const [accessFor, setAccessFor] = useState(null);
   const [assistantsFor, setAssistantsFor] = useState(null);
   const [versionsFor, setVersionsFor] = useState(null);
+  const [voicesFor, setVoicesFor] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [health, setHealth] = useState({});
   const [refollow, setRefollow] = useState(null);
@@ -453,9 +455,10 @@ export default function AgentsAdminPage() {
   };
 
   // Re-attach Inbound SDR to Outbound SDR: the backend copies SDR's scope, grants and status at once.
+  // PATCH merges settings, so only follows is sent (sending voices would be refused: they have their own PUT).
   const followAgain = async () => {
     try {
-      await updateAgent(refollow.id, { settings: { ...(refollow.settings || {}), follows: 'sdr' } });
+      await updateAgent(refollow.id, { settings: { follows: 'sdr' } });
       toast.success(`${refollow.name} follows ${FOLLOWED_AGENT_LABELS.sdr} again`);
       await load();
       return true;
@@ -524,6 +527,7 @@ export default function AgentsAdminPage() {
                         <Button variant="outline" size="sm" onClick={() => setRefollow(agent)}>Follow {FOLLOWED_AGENT_LABELS.sdr} again</Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => setAssistantsFor(agent)}>Assistants</Button>
+                      <Button variant="outline" size="sm" onClick={() => setVoicesFor(agent)}>Voices</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -543,6 +547,8 @@ export default function AgentsAdminPage() {
         onVersions={(row) => { setVersionsFor({ agent: assistantsFor, assistant: row }); setAssistantsFor(null); }} />
       <SharedAssistantVersionsDialog agent={versionsFor?.agent} assistant={versionsFor?.assistant}
         onClose={() => setVersionsFor(null)} />
+      <AgentVoicesDialog agent={voicesFor} onClose={() => setVoicesFor(null)}
+        onSaved={async () => { await load(); }} />
     </div>
   );
 }

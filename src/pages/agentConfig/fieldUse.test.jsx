@@ -78,7 +78,7 @@ describe('the steps', () => {
 
   test('gender: says what it does today, no verb-form claim', () => {
     withUse(<IdentityStep agentType="sdr_outbound" payload={{}} context={{ languages: [] }} field={field()} />);
-    expect(screen.getByText(/match its voice and to refer to itself/i)).toBeInTheDocument();
+    expect(screen.getByText('Sets how the agent refers to itself. The voice follows this choice unless you pick a voice.')).toBeInTheDocument();
     expect(screen.queryByText(/verb forms/i)).not.toBeInTheDocument();
   });
 
