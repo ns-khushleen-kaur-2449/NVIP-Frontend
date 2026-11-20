@@ -48,6 +48,8 @@ export function errorText(error, fallback) {
   const detail = error?.response?.data?.detail;
   if (typeof detail === 'string') return detail;
   if (Array.isArray(detail)) return detail.map((d) => d.msg || String(d)).join('; ');
+  // Coded refusals: {code, message} (e.g. pack_already_has_agent, assistant_in_use).
+  if (detail && typeof detail.message === 'string') return detail.message;
   return fallback;
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Building2, CalendarPlus, Eye, Loader2, Pencil, Plus, RefreshCw, Trash2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarPlus, Download, Eye, Loader2, Pencil, Plus, RefreshCw, Trash2, Wrench, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  createTool, deleteTool, getToolTenants, listTools, listToolTypes, previewTool, registerAppointmentTools, setToolTenants,
+  createTool, deleteTool, fetchVapiTool, getToolTenants, importVapiTool, listTools, listToolTypes, previewTool, registerAppointmentTools, setToolTenants,
   syncTool, updateTool,
 } from '@/lib/api';
 
@@ -438,6 +438,191 @@ function TenantAccessDialog({ tool, onOpenChange, onSaved }) {
 }
 
 /** Super Admin: platform Vapi tools (create, edit, re-sync, delete, tenant access). */
+const MATCHED_BY = {
+  chosen: 'chosen by you',
+  name: "found from the tool's name",
+  vapi_type: 'the only type for this kind of Vapi tool',
+};
+
+const show = (value) => (typeof value === 'string' ? value || '(empty)' : JSON.stringify(value, null, 2) ?? '(none)');
+
+// Import a tool that already exists in Vapi: fetch shows everything that would be saved, import saves it.
+// Neither changes the tool in Vapi; when Vapi differs from what this platform sends, Re-sync updates it afterwards.
+function ImportVapiToolDialog({ open, onOpenChange, types, onImported }) {
+  const [vapiId, setVapiId] = useState('');
+  const [typeKey, setTypeKey] = useState('auto');
+  const [result, setResult] = useState(null);
+  const [problem, setProblem] = useState(null); // { messages: [], typeKeys: [] }
+  const [busy, setBusy] = useState(null); // 'fetch' | 'import'
+
+  useEffect(() => {
+    if (!open) return;
+    setVapiId(''); setTypeKey('auto'); setResult(null); setProblem(null); setBusy(null);
+  }, [open]);
+
+  const chosenType = typeKey === 'auto' ? null : typeKey;
+  const typeLabel = (key) => types.find((t) => t.type_key === key)?.label || key;
+  // Editing the id or the type makes an earlier fetch stale.
+  const reset = (apply) => (value) => { apply(value); setResult(null); setProblem(null); };
+
+  const failure = (e, fallback) => {
+    const detail = e?.response?.data?.detail;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail) && detail.message) {
+      return { messages: [detail.message], typeKeys: detail.type_keys || [] };
+    }
+    return { messages: errorList(e, fallback), typeKeys: [] };
+  };
+
+  const runFetch = async () => {
+    setBusy('fetch'); setProblem(null); setResult(null);
+    try {
+      const res = await fetchVapiTool(vapiId.trim(), chosenType);
+      setResult(res.data);
+    } catch (e) {
+      setProblem(failure(e, 'Could not fetch the tool from Vapi'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runImport = async () => {
+    setBusy('import'); setProblem(null);
+    try {
+      const res = await importVapiTool(vapiId.trim(), chosenType);
+      const { tool } = res.data;
+      if (tool.sync_status === 'active') toast.success(`Imported ${tool.name}; it already matches Vapi`);
+      else toast.success(`Imported ${tool.name}. Press Re-sync to make the Vapi tool match this platform`);
+      onImported();
+      onOpenChange(false);
+    } catch (e) {
+      setProblem(failure(e, 'Import failed'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const definition = result?.definition;
+  const takesParameters = result?.vapi_type === 'function';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto" data-testid="import-vapi-tool-dialog">
+        <DialogHeader>
+          <DialogTitle>Import a tool from Vapi</DialogTitle>
+          <DialogDescription>
+            Enter the tool's Vapi id. Fetch shows everything that will be saved; importing makes it a platform tool
+            like one created here. Vapi is not changed.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-4">
+            <Field label="Vapi tool id">
+              <Input className={`${fieldClass} font-mono`} value={vapiId} placeholder="e.g. 3f1c…"
+                onChange={(e) => reset(setVapiId)(e.target.value)} aria-label="Vapi tool id"
+                onKeyDown={(e) => { if (e.key === 'Enter' && vapiId.trim() && !busy) runFetch(); }} />
+            </Field>
+            <Field label="Tool type" hint="Detected from the tool's name when it is a type's default name.">
+              <Select value={typeKey} onValueChange={reset(setTypeKey)}>
+                <SelectTrigger className={fieldClass} aria-label="Tool type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Detect automatically</SelectItem>
+                  {types.map((t) => <SelectItem key={t.type_key} value={t.type_key}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          {problem && (
+            <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-600 space-y-1" role="alert">
+              {problem.messages.map((m) => <p key={m}>{m}</p>)}
+              {problem.typeKeys.length > 0 && (
+                <p className="text-xs text-muted-foreground">Pick one of: {problem.typeKeys.map(typeLabel).join(', ')}.</p>
+              )}
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-3" data-testid="vapi-tool-preview">
+              <div className="flex items-center gap-2 flex-wrap text-sm">
+                <span className="font-mono font-medium">{definition.name || '(no name)'}</span>
+                <Badge variant="secondary" className="text-[11px]">{typeLabel(result.type_key)}</Badge>
+                <span className="text-xs text-muted-foreground">Type {MATCHED_BY[result.type_matched_by] || result.type_matched_by}</span>
+                {result.valid && (result.in_sync
+                  ? <Badge variant="outline" className={SYNC_STYLES.active.className}>Matches Vapi</Badge>
+                  : <Badge variant="outline" className={SYNC_STYLES.pending.className}>Needs a sync after import</Badge>)}
+              </div>
+
+              {result.errors.length > 0 && (
+                <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-600 space-y-1">
+                  <p className="font-medium">This tool cannot be imported yet:</p>
+                  {result.errors.map((m) => <p key={m}>• {m}</p>)}
+                </div>
+              )}
+              {result.warnings.length > 0 && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 space-y-1">
+                  {result.warnings.map((m) => <p key={m} className="flex gap-1"><AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />{m}</p>)}
+                </div>
+              )}
+
+              <Field label="Description"><p className="text-sm mt-1 whitespace-pre-wrap">{definition.description || '(none)'}</p></Field>
+              {takesParameters && (
+                <>
+                  <Field label="Request schema">
+                    <pre className="mt-1 text-xs bg-[hsl(var(--surface-2))] border border-border rounded-md p-2 overflow-x-auto max-h-56">{show(definition.request_schema)}</pre>
+                  </Field>
+                  <Field label="Settings">
+                    <p className="text-xs mt-1 font-mono">
+                      async: {String(Boolean(definition.settings?.async))} · timeout: {definition.settings?.timeout_seconds}s · path: {definition.settings?.server_path}
+                    </p>
+                  </Field>
+                  <Field label="Response template">
+                    <p className="text-xs mt-1 whitespace-pre-wrap">{definition.response_template || '(none: the handler\'s own answer is spoken)'}</p>
+                  </Field>
+                </>
+              )}
+              <Field label="Messages">
+                {definition.messages.length === 0 ? <p className="text-xs mt-1">(none)</p> : (
+                  <ul className="mt-1 space-y-1 text-xs">
+                    {definition.messages.map((m, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i}><span className="font-mono text-muted-foreground">{m.type}</span> {m.content}</li>
+                    ))}
+                  </ul>
+                )}
+              </Field>
+
+              {result.differences.length > 0 && (
+                <Field label="What a sync will change in Vapi"
+                  hint="Import keeps Vapi as it is. Re-sync afterwards sends this platform's version to the same Vapi tool.">
+                  <div className="mt-1 rounded-md border border-border divide-y divide-border text-xs">
+                    {result.differences.map((d) => (
+                      <div key={d.field} className="grid grid-cols-[140px_1fr_1fr] gap-2 p-2">
+                        <span className="font-mono">{d.field}</span>
+                        <pre className="whitespace-pre-wrap break-all text-muted-foreground">Vapi: {show(d.vapi)}</pre>
+                        <pre className="whitespace-pre-wrap break-all">Platform: {show(d.platform)}</pre>
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={runFetch} disabled={!vapiId.trim() || Boolean(busy)}>
+            {busy === 'fetch' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />} Fetch
+          </Button>
+          <Button onClick={runImport} disabled={!result?.valid || Boolean(busy)} className="bg-primary text-primary-foreground">
+            {busy === 'import' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />} Import
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ToolsManager() {
   const [tools, setTools] = useState([]);
   const [types, setTypes] = useState([]);
@@ -446,6 +631,7 @@ export default function ToolsManager() {
   const [busyId, setBusyId] = useState(null);
   const [accessTool, setAccessTool] = useState(null);
   const [registering, setRegistering] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -527,6 +713,10 @@ export default function ToolsManager() {
             {registering ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CalendarPlus className="w-4 h-4 mr-1" />}
             Register appointment tools
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setImporting(true)} disabled={!types.length}
+            title="Fetch a tool that already exists in Vapi by its id and save it as a platform tool">
+            <Download className="w-4 h-4 mr-1" /> Import from Vapi
+          </Button>
           <Button size="sm" onClick={() => setEditor({ open: true, tool: null })} disabled={!types.length} className="bg-primary text-primary-foreground">
             <Plus className="w-4 h-4 mr-1" /> New tool
           </Button>
@@ -568,6 +758,8 @@ export default function ToolsManager() {
           ))}
         </div>
       )}
+
+      <ImportVapiToolDialog open={importing} onOpenChange={setImporting} types={types} onImported={load} />
 
       <TenantAccessDialog tool={accessTool} onOpenChange={(open) => !open && setAccessTool(null)} onSaved={load} />
 

@@ -100,6 +100,27 @@ export const accessSummary =(agent) => (agent?.access_scope === 'all' ? 'All org
 export const VERSION_STATUS_LABELS = Object.freeze({ published: 'Live', draft: 'Draft', superseded: 'Earlier live' });
 
 /** The editor's text as a draft payload: `{ payload }`, or `{ error }` saying why it can't be saved. */
+/** The ``model.toolIds`` of the assistant JSON in ``text``, or null when the text is not a JSON object. */
+export const toolIdsIn = (text) => {
+  const parsed = parseAssistantJson(text);
+  if (parsed.error) return null;
+  const ids = parsed.payload.model?.toolIds;
+  return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
+};
+
+/** ``text`` with ``vapiToolId`` added to (``on``) or removed from ``model.toolIds``; null when not valid JSON.
+ * The rest of the JSON is kept as it is (re-indented). */
+export const withToolId = (text, vapiToolId, on) => {
+  const parsed = parseAssistantJson(text);
+  if (parsed.error) return null;
+  const payload = parsed.payload;
+  const model = payload.model && typeof payload.model === 'object' && !Array.isArray(payload.model) ? payload.model : {};
+  const current = Array.isArray(model.toolIds) ? model.toolIds : [];
+  const toolIds = on ? (current.includes(vapiToolId) ? current : [...current, vapiToolId])
+    : current.filter((id) => id !== vapiToolId);
+  return JSON.stringify({ ...payload, model: { ...model, toolIds } }, null, 2);
+};
+
 export const parseAssistantJson = (text) => {
   let payload;
   try {
