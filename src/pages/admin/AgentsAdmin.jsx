@@ -13,7 +13,7 @@ import SharedAssistantVersionsDialog from '@/components/admin/SharedAssistantVer
 import ConfirmDialog from '@/components/ops/ConfirmDialog';
 import {
   createAgent, getAgentAccess, getAgentHealth, listAgentAssistants, listAgents, registerAgentAssistant,
-  removeAgentAssistant, setAgentAccess, updateAgent,
+  removeAgentAssistant, replaceAgentAssistant, setAgentAccess, updateAgent,
 } from '@/lib/api';
 import {
   AGENT_STATUS_ACTIONS, AGENT_STATUS_LABELS, FOLLOWED_AGENT_LABELS, accessSummary, canFollowAgain, followsLabel, healthState,
@@ -225,17 +225,28 @@ function AccessDialog({ agent, onClose, onSaved }) {
   );
 }
 
+const IN_USE = 'assistant_in_use';
+const inUseMessage = 'Organisations are calling through this assistant. Replace it instead, or delete anyway with a reason.';
+const codeOf = (e) => e?.response?.data?.detail?.code;
+
+/** An agent row has exactly one shared Vapi assistant (plus replaced ones, kept as read-only history). */
 function AssistantsDialog({ agent, onClose, onVersions }) {
   const [rows, setRows] = useState(null);
-  const [form, setForm] = useState({ vapi_assistant_id: '', name: '', purpose: '' });
+  const [form, setForm] = useState({ vapi_assistant_id: '', name: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [replacing, setReplacing] = useState(false);
+  const [replaceForm, setReplaceForm] = useState({ vapi_assistant_id: '', name: '', reason: '' });
+  const [replaceError, setReplaceError] = useState(null);
+  const [forceRow, setForceRow] = useState(null);
+  const [forceReason, setForceReason] = useState('');
+  const [forceError, setForceError] = useState(null);
 
   const load = useCallback(async () => {
     try {
       setRows((await listAgentAssistants(agent.id)).data);
     } catch (e) {
-      setError(errorText(e, 'Could not load assistants'));
+      setError(errorText(e, 'Could not load the assistant'));
       setRows([]);
     }
   }, [agent]);
@@ -244,20 +255,21 @@ function AssistantsDialog({ agent, onClose, onVersions }) {
     if (!agent) return;
     setRows(null);
     setError(null);
-    setForm({ vapi_assistant_id: '', name: '', purpose: '' });
+    setForm({ vapi_assistant_id: '', name: '' });
     load();
   }, [agent, load]);
 
+  const live = rows?.find((row) => !row.replaced_at) || null;
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const setReplace = (patch) => setReplaceForm((f) => ({ ...f, ...patch }));
+
   const add = async () => {
     if (!form.vapi_assistant_id.trim() || !form.name.trim()) { setError('A Vapi assistant id and a name are required'); return; }
     setSaving(true);
     setError(null);
     try {
-      await registerAgentAssistant(agent.id, {
-        vapi_assistant_id: form.vapi_assistant_id.trim(), name: form.name.trim(), purpose: form.purpose.trim() || null,
-      });
-      setForm({ vapi_assistant_id: '', name: '', purpose: '' });
+      await registerAgentAssistant(agent.id, { vapi_assistant_id: form.vapi_assistant_id.trim(), name: form.name.trim() });
+      setForm({ vapi_assistant_id: '', name: '' });
       await load();
     } catch (e) {
       setError(errorText(e, 'Could not register the assistant'));
@@ -265,12 +277,51 @@ function AssistantsDialog({ agent, onClose, onVersions }) {
       setSaving(false);
     }
   };
+
+  const openReplace = () => {
+    setReplaceForm({ vapi_assistant_id: '', name: '', reason: '' });
+    setReplaceError(null);
+    setReplacing(true);
+  };
+  const replace = async () => {
+    setReplaceError(null);
+    try {
+      await replaceAgentAssistant(agent.id, {
+        vapi_assistant_id: replaceForm.vapi_assistant_id.trim(), name: replaceForm.name.trim(),
+        reason: replaceForm.reason.trim(),
+      });
+      toast.success(`${agent.name} now calls through the new assistant. Import its version 1 next.`);
+      await load();
+      return true;
+    } catch (e) {
+      setReplaceError(errorText(e, 'Could not replace the assistant'));
+      return false;
+    }
+  };
+
   const remove = async (row) => {
     try {
       await removeAgentAssistant(agent.id, row.id);
       await load();
     } catch (e) {
-      toast.error(errorText(e, 'Could not remove the assistant'));
+      if (codeOf(e) === IN_USE) {
+        setForceRow(row);
+        setForceReason('');
+        setForceError(null);
+      } else {
+        toast.error(errorText(e, 'Could not remove the assistant'));
+      }
+    }
+  };
+  const forceRemove = async () => {
+    setForceError(null);
+    try {
+      await removeAgentAssistant(agent.id, forceRow.id, { force: true, reason: forceReason.trim() });
+      await load();
+      return true;
+    } catch (e) {
+      setForceError(errorText(e, 'Could not remove the assistant'));
+      return false;
     }
   };
 
@@ -278,54 +329,79 @@ function AssistantsDialog({ agent, onClose, onVersions }) {
     <Dialog open={Boolean(agent)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[620px]" data-testid="agent-assistants-dialog">
         <DialogHeader>
-          <DialogTitle>Shared assistants of {agent?.name}</DialogTitle>
+          <DialogTitle>Shared assistant of {agent?.name}</DialogTitle>
           <DialogDescription>
-            Vapi assistants every organisation using this agent shares. Only you see these ids; organisations cannot import or edit them.
+            The one Vapi assistant every organisation using this agent calls through. Only you see its id;
+            organisations cannot import or edit it.
           </DialogDescription>
         </DialogHeader>
-        <div className="rounded-lg border border-border overflow-x-auto">
-          {!rows ? (
-            <div className="flex justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
-          ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4">No shared assistants registered yet.</p>
-          ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Purpose</TableHead><TableHead>Vapi id</TableHead><TableHead /></TableRow></TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="text-sm font-medium">{row.name}</TableCell>
-                    <TableCell className="text-sm">{row.purpose || '—'}</TableCell>
-                    <TableCell><code className="text-xs">{row.vapi_assistant_id}</code></TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <Button variant="outline" size="sm" aria-label={`Versions of ${row.name}`} onClick={() => onVersions(row)}>
-                        Versions{row.published_version ? ` (live: ${row.published_version})` : ''}
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label={`Remove ${row.name}`} onClick={() => remove(row)}><Trash2 className="w-4 h-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <label className={field}>Vapi assistant id
-            <Input value={form.vapi_assistant_id} onChange={(e) => set({ vapi_assistant_id: e.target.value })} className="mt-1" />
-          </label>
-          <label className={field}>Name
-            <Input value={form.name} onChange={(e) => set({ name: e.target.value })} className="mt-1" />
-          </label>
-          <label className={field}>Purpose
-            <Input value={form.purpose} onChange={(e) => set({ purpose: e.target.value })} className="mt-1" placeholder="intake" />
-          </label>
-        </div>
+        {!rows ? (
+          <div className="flex justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+        ) : live ? (
+          <div className="rounded-lg border border-border p-3 space-y-3" data-testid="live-assistant">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{live.name}</p>
+                <code className="text-xs break-all">{live.vapi_assistant_id}</code>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="outline" size="sm" aria-label={`Versions of ${live.name}`} onClick={() => onVersions(live)}>
+                  Versions{live.published_version ? ` (live: ${live.published_version})` : ''}
+                </Button>
+                <Button variant="ghost" size="icon" aria-label={`Remove ${live.name}`} onClick={() => remove(live)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={openReplace}>Replace assistant</Button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">No shared assistant registered yet.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className={field}>Vapi assistant id
+                <Input value={form.vapi_assistant_id} onChange={(e) => set({ vapi_assistant_id: e.target.value })} className="mt-1" />
+              </label>
+              <label className={field}>Name
+                <Input value={form.name} onChange={(e) => set({ name: e.target.value })} className="mt-1" />
+              </label>
+            </div>
+          </>
+        )}
         {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
-        <DialogFooter>
-          <Button onClick={add} disabled={saving} className="bg-primary text-primary-foreground">
-            {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Register assistant
-          </Button>
-        </DialogFooter>
+        {rows && !live && (
+          <DialogFooter>
+            <Button onClick={add} disabled={saving} className="bg-primary text-primary-foreground">
+              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Register assistant
+            </Button>
+          </DialogFooter>
+        )}
+
+        <ConfirmDialog open={replacing} onOpenChange={setReplacing} danger confirmLabel="Replace assistant"
+          title={`Replace the shared assistant of ${agent?.name}?`}
+          description="Every organisation on this agent switches to the new assistant on its next call. The old assistant's versions are kept as read-only history."
+          canConfirm={Boolean(replaceForm.vapi_assistant_id.trim() && replaceForm.name.trim() && replaceForm.reason.trim())}
+          onConfirm={replace}>
+          <div className="space-y-2">
+            <label className={field}>New Vapi assistant id
+              <Input value={replaceForm.vapi_assistant_id} onChange={(e) => setReplace({ vapi_assistant_id: e.target.value })} className="mt-1" />
+            </label>
+            <label className={field}>Name
+              <Input value={replaceForm.name} onChange={(e) => setReplace({ name: e.target.value })} className="mt-1" />
+            </label>
+            <label className={field}>Reason (required)
+              <Input value={replaceForm.reason} onChange={(e) => setReplace({ reason: e.target.value })} className="mt-1" />
+            </label>
+            {replaceError && <p className="text-xs text-red-600" role="alert">{replaceError}</p>}
+          </div>
+        </ConfirmDialog>
+
+        <ConfirmDialog open={Boolean(forceRow)} onOpenChange={(open) => !open && setForceRow(null)} danger
+          confirmLabel="Delete anyway" title={`Delete ${forceRow?.name}?`} description={inUseMessage}
+          canConfirm={Boolean(forceReason.trim())} onConfirm={forceRemove}>
+          <label className={field}>Reason (required)
+            <Input value={forceReason} onChange={(e) => setForceReason(e.target.value)} className="mt-1" />
+          </label>
+          {forceError && <p className="text-xs text-red-600" role="alert">{forceError}</p>}
+        </ConfirmDialog>
       </DialogContent>
     </Dialog>
   );

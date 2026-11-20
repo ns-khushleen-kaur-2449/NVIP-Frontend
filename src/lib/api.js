@@ -161,7 +161,11 @@ export const setAgentAccess = (id, accessScope, tenantIds = []) =>
   api.put(`/api/v1/agents/${id}/access`, { access_scope: accessScope, tenant_ids: tenantIds });
 export const listAgentAssistants = (id) => api.get(`/api/v1/agents/${id}/assistants`);
 export const registerAgentAssistant = (id, data) => api.post(`/api/v1/agents/${id}/assistants`, data);
-export const removeAgentAssistant = (id, rowId) => api.delete(`/api/v1/agents/${id}/assistants/${rowId}`);
+// ``force`` deletes an assistant organisations are calling through; it needs a reason (409 assistant_in_use otherwise).
+export const removeAgentAssistant = (id, rowId, { force = false, reason } = {}) => api.delete(
+  `/api/v1/agents/${id}/assistants/${rowId}`, force ? { params: { force: true }, data: { reason } } : undefined);
+// Switch the agent to another Vapi assistant: every organisation on the agent moves to it.
+export const replaceAgentAssistant = (id, data) => api.put(`/api/v1/agents/${id}/assistant`, data);
 // Super Admin only: a shared assistant's versions. Import reads Vapi; publish and restore change the assistant in Vapi.
 const assistantVersions = (id, rowId) => `/api/v1/agents/${id}/assistants/${rowId}/versions`;
 export const listAgentAssistantVersions = (id, rowId) => api.get(assistantVersions(id, rowId));
@@ -173,6 +177,8 @@ export const rollbackAgentAssistantVersion = (id, rowId, n) => api.post(`${assis
 // Whether this server has the agent's code and can run it: { key, has_code, contract_version, ok, problems }.
 // A draft whose prompt and first message come from the agent type's pack template (SDR's two types); then check/publish.
 export const createAgentAssistantDraftFromTemplate = (id, rowId) => api.post(`${assistantVersions(id, rowId)}/from-template`);
+// The live platform tools this agent's shared assistant may attach by Vapi id (model.toolIds): its code pack's.
+export const listAgentAttachableTools = (id) => api.get(`/api/v1/agents/${id}/attachable-tools`);
 export const getAgentHealth = (id) => api.get(`/api/v1/agents/${id}/health`);
 
 // ── Agent instances: the tenant's configured agent per agent type, with versions ──
@@ -652,6 +658,9 @@ export const updateTool = (id, data) => api.patch(`/api/admin/tools/${id}`, data
 export const syncTool = (id) => api.post(`/api/admin/tools/${id}/sync`);
 export const deleteTool = (id) => api.delete(`/api/admin/tools/${id}`);
 export const previewTool = (data) => api.post('/api/admin/tools/preview', data);
+// A tool that already exists in Vapi: fetch shows what would be saved (writes nothing); import saves it.
+export const fetchVapiTool = (vapiToolId, typeKey) => api.post('/api/admin/tools/vapi/fetch', { vapi_tool_id: vapiToolId, type_key: typeKey || null });
+export const importVapiTool = (vapiToolId, typeKey) => api.post('/api/admin/tools/vapi/import', { vapi_tool_id: vapiToolId, type_key: typeKey || null });
 // Create (or re-sync) the six appointment tools in Vapi; safe to re-run.
 export const registerAppointmentTools = () => api.post('/api/admin/tools/register');
 export const getToolTenants = (id) => api.get(`/api/admin/tools/${id}/tenants`);

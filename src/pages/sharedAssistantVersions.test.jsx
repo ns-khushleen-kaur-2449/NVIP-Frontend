@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AgentsAdminPage from '@/pages/admin/AgentsAdmin';
-import { parseAssistantJson } from '@/lib/agents';
+import { parseAssistantJson, toolIdsIn, withToolId } from '@/lib/agents';
 import * as api from '@/lib/api';
 import { USERS, renderWithAuth } from '@/test/renderWithAuth';
 
@@ -21,6 +21,8 @@ jest.mock('@/lib/api', () => ({
   checkAgentAssistantVersion: jest.fn(),
   publishAgentAssistantVersion: jest.fn(),
   rollbackAgentAssistantVersion: jest.fn(),
+  listAgentAttachableTools: jest.fn(),
+  replaceAgentAssistant: jest.fn(),
 }));
 
 const AGENT = { id: 'a-2', key: 'hiring', name: 'Hiring', industry: 'HR', status: 'active', access_scope: 'selected' };
@@ -46,6 +48,7 @@ beforeEach(() => {
   api.checkAgentAssistantVersion.mockResolvedValue({ data: { ok: true, problems: [] } });
   api.publishAgentAssistantVersion.mockResolvedValue({ data: {} });
   api.rollbackAgentAssistantVersion.mockResolvedValue({ data: version(4, 'published', {}, { copied_from: 1 }) });
+  api.listAgentAttachableTools.mockResolvedValue({ data: [] });
 });
 
 async function openVersions(user) {
@@ -125,6 +128,27 @@ describe('Shared assistant versions (Super Admin)', () => {
     expect(api.checkAgentAssistantVersion).toHaveBeenCalledWith('a-2', 'r-1', 3);
   });
 
+  test('the check shows its warnings in amber and still passes', async () => {
+    const warning = "The prompt's tools section does not describe these tools in 'model.toolIds': book_appointment";
+    api.checkAgentAssistantVersion.mockResolvedValue({ data: { ok: true, problems: [], warnings: [warning] } });
+    const user = userEvent.setup();
+    const dialog = await openVersions(user);
+    await user.click(within(await within(dialog).findByTestId('version-row-3')).getByRole('button', { name: 'Check' }));
+    const result = await within(dialog).findByTestId('version-check');
+    expect(result).toHaveTextContent('Version 3 passed the check and can be published.');
+    const warnings = within(result).getByTestId('version-check-warnings');
+    expect(warnings).toHaveTextContent(warning);
+    expect(warnings).toHaveClass('text-amber-600');
+  });
+
+  test('a check with no warnings field shows no warnings', async () => {
+    const user = userEvent.setup();
+    const dialog = await openVersions(user);
+    await user.click(within(await within(dialog).findByTestId('version-row-3')).getByRole('button', { name: 'Check' }));
+    const result = await within(dialog).findByTestId('version-check');
+    expect(within(result).queryByTestId('version-check-warnings')).toBeNull();
+  });
+
   test('publishing asks first and says it reaches every organisation', async () => {
     const user = userEvent.setup();
     const dialog = await openVersions(user);
@@ -157,5 +181,72 @@ describe('Shared assistant versions (Super Admin)', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(/copied into a new version/i);
     await user.click(screen.getByRole('button', { name: 'Restore' }));
     await waitFor(() => expect(api.rollbackAgentAssistantVersion).toHaveBeenCalledWith('a-2', 'r-1', 1));
+  });
+});
+
+
+describe('tool ids in the assistant JSON', () => {
+  test('toolIdsIn reads model.toolIds, null for invalid JSON', () => {
+    expect(toolIdsIn('{"model": {"toolIds": ["a", 3, "b"]}}')).toEqual(['a', 'b']);
+    expect(toolIdsIn('{"name": "x"}')).toEqual([]);
+    expect(toolIdsIn('{oops')).toBeNull();
+  });
+
+  test('withToolId adds once and removes, keeping the rest of the JSON', () => {
+    const start = '{"name": "x", "model": {"provider": "openai", "toolIds": ["a"]}}';
+    const added = JSON.parse(withToolId(start, 'b', true));
+    expect(added).toEqual({ name: 'x', model: { provider: 'openai', toolIds: ['a', 'b'] } });
+    expect(JSON.parse(withToolId(JSON.stringify(added), 'b', true)).model.toolIds).toEqual(['a', 'b']);
+    expect(JSON.parse(withToolId(start, 'a', false)).model.toolIds).toEqual([]);
+    expect(JSON.parse(withToolId('{"name": "x"}', 'c', true))).toEqual({ name: 'x', model: { toolIds: ['c'] } });
+    expect(withToolId('{oops', 'c', true)).toBeNull();
+  });
+});
+
+describe('attaching tools to a shared assistant version', () => {
+  const TOOLS = [
+    { id: 't-1', name: 'book_appointment', type_key: 'book_appointment', vapi_tool_id: 'vt-book', owner_key: 'hiring' },
+    { id: 't-2', name: 'end_call', type_key: 'end_call', vapi_tool_id: 'vt-end', owner_key: 'hiring' },
+  ];
+
+  test('ticking a tool adds its Vapi id to the JSON, and Save as draft sends it', async () => {
+    api.listAgentAttachableTools.mockResolvedValue({ data: TOOLS });
+    api.listAgentAssistantVersions.mockResolvedValue({ data: [
+      version(2, 'published', { firstMessage: 'Live hello', model: { provider: 'openai', toolIds: ['vt-end'] } }),
+    ] });
+    const user = userEvent.setup();
+    const dialog = await openVersions(user);
+    const tools = await within(dialog).findByTestId('assistant-tools');
+    expect(await within(tools).findByRole('checkbox', { name: 'end_call' })).toBeChecked();
+    const book = within(tools).getByRole('checkbox', { name: 'book_appointment' });
+    expect(book).not.toBeChecked();
+    expect(api.listAgentAttachableTools).toHaveBeenCalledWith('a-2');
+    await user.click(book);
+    expect(book).toBeChecked();
+    await user.click(within(tools).getByRole('checkbox', { name: 'end_call' }));
+    await user.click(within(dialog).getByRole('button', { name: /save as draft/i }));
+    await waitFor(() => expect(api.createAgentAssistantDraft).toHaveBeenCalledWith('a-2', 'r-1', {
+      firstMessage: 'Live hello', model: { provider: 'openai', toolIds: ['vt-book'] } }));
+  });
+
+  test('ids that are not the agent\'s live tools are pointed out, and invalid JSON locks the ticks', async () => {
+    api.listAgentAttachableTools.mockResolvedValue({ data: TOOLS });
+    api.listAgentAssistantVersions.mockResolvedValue({ data: [
+      version(2, 'published', { model: { toolIds: ['vt-unknown'] } }),
+    ] });
+    const user = userEvent.setup();
+    const dialog = await openVersions(user);
+    expect(await within(dialog).findByText(/not this agent's live tools: vt-unknown/)).toBeInTheDocument();
+    const editor = within(dialog).getByLabelText(/assistant json/i);
+    await user.clear(editor);
+    await user.type(editor, 'not json');
+    expect(within(dialog).getByRole('checkbox', { name: 'book_appointment' })).toBeDisabled();
+    expect(within(dialog).getByText('Fix the JSON below to change its tools.')).toBeInTheDocument();
+  });
+
+  test('says where to create tools when the agent has none', async () => {
+    const user = userEvent.setup();
+    const dialog = await openVersions(user);
+    expect(await within(dialog).findByText(/No live tools for this agent yet/)).toBeInTheDocument();
   });
 });

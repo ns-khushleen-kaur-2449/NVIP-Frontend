@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,10 +14,10 @@ import {
 import { errorText } from '@/components/admin/userBits';
 import {
   checkAgentAssistantVersion, createAgentAssistantDraft, createAgentAssistantDraftFromTemplate, importAgentAssistantVersion,
-  listAgentAssistantVersions,
+  listAgentAssistantVersions, listAgentAttachableTools,
   publishAgentAssistantVersion, rollbackAgentAssistantVersion,
 } from '@/lib/api';
-import { VERSION_STATUS_LABELS, hasSharedAssistantTemplate, parseAssistantJson } from '@/lib/agents';
+import { VERSION_STATUS_LABELS, hasSharedAssistantTemplate, parseAssistantJson, toolIdsIn, withToolId } from '@/lib/agents';
 
 const STATUS_STYLE = {
   published: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/25',
@@ -45,6 +46,8 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
   // The last check: { version, ok, problems }; version is null when a publish was refused.
   const [check, setCheck] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  // The platform tools this agent may attach (null while loading, [] when none or the list failed).
+  const [tools, setTools] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -65,7 +68,15 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
     setCheck(null);
     setText('');
     load().then((list) => setText(liveText(list)));
-  }, [open, load]);
+    setTools(null);
+    listAgentAttachableTools(agent.id).then((r) => setTools(r.data)).catch(() => setTools([]));
+  }, [open, load, agent]);
+
+  const attached = toolIdsIn(text);
+  const toggleTool = (tool, on) => {
+    const next = withToolId(text, tool.vapi_tool_id, on);
+    if (next !== null) { setText(next); setCheck(null); }
+  };
 
   const run = async (work, fallback) => {
     setBusy(true);
@@ -207,6 +218,50 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
                   {check.problems.map((problem) => <li key={problem}>{problem}</li>)}
                 </ul>
               </>
+            )}
+            {/* Notes the check makes without refusing a publish (older backends send none). */}
+            {check.warnings?.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-amber-600" data-testid="version-check-warnings">
+                {check.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {versions?.length > 0 && (
+          <div className="rounded-lg border border-border p-3 space-y-2" data-testid="assistant-tools">
+            <p className="text-xs font-medium text-muted-foreground">
+              Tools: ticking one adds its Vapi tool id to <code>model.toolIds</code> below. Save as a draft, check and
+              publish to send it to Vapi.
+            </p>
+            {tools === null ? (
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" aria-label="Loading tools" />
+            ) : tools.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No live tools for this agent yet. Create and sync them under Platform → Tools.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {tools.map((tool) => (
+                  <li key={tool.id}>
+                    <label className="flex items-start gap-2 text-sm">
+                      <Checkbox checked={Boolean(attached?.includes(tool.vapi_tool_id))} disabled={attached === null}
+                        onCheckedChange={(on) => toggleTool(tool, Boolean(on))} aria-label={tool.name} className="mt-0.5" />
+                      <span className="min-w-0">
+                        <span className="font-mono">{tool.name}</span>
+                        <span className="block text-[11px] text-muted-foreground break-all">{tool.vapi_tool_id}</span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {attached === null && <p className="text-xs text-amber-600">Fix the JSON below to change its tools.</p>}
+            {attached?.some((id) => tools && !tools.some((t) => t.vapi_tool_id === id)) && (
+              <p className="text-xs text-amber-600">
+                The JSON lists tool ids that are not this agent's live tools:{' '}
+                {attached.filter((id) => !tools?.some((t) => t.vapi_tool_id === id)).join(', ')}. The check will refuse them.
+              </p>
             )}
           </div>
         )}
