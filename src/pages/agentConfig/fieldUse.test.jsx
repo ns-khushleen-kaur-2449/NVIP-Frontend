@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import * as api from '@/lib/api';
 import { FieldUseProvider, ListField, NOT_USED_NOTE, SelectField, SwitchField, TextField } from '@/pages/agentConfig/fields';
-import { BehaviourStep, BusinessStep, CampaignDefaultsStep, IdentityStep, InboundStep, fieldPropsFor } from '@/pages/agentConfig/steps';
+import { ActionsStep, BehaviourStep, BusinessStep, CampaignDefaultsStep, IdentityStep, InboundStep, fieldPropsFor } from '@/pages/agentConfig/steps';
 import { USERS } from '@/test/renderWithAuth';
 
 jest.mock('@/lib/api', () => ({
@@ -137,5 +137,17 @@ describe('limits a call can carry', () => {
     expect(screen.getByLabelText('Extra instructions')).toHaveAttribute('maxLength', '600');
     expect(screen.getByText('750/600')).toBeInTheDocument();
     expect(screen.getByTestId('instructions-over')).toHaveTextContent('Calls use only the first 600 characters (now 750)');
+  });
+});
+
+describe('actions and integrations', () => {
+  const ACTION_FIELDS = { 'calendar.booking_enabled': { applied_to_calls: true }, 'call_behaviour.tools': { applied_to_calls: true } };
+
+  test('booking links to the meeting types instead of its own meeting length', () => {
+    const payload = { calendar: { booking_enabled: true }, call_behaviour: { tools: [], actions_set: true } };
+    withUse(<ActionsStep agentType="sdr_outbound" payload={payload} context={{}} field={field(payload)} />, ACTION_FIELDS);
+    expect(screen.queryByLabelText(/meeting length/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Meeting types' })).toHaveAttribute('href', '/settings?tab=scheduling');
+    expect(screen.queryByText(NOT_USED_NOTE)).not.toBeInTheDocument();
   });
 });

@@ -60,3 +60,39 @@ test('shared assistants off: the call uses one of the tenant\'s own assistants, 
   }));
   expect(api.listAvailableAgentTypes).not.toHaveBeenCalled();
 });
+
+test('a chosen campaign is sent, and calling waits until one is chosen', async () => {
+  const user = userEvent.setup();
+  renderWithAuth(<SingleCallPage />, { user: { ...USERS.manager, ...SHARED } });
+  await pickProspect(user);
+  const button = await screen.findByRole('button', { name: 'Call with Outbound SDR' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(screen.getByLabelText("Use an existing campaign's pitch"));
+  expect(button).toBeDisabled();
+  expect(screen.queryByText(/cannot be sent yet/i)).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText('Campaign'), 'c1');
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(api.initiateSmartsdrCall).toHaveBeenCalledWith(expect.objectContaining({
+    campaign_id: 'c1', purpose: undefined })));
+});
+
+test('a short purpose is sent (shared Outbound SDR only)', async () => {
+  const user = userEvent.setup();
+  renderWithAuth(<SingleCallPage />, { user: { ...USERS.manager, ...SHARED } });
+  await pickProspect(user);
+  const button = await screen.findByRole('button', { name: 'Call with Outbound SDR' });
+  await user.click(screen.getByLabelText('Use a short purpose'));
+  expect(button).toBeDisabled();
+  await user.type(screen.getByLabelText('Short purpose'), "  I'm calling about your linen order.  ");
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(api.initiateSmartsdrCall).toHaveBeenCalledWith(expect.objectContaining({
+    campaign_id: undefined, purpose: "I'm calling about your linen order." })));
+});
+
+test('own assistants: no short purpose option', async () => {
+  renderWithAuth(<SingleCallPage />, { user: { ...USERS.manager, ...OWN } });
+  await screen.findByRole('option', { name: 'Main agent' });
+  expect(screen.queryByLabelText('Use a short purpose')).not.toBeInTheDocument();
+});
