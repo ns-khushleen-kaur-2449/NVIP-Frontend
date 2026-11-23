@@ -68,15 +68,20 @@ export default function SingleCallPage() {
   }, [sharedMode, user]);
 
   const ready = sharedMode ? Boolean(readiness?.ok) : Boolean(assistantId);
+  // A chosen campaign or a typed purpose must be filled before calling.
+  const purposeReady = purposeMode === 'campaign' ? Boolean(campaignId)
+    : purposeMode === 'custom' ? Boolean(purpose.trim()) : true;
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!phone.trim() || !name.trim() || !ready) return;
+    if (!phone.trim() || !name.trim() || !ready || !purposeReady) return;
     setBusy(true);
     setCallError(null);
     try {
       await initiateSmartsdrCall({ phone_number: phone.trim(), user_name: name.trim(),
-        assistant_id: sharedMode ? undefined : assistantId, prospect_id: prospectId || undefined });
+        assistant_id: sharedMode ? undefined : assistantId, prospect_id: prospectId || undefined,
+        campaign_id: purposeMode === 'campaign' ? campaignId : undefined,
+        purpose: purposeMode === 'custom' ? purpose.trim() : undefined });
       toast.success('Call started. It will appear in Call logs.');
     } catch (error) {
       const response = error.response?.data || {};
@@ -115,10 +120,11 @@ export default function SingleCallPage() {
         <fieldset className="space-y-3"><legend className="text-sm font-semibold">Call purpose</legend>
           <label className="flex items-center gap-2 text-sm"><input type="radio" name="purpose" checked={purposeMode === 'default'} onChange={() => setPurposeMode('default')} /> Use the agent's default call reason</label>
           <label className="flex items-center gap-2 text-sm"><input type="radio" name="purpose" checked={purposeMode === 'campaign'} onChange={() => setPurposeMode('campaign')} /> Use an existing campaign's pitch</label>
-          {purposeMode === 'campaign' && <select className="w-full rounded-md border bg-background px-3 py-2" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}><option value="">Choose a campaign</option>{campaigns.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>}
-          <label className="flex items-center gap-2 text-sm"><input type="radio" name="purpose" checked={purposeMode === 'custom'} onChange={() => setPurposeMode('custom')} /> Use a short purpose</label>
-          {purposeMode === 'custom' && <Input maxLength={500} placeholder="What should the agent discuss?" value={purpose} onChange={(e) => setPurpose(e.target.value)} />}
-          {(purposeMode === 'campaign' || purposeMode === 'custom') && <p className="text-xs text-amber-700">This call endpoint currently uses the agent's default call reason. The selected campaign pitch or custom purpose cannot be sent yet.</p>}
+          {purposeMode === 'campaign' && <select aria-label="Campaign" className="w-full rounded-md border bg-background px-3 py-2" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}><option value="">Choose a campaign</option>{campaigns.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>}
+          {sharedMode && <label className="flex items-center gap-2 text-sm"><input type="radio" name="purpose" checked={purposeMode === 'custom'} onChange={() => setPurposeMode('custom')} /> Use a short purpose</label>}
+          {sharedMode && purposeMode === 'custom' && <Input aria-label="Short purpose" maxLength={300} placeholder="One sentence: why the agent is calling" value={purpose} onChange={(e) => setPurpose(e.target.value)} />}
+          {purposeMode === 'default' && sharedMode && <p className="text-xs text-muted-foreground">The agent says its default call reason (Agent identity → Default call reason).</p>}
+          {purposeMode === 'campaign' && <p className="text-xs text-muted-foreground">The call uses this campaign's pitch and purpose but isn't counted as one of its calls.</p>}
         </fieldset>
         {!sharedMode && (
           <label className="block space-y-1 text-sm font-medium">Assistant
@@ -128,7 +134,7 @@ export default function SingleCallPage() {
             </select>
           </label>
         )}
-        <div className="flex items-center justify-between gap-4"><Button type="submit" disabled={busy || !ready}>{busy ? 'Starting call…' : sharedMode ? 'Call with Outbound SDR' : 'Start call'}</Button><Link className="text-sm underline" to="/call-logs">View call logs</Link></div>
+        <div className="flex items-center justify-between gap-4"><Button type="submit" disabled={busy || !ready || !purposeReady}>{busy ? 'Starting call…' : sharedMode ? 'Call with Outbound SDR' : 'Start call'}</Button><Link className="text-sm underline" to="/call-logs">View call logs</Link></div>
         {sharedMode && readiness && !readiness.ok && (
           <p role="status" className="text-sm text-muted-foreground">
             {readiness.reason === 'not_published'

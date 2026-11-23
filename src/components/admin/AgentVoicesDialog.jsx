@@ -38,8 +38,8 @@ export function voicesFrom(cells) {
 }
 
 /**
- * Fill only EMPTY cells from the Assistant Builder's voices. A language whose pack has one voice for both genders
- * (en, hi: ``gendered`` false) fills Female only, so the health check keeps asking for a real male voice.
+ * Fill only EMPTY cells from the Assistant Builder's voices. A language with one builder voice for both genders
+ * (``gendered`` false) fills Female only, so the health check keeps asking for a real male voice.
  * Returns [cells, how many were filled].
  */
 export function withBuilderVoices(cells, languages) {
@@ -151,7 +151,7 @@ export default function AgentVoicesDialog({ agent, onClose, onSaved }) {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-xs text-muted-foreground">
-                Copy builder voices fills only empty cells (English and Hindi: Female only). Nothing is saved until you save.
+                Copy builder voices fills only empty cells; a language with one builder voice for both genders fills Female only. Nothing is saved until you save.
               </p>
               <Button variant="outline" size="sm" onClick={copyBuilder} disabled={!languages.length}>Copy builder voices</Button>
             </div>

@@ -273,6 +273,10 @@ export function IdentityStep({ agentType, payload, context, field }) {
           <TextField label="Opening line" multiline maxLength={500} counter
             hint="Placeholders: {{lead_first_name}}, {{agent_name}}, {{company_name}}, {{call_purpose}}."
             {...field('opener.first_message')} />
+          <TextField label="Default call reason" maxLength={300} counter
+            placeholder="I'm calling about the linen samples you asked for."
+            hint="One spoken sentence: why the agent is calling when the call has no campaign (Single call). A campaign's own purpose replaces it. Fills {{call_purpose}}."
+            {...field('opener.default_call_reason')} />
           <PreviewPointer />
         </div>
       )}
@@ -391,8 +395,12 @@ export function ActionsStep({ payload, field, readOnly }) {
       <SwitchField label="Book meetings in the calendar" checked={booking.value} onChange={booking.onChange} readOnly={readOnly}
         path="calendar.booking_enabled" hint="Books only real free slots from your connected calendar." />
       <p className="text-sm"><Link to="/settings/calendar" className="underline">Calendar connection</Link></p>
+      {/* Meeting length, buffers and notice come from the organisation's meeting types: one place defines them. */}
       {payload?.calendar?.booking_enabled && (
-        <TextField label="Meeting length (minutes)" type="number" {...field('calendar.meeting_length_minutes')} />
+        <p className="text-sm text-muted-foreground" data-testid="meeting-types-link">
+          Meeting length is set per meeting type.{' '}
+          <Link to="/settings?tab=scheduling" className="underline">Meeting types</Link>
+        </p>
       )}
       <SwitchField label="Send the product brochure when asked" checked={tools.includes(TOOL_BROCHURE)} readOnly={readOnly}
         path="call_behaviour.tools" onChange={(on) => setTool(TOOL_BROCHURE, on)} />
