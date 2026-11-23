@@ -120,6 +120,26 @@ export const listTeams = () => api.get('/api/teams');
 export const listTenants = () => api.get('/api/admin/tenants/all');
 export const listAdminTenants = (params) => api.get('/api/admin/tenants', { params });
 export const createTenantWithAdmin = (data) => api.post('/api/admin/tenants/with-admin', data);
+// The setup wizard: create the tenant (its progress recorded), read and save where the wizard is.
+export const createTenant = (data) => api.post('/api/admin/tenants', data);
+export const getTenantOnboarding = (id) => api.get(`/api/admin/tenants/${id}/onboarding`);
+export const saveTenantOnboarding = (id, step, completed) => api.put(`/api/admin/tenants/${id}/onboarding`, { step, completed });
+// Readiness: one tenant's items, or {blocking, recommended} counts for a page of tenants (at most 100).
+export const getTenantReadiness = (id) => api.get(`/api/admin/tenants/${id}/readiness`);
+export const getTenantsReadiness = (ids) => api.get('/api/admin/tenants/readiness',
+  { params: new URLSearchParams(ids.map((id) => ['tenant_id', id])) });
+// Invite links (no email: the link is shown once to copy and share by hand).
+export const createInvitation = (data) => api.post('/api/v1/invitations', data);
+export const listInvitations = () => api.get('/api/v1/invitations');
+export const resendInvitation = (id) => api.post(`/api/v1/invitations/${id}/resend`);
+export const revokeInvitation = (id) => api.post(`/api/v1/invitations/${id}/revoke`);
+export const createTenantInvitation = (tenantId, data) => api.post(`/api/admin/tenants/${tenantId}/invitations`, data);
+export const listTenantInvitations = (tenantId) => api.get(`/api/admin/tenants/${tenantId}/invitations`);
+export const resendTenantInvitation = (tenantId, id) => api.post(`/api/admin/tenants/${tenantId}/invitations/${id}/resend`);
+export const revokeTenantInvitation = (tenantId, id) => api.post(`/api/admin/tenants/${tenantId}/invitations/${id}/revoke`);
+// Public (no sign-in): the invite page.
+export const getInvitation = (token) => api.get(`/api/v1/invitations/${encodeURIComponent(token)}`);
+export const acceptInvitation = (token, password) => api.post(`/api/v1/invitations/${encodeURIComponent(token)}/accept`, { password });
 // A reason is required; it is kept in the admin audit trail.
 export const suspendTenant = (id, reason) => api.post(`/api/admin/tenants/${id}/suspend`, { reason });
 export const activateTenant = (id, reason) => api.post(`/api/admin/tenants/${id}/activate`, { reason });
@@ -672,6 +692,9 @@ export const importVapiTool = (vapiToolId, typeKey) => api.post('/api/admin/tool
 export const registerAppointmentTools = () => api.post('/api/admin/tools/register');
 export const getToolTenants = (id) => api.get(`/api/admin/tools/${id}/tenants`);
 export const setToolTenants = (id, tenantIds, reason) => api.put(`/api/admin/tools/${id}/tenants`, { tenant_ids: tenantIds, reason });
+// Several tools at once: grant adds the tenants to each tool (its other tenants kept); grant=false removes them.
+export const setManyToolsTenants = (toolIds, tenantIds, grant, reason) => api.post('/api/admin/tools/tenant-access',
+  { tool_ids: toolIds, tenant_ids: tenantIds, grant, reason });
 // Tools on one assistant (tools granted to its tenant; Tenant Admin attaches/detaches).
 export const listAssistantTools = (assistantId) => api.get(`/api/v1/assistants/${assistantId}/tools`);
 // Tools an Assistant Builder agent can be given (granted to the tenant), each with the tool types it needs.

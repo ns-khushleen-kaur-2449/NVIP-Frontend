@@ -18,7 +18,8 @@ import { errorText } from '@/components/admin/userBits';
 import Can from '@/components/auth/Can';
 import { deactivateUser, listAdminUsers, listTenants, reactivateUser } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
-import { PERMISSIONS, ROLES, roleLabel } from '@/lib/rbac';
+import { PERMISSIONS, ROLES, creatableRoles, roleLabel } from '@/lib/rbac';
+import { InvitationsList, InviteDialog } from '@/components/admin/Invitations';
 
 const PAGE_SIZE = 20;
 const ALL = 'all';
@@ -46,6 +47,10 @@ export default function UsersPage() {
   const [confirming, setConfirming] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const isSuperAdmin = actor?.role === ROLES.SUPER_ADMIN;
+  // Invite links are for a tenant's own users (a Super Admin invites a tenant's admin from Tenants).
+  const [inviting, setInviting] = useState(false);
+  const [invitesKey, setInvitesKey] = useState(0);
+  const inviteRoles = creatableRoles(actor).filter((r) => r !== ROLES.SUPER_ADMIN && r !== ROLES.TENANT_ADMIN);
 
   useEffect(() => {
     const timer = setTimeout(() => { setSearch(query.trim()); setPage(1); }, 300);
@@ -105,7 +110,15 @@ export default function UsersPage() {
           </p>
         </div>
         <Can perm={PERMISSIONS.USERS_CREATE}>
-          <Button onClick={() => setAdding(true)} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Add user</Button>
+          <div className="flex gap-2">
+            {!isSuperAdmin && inviteRoles.length > 0 && (
+              <Button onClick={() => setInviting(true)} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Invite</Button>
+            )}
+            <Button variant={!isSuperAdmin && inviteRoles.length > 0 ? 'outline' : 'default'} onClick={() => setAdding(true)}
+              className={!isSuperAdmin && inviteRoles.length > 0 ? '' : 'bg-primary text-primary-foreground'}>
+              {!isSuperAdmin && inviteRoles.length > 0 ? 'Add user (temporary password)' : <><Plus className="w-4 h-4 mr-1" /> Add user</>}
+            </Button>
+          </div>
         </Can>
       </div>
 
@@ -167,6 +180,16 @@ export default function UsersPage() {
       </Card>
 
       <AddUserDialog open={adding} onOpenChange={setAdding} onCreated={load} />
+      {!isSuperAdmin && inviteRoles.length > 0 && (
+        <>
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold">Invites</h2>
+            <InvitationsList refreshKey={invitesKey} />
+          </section>
+          <InviteDialog open={inviting} onOpenChange={setInviting} roles={inviteRoles}
+            onInvited={() => setInvitesKey((k) => k + 1)} />
+        </>
+      )}
       <EditUserDialog user={editing} onOpenChange={(open) => !open && setEditing(null)} onSaved={load} />
       <AlertDialog open={Boolean(confirming)} onOpenChange={(open) => !open && setConfirming(null)}>
         <AlertDialogContent>

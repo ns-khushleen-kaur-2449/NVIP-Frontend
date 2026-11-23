@@ -8,6 +8,7 @@ import AgentDetailPage from '@/pages/admin/AgentDetail';
 import AgentCatalogPage from '@/pages/admin/AgentsAdmin';
 import AdminToolsPage from '@/pages/admin/Tools';
 import TenantsAdminPage from '@/pages/admin/Tenants';
+import TenantSetupPage from '@/pages/admin/TenantSetup';
 import PlatformUsersPage from '@/pages/admin/PlatformUsers';
 import TenantAdminsPage from '@/pages/admin/TenantAdmins';
 import AdminAuditLogsPage from '@/pages/admin/AuditLogs';
@@ -28,6 +29,9 @@ export function adminRoutes() {
       <Route index element={<Navigate to="/admin/overview" replace />} />
       <Route path="overview" element={<AdminOverviewPage />} />
       <Route path="tenants" element={<TenantsAdminPage />} />
+      {/* The setup wizard: start a tenant, or continue its setup (resumes at the saved step). */}
+      <Route path="tenants/new" element={<TenantSetupPage />} />
+      <Route path="tenants/:tenantId/setup" element={<TenantSetupPage />} />
       <Route path="users" element={<PlatformUsersPage />} />
       <Route path="tenant-users" element={<TenantAdminsPage />} />
       <Route path="integrations" element={<IntegrationsPage />} />

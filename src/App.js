@@ -15,6 +15,7 @@ import LegacyReportsPage from "@/pages/Reports";
 import PropertiesPage from "@/pages/Properties";
 import SettingsPage from "@/pages/Settings";
 import LoginPage from "@/pages/Login";
+import InviteAcceptPage from "@/pages/InviteAccept";
 import AgentRunsPage from "@/pages/AgentRuns";
 import VoiceCampaigns from "@/components/voice/VoiceCampaigns";
 import VoiceCampaignDetail from "@/components/voice/VoiceCampaignDetail";
@@ -283,6 +284,8 @@ function App() {
           {/* predev's mock sign-in is replaced by the real one. */}
           <Route path="/signin" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
+          {/* Public: an invite link (no sign-in); the page keeps the token out of any Referer. */}
+          <Route path="/invite/:token" element={<InviteAcceptPage />} />
           <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/marketplace" element={<Navigate to="/" replace />} />
           <Route path="/marketplace/listings" element={<MarketplaceListingsPage />} />

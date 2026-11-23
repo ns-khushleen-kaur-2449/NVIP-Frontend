@@ -67,7 +67,7 @@ export default function AgentTable({ agents, busyId, onPause, onResume, onAssign
             </thead>
             <tbody>
               {agents.map((agent, index) => (
-                <tr key={agent.id ?? 'unregistered'} className="border-b border-border last:border-0">
+                <tr key={agent.key ?? agent.id ?? 'unregistered'} className="border-b border-border last:border-0">
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-3">
                       <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold text-white ${AVATAR_COLORS[index % AVATAR_COLORS.length]}`} aria-hidden="true">

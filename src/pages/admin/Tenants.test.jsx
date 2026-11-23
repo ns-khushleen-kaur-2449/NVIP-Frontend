@@ -159,3 +159,29 @@ test('the plan comes from billing, and a search with no match says so', async ()
   fireEvent.change(screen.getByLabelText('Search tenants'), { target: { value: 'nobody' } });
   expect(await screen.findByText('No tenants match this search.')).toBeInTheDocument();
 });
+
+describe('readiness and setup', () => {
+  test('the Readiness column counts this page only, and an unfinished wizard tenant has Continue setup', async () => {
+    const other = { ...TENANT, tenant_id: 't-2', name: 'Beta', onboarding: { step: 'phone', completed: ['details', 'admin'], finished: false } };
+    const done = { ...TENANT, tenant_id: 't-3', name: 'Gamma', onboarding: { step: 'review', completed: [], finished: true } };
+    api.listAdminTenants.mockResolvedValue({ data: { tenants: [TENANT, other, done], total: 3 } });
+    api.getTenantsReadiness.mockResolvedValue({ data: { tenants: {
+      't-1': { blocking: 3, recommended: 1 }, 't-2': { blocking: 0, recommended: 2 }, 't-3': { blocking: 0, recommended: 0 } } } });
+    renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
+    expect(await screen.findByText('3 blocking')).toBeInTheDocument();
+    expect(api.getTenantsReadiness).toHaveBeenCalledWith(['t-1', 't-2', 't-3']);
+    expect(screen.getByTestId('tenant-readiness-t-2')).toHaveTextContent('2 to do');
+    expect(screen.getByTestId('tenant-readiness-t-3')).toHaveTextContent('Ready');
+    expect(within(screen.getByTestId('tenant-readiness-t-2')).getByRole('link', { name: 'Continue setup' }))
+      .toHaveAttribute('href', '/admin/tenants/t-2/setup');
+    expect(within(screen.getByTestId('tenant-readiness-t-1')).queryByText('Continue setup')).toBeNull();
+    expect(within(screen.getByTestId('tenant-readiness-t-3')).queryByText('Continue setup')).toBeNull();
+    expect(screen.getByRole('link', { name: /New tenant/ })).toHaveAttribute('href', '/admin/tenants/new');
+  });
+
+  test('readiness that fails to load shows a dash, not an error page', async () => {
+    api.getTenantsReadiness.mockRejectedValue(new Error('down'));
+    renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
+    await waitFor(() => expect(screen.getByTestId('tenant-readiness-t-1')).toHaveTextContent('—'));
+  });
+});
