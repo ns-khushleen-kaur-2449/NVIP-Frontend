@@ -95,3 +95,52 @@ test('asks for the tool type when it cannot be detected, and shows Vapi errors',
   fireEvent.click(within(dialog).getByRole('button', { name: /fetch/i }));
   expect(await within(dialog).findByText(/Vapi cannot find this tool/)).toBeInTheDocument();
 });
+
+describe('tenant access for several tools at once', () => {
+  const TOOLS = [
+    { id: 't-1', name: 'search_products', type_key: 'search_products', sync_status: 'active', vapi_tool_id: 'v1' },
+    { id: 't-2', name: 'send_brochure', type_key: 'send_brochure', sync_status: 'active', vapi_tool_id: 'v2' },
+    { id: 't-3', name: 'end_call', type_key: 'end_call', sync_status: 'active', vapi_tool_id: 'v3' },
+  ];
+  const TENANTS = [{ tenant_id: 'a', name: 'Aditi', granted: false, assistant_count: 0 },
+    { tenant_id: 'n', name: 'Nets Info', granted: true, assistant_count: 0 }];
+
+  beforeEach(() => {
+    api.listTools.mockResolvedValue({ data: TOOLS });
+    api.getToolTenants.mockResolvedValue({ data: { tenants: TENANTS } });
+    api.setManyToolsTenants.mockResolvedValue({ data: { tools: [
+      { tool_id: 't-1', name: 'search_products', changed: true, detach_errors: [] },
+      { tool_id: 't-2', name: 'send_brochure', changed: false, detach_errors: [] }] } });
+  });
+
+  it('gives the ticked tenants every selected tool in one save', async () => {
+    render(<ToolsManager />);
+    const bulk = await screen.findByRole('button', { name: /Tenant access for/ });
+    expect(bulk).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select search_products' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select send_brochure' }));
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Tenant access for 2 tools/ }));
+    const dialog = await screen.findByTestId('bulk-access-dialog');
+    expect(dialog).toHaveTextContent('search_products, send_brochure');
+    const save = within(dialog).getByRole('button', { name: 'Give access' });
+    expect(save).toBeDisabled(); // no tenant, no reason yet
+    fireEvent.click(await within(dialog).findByRole('checkbox', { name: 'Aditi' }));
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Pilot rollout' } });
+    fireEvent.click(save);
+    await waitFor(() => expect(api.setManyToolsTenants).toHaveBeenCalledWith(['t-1', 't-2'], ['a'], true, 'Pilot rollout'));
+    expect(toast.success).toHaveBeenCalledWith('Access given on 1 of 2 tool(s)');
+  });
+
+  it('select all, then remove access', async () => {
+    render(<ToolsManager />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select all tools' }));
+    fireEvent.click(screen.getByRole('button', { name: /Tenant access for 3 tools/ }));
+    const dialog = await screen.findByTestId('bulk-access-dialog');
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Remove access' }));
+    fireEvent.click(await within(dialog).findByRole('checkbox', { name: 'Nets Info' }));
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Offboarding' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove access' }));
+    await waitFor(() => expect(api.setManyToolsTenants).toHaveBeenCalledWith(['t-1', 't-2', 't-3'], ['n'], false, 'Offboarding'));
+  });
+});

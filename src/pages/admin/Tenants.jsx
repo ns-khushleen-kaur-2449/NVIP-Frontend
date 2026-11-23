@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import ReasonDialog from '@/components/ops/ReasonDialog';
 import CallingBoundDialog from '@/components/admin/CallingBoundDialog';
 import TenantSettingsDialog from '@/components/admin/TenantSettingsDialog';
+import { InvitationsList, InviteDialog } from '@/components/admin/Invitations';
+import { ReadinessBadge } from '@/components/admin/ReadinessList';
 import { errorText, EMAIL_IN_USE, EmailInUse } from '@/components/admin/userBits';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -19,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   activateTenant, addTenantPhoneNumber, cancelTenantOffboarding, createTenantWithAdmin, initiateTenantOffboarding,
-  getTenantSettings, listAdminTenants, listTenantPhoneNumbers, removeTenantPhoneNumber, setTenantApolloAccess,
+  getTenantSettings, getTenantsReadiness, listAdminTenants, listTenantPhoneNumbers, removeTenantPhoneNumber, setTenantApolloAccess,
   setTenantPhoneNumberInboundMode, suspendTenant,
 } from '@/lib/api';
 import { generateTemporaryPassword } from '@/lib/passwords';
@@ -31,7 +33,7 @@ const STATUS_STYLES = {
 const statusLabel = (status) => (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown');
 
 /** The plan from Stripe billing; a tenant with no paid plan is Free. */
-function PlanCell({ plan }) {
+export function PlanCell({ plan }) {
   if (!plan) return <span className="text-muted-foreground">Unknown</span>;
   const unpaid = plan.key && plan.status && !['active', 'trialing'].includes(plan.status);
   return (
@@ -200,8 +202,11 @@ export function InboundModeControl({ tenant, row, sharedOn, mode, onChanged }) {
   );
 }
 
-/** Super Admin: the Vapi phone numbers a tenant's admins may attach to its assistants, and how inbound calls are answered. */
-function PhoneNumbersDialog({ tenant, onClose }) {
+/**
+ * Super Admin: the Vapi phone numbers a tenant's admins may attach to its assistants, and how inbound calls are
+ * answered. Used by the Phone numbers dialog and the setup wizard's "Phone number" step; `onChanged` gets the rows.
+ */
+export function PhoneNumbersPanel({ tenant, onChanged }) {
   const [rows, setRows] = useState(null);
   const [form, setForm] = useState({ vapi_phone_number_id: '', label: '' });
   const [saving, setSaving] = useState(false);
@@ -222,12 +227,14 @@ function PhoneNumbersDialog({ tenant, onClose }) {
 
   const load = useCallback(async () => {
     try {
-      setRows((await listTenantPhoneNumbers(tenant.tenant_id)).data);
+      const data = (await listTenantPhoneNumbers(tenant.tenant_id)).data;
+      setRows(data);
+      onChanged?.(data);
     } catch (e) {
       setError(errorText(e, 'Could not load phone numbers'));
       setRows([]);
     }
-  }, [tenant]);
+  }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!tenant) return;
@@ -268,14 +275,6 @@ function PhoneNumbersDialog({ tenant, onClose }) {
 
   return (
     <>
-      <Dialog open={Boolean(tenant)} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto" data-testid="tenant-phone-numbers-dialog">
-          <DialogHeader>
-            <DialogTitle>Phone numbers of {tenant?.name}</DialogTitle>
-            <DialogDescription>
-              The Vapi phone numbers this tenant's admins may attach to its assistants. A number belongs to one tenant at most.
-            </DialogDescription>
-          </DialogHeader>
           <div className="rounded-lg border border-border overflow-x-auto">
             {!rows ? (
               <div className="flex justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
@@ -323,8 +322,6 @@ function PhoneNumbersDialog({ tenant, onClose }) {
               {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Add number
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <AlertDialog open={Boolean(removing)} onOpenChange={(open) => !open && setRemoving(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -343,6 +340,22 @@ function PhoneNumbersDialog({ tenant, onClose }) {
   );
 }
 
+function PhoneNumbersDialog({ tenant, onClose }) {
+  return (
+    <Dialog open={Boolean(tenant)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto" data-testid="tenant-phone-numbers-dialog">
+        <DialogHeader>
+          <DialogTitle>Phone numbers of {tenant?.name}</DialogTitle>
+          <DialogDescription>
+            The Vapi phone numbers this tenant's admins may attach to its assistants. A number belongs to one tenant at most.
+          </DialogDescription>
+        </DialogHeader>
+        {tenant && <PhoneNumbersPanel tenant={tenant} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** Super Admin: every tenant, with its users; create, suspend and activate, grant Apollo access and give phone numbers. */
 export default function TenantsPage() {
   const [tenants, setTenants] = useState(null);
@@ -355,16 +368,28 @@ export default function TenantsPage() {
   const [settingsOf, setSettingsOf] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [numbersFor, setNumbersFor] = useState(null);
+  // A tenant's admin invites: create (a link to copy) and the list.
+  const [invitesFor, setInvitesFor] = useState(null);
+  const [inviteKey, setInviteKey] = useState(0);
+  const [invitingAdmin, setInvitingAdmin] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  // Readiness counts for the tenants on this page only: {tenant_id: {blocking, recommended}}; null while loading.
+  const [readiness, setReadiness] = useState(null);
 
   const load = useCallback(async () => {
     try {
       const response = await listAdminTenants({ page, page_size: 25, q: query || undefined, status: statusFilter || undefined });
-      setTenants(response.data.tenants || []);
+      const rows = response.data.tenants || [];
+      setTenants(rows);
       setTotal(response.data.total || 0);
+      setReadiness(null);
+      if (rows.length) {
+        Promise.resolve().then(() => getTenantsReadiness(rows.map((t) => t.tenant_id)))
+          .then((r) => setReadiness(r?.data?.tenants || {})).catch(() => setReadiness({}));
+      }
     } catch (e) {
       toast.error(errorText(e, 'Failed to load tenants'));
       setTenants([]);
@@ -433,7 +458,10 @@ export default function TenantsPage() {
           <h1 className="font-display text-2xl font-semibold flex items-center gap-2"><Building2 className="w-6 h-6 text-primary" /> Tenants</h1>
           <p className="text-sm text-muted-foreground mt-1">Every organisation on the platform. Suspending one signs its users out at once.</p>
         </div>
-        <Button onClick={() => setCreating(true)} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> New tenant</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCreating(true)}>Quick create (temporary password)</Button>
+          <Button asChild className="bg-primary text-primary-foreground"><Link to="/admin/tenants/new"><Plus className="w-4 h-4 mr-1" /> New tenant</Link></Button>
+        </div>
       </div>
 
       <Card className="card-base p-4">
@@ -451,7 +479,7 @@ export default function TenantsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tenant</TableHead><TableHead>Tenant Admin</TableHead><TableHead>Status</TableHead><TableHead>Apollo</TableHead><TableHead>Users</TableHead>
+                  <TableHead>Tenant</TableHead><TableHead>Tenant Admin</TableHead><TableHead>Status</TableHead><TableHead>Readiness</TableHead><TableHead>Apollo</TableHead><TableHead>Users</TableHead>
                   <TableHead>Admins</TableHead><TableHead>Active agents</TableHead><TableHead>Dial attempts (all time)</TableHead><TableHead>Plan</TableHead><TableHead>Created</TableHead><TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -471,6 +499,19 @@ export default function TenantsPage() {
                         {statusLabel(tenant.status)}
                       </Badge>
                       {tenant.offboarding_started_at && <div className="mt-1 text-xs text-amber-700">Offboarding · {new Date(tenant.offboarding_started_at).toLocaleDateString()}</div>}
+                    </TableCell>
+                    <TableCell data-testid={`tenant-readiness-${tenant.tenant_id}`}>
+                      {!readiness ? <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" aria-label="Loading readiness" />
+                        : (
+                          <Link to={`/admin/tenants/${tenant.tenant_id}/setup?step=review`} title={`Readiness of ${tenant.name}`}>
+                            <ReadinessBadge summary={readiness[tenant.tenant_id]} />
+                          </Link>
+                        )}
+                      {tenant.onboarding && !tenant.onboarding.finished && (
+                        <Button asChild size="sm" variant="link" className="h-auto p-0 mt-1 block text-xs">
+                          <Link to={`/admin/tenants/${tenant.tenant_id}/setup`}>Continue setup</Link>
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -493,6 +534,7 @@ export default function TenantsPage() {
                         ? <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setCancelling(tenant)}>Cancel offboarding</Button>
                         : <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setOffboarding(tenant)}>Offboard</Button>}
                       <Button variant="ghost" size="sm" onClick={() => setNumbersFor(tenant)}>Phone numbers</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setInvitesFor(tenant)}>Invites</Button>
                       <Button variant="outline" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setConfirming(tenant)}>
                         {tenant.status === 'active' ? 'Suspend' : 'Activate'}
                       </Button>
@@ -508,6 +550,23 @@ export default function TenantsPage() {
 
       <NewTenantDialog open={creating} onOpenChange={setCreating} onCreated={load} />
       <PhoneNumbersDialog tenant={numbersFor} onClose={() => setNumbersFor(null)} />
+      <Dialog open={Boolean(invitesFor)} onOpenChange={(open) => !open && setInvitesFor(null)}>
+        <DialogContent className="sm:max-w-[640px]" data-testid="tenant-invites-dialog">
+          <DialogHeader>
+            <DialogTitle>Invites of {invitesFor?.name}</DialogTitle>
+            <DialogDescription>Invite the organisation's Tenant Admin with a link to share by hand (no email is sent).</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setInvitingAdmin(true)}>Invite Tenant Admin</Button>
+          </div>
+          {invitesFor && <InvitationsList tenantId={invitesFor.tenant_id} refreshKey={inviteKey} />}
+        </DialogContent>
+      </Dialog>
+      {invitesFor && (
+        <InviteDialog open={invitingAdmin} onOpenChange={setInvitingAdmin} roles={['tenant_admin']}
+          tenantId={invitesFor.tenant_id} title={`Invite the Tenant Admin of ${invitesFor.name}`}
+          onInvited={() => setInviteKey((k) => k + 1)} />
+      )}
       <CallingBoundDialog tenant={bounding} onOpenChange={(open) => !open && setBounding(null)} />
       <TenantSettingsDialog tenant={settingsOf} onOpenChange={(open) => { if (!open) { setSettingsOf(null); load(); } }} />
       <ReasonDialog

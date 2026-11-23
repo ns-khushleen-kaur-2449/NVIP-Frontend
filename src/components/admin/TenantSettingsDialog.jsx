@@ -30,8 +30,11 @@ export const FEATURE_DESCRIPTIONS = {
 };
 const number = (value) => (value === '' ? null : Number(value));
 
-/** One tenant's limits, feature switches and Tenant Admins. Every change takes a reason and is audited. */
-export default function TenantSettingsDialog({ tenant, onOpenChange }) {
+/**
+ * One tenant's limits, seat override, feature switches and (unless `hideAdmins`) Tenant Admins. Every change takes a
+ * reason and is audited. Used by the Settings dialog and the setup wizard's "Features and limits" step.
+ */
+export function TenantSettingsPanel({ tenant, hideAdmins = false, onLoaded }) {
   const [data, setData] = useState(null);
   const [limits, setLimits] = useState({});
   const [change, setChange] = useState(null);
@@ -42,7 +45,8 @@ export default function TenantSettingsDialog({ tenant, onOpenChange }) {
   const show = useCallback((settings) => {
     setData(settings);
     setLimits(Object.fromEntries(Object.keys(settings.limits).map((key) => [key, settings.limits[key] ?? ''])));
-  }, []);
+    onLoaded?.(settings);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!tenantId) return;
@@ -67,12 +71,7 @@ export default function TenantSettingsDialog({ tenant, onOpenChange }) {
   const limitsChanged = data && fields.some(({ key }) => String(limits[key] ?? '') !== String(data.limits[key] ?? ''));
 
   return (
-    <Dialog open={Boolean(tenant)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto" data-testid="tenant-settings">
-        <DialogHeader>
-          <DialogTitle>{tenant?.name}</DialogTitle>
-          <DialogDescription>{data ? `Status: ${data.status}${data.dialing_paused ? ' · calling paused' : ''}` : 'Limits, features and admins.'}</DialogDescription>
-        </DialogHeader>
+    <>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {!data && !error && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin" /></div>}
         {data && (
@@ -136,7 +135,7 @@ export default function TenantSettingsDialog({ tenant, onOpenChange }) {
               </ul>
             </section>
 
-            <section className="space-y-2">
+            {!hideAdmins && <section className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Tenant admins</h3>
                 <Link className="text-xs underline" to={`/admin/tenant-users?tenant_id=${tenantId}`}>Manage</Link>
@@ -151,12 +150,28 @@ export default function TenantSettingsDialog({ tenant, onOpenChange }) {
                   ))}
                 </ul>
               )}
-            </section>
+            </section>}
           </div>
         )}
         <ReasonDialog open={Boolean(change)} onOpenChange={(open) => !open && setChange(null)} title={change?.title || ''}
           confirmLabel={change?.label || 'Confirm'} danger={change?.danger}
           reasonPlaceholder="Why? It is kept in the platform audit trail." onConfirm={confirm} />
+    </>
+  );
+}
+
+/** One tenant's limits, feature switches and Tenant Admins, in a dialog. */
+export default function TenantSettingsDialog({ tenant, onOpenChange }) {
+  const [status, setStatus] = useState(null);
+  useEffect(() => { setStatus(null); }, [tenant]);
+  return (
+    <Dialog open={Boolean(tenant)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto" data-testid="tenant-settings">
+        <DialogHeader>
+          <DialogTitle>{tenant?.name}</DialogTitle>
+          <DialogDescription>{status ? `Status: ${status.status}${status.dialing_paused ? ' · calling paused' : ''}` : 'Limits, features and admins.'}</DialogDescription>
+        </DialogHeader>
+        {tenant && <TenantSettingsPanel tenant={tenant} onLoaded={setStatus} />}
       </DialogContent>
     </Dialog>
   );

@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  createTool, deleteTool, fetchVapiTool, getToolTenants, importVapiTool, listTools, listToolTypes, previewTool, registerAppointmentTools, setToolTenants,
+  createTool, deleteTool, fetchVapiTool, getToolTenants, importVapiTool, listTools, listToolTypes, previewTool, registerAppointmentTools, setManyToolsTenants, setToolTenants,
   syncTool, updateTool,
 } from '@/lib/api';
 
@@ -437,6 +437,95 @@ function TenantAccessDialog({ tool, onOpenChange, onSaved }) {
   );
 }
 
+/** Super Admin: tenant access for several tools at once.  Give adds the tenants to every selected tool (each tool's
+ * other tenants are kept); Remove takes them off.  One check first: a refusal changes nothing. */
+export function BulkAccessDialog({ tools, onOpenChange, onSaved }) {
+  const open = Boolean(tools?.length);
+  const [tenants, setTenants] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [grant, setGrant] = useState(true);
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTenants(null); setSelected(new Set()); setGrant(true); setReason('');
+    // Every tenant (the list is the same for any tool).
+    getToolTenants(tools[0].id)
+      .then((res) => setTenants(res.data.tenants))
+      .catch((e) => toast.error(errorList(e, 'Failed to load tenants')[0]));
+  }, [open, tools]);
+
+  const toggle = (id, on) => setSelected((s) => {
+    const next = new Set(s);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await setManyToolsTenants(tools.map((t) => t.id), [...selected], grant, reason.trim());
+      const changed = res.data.tools.filter((t) => t.changed).length;
+      const failed = res.data.tools.reduce((n, t) => n + (t.detach_errors?.length || 0), 0);
+      const verb = grant ? 'given' : 'removed';
+      if (failed) toast.warning(`Access ${verb} on ${changed} tool(s), but Vapi did not update ${failed} agent(s). Run tool sync for those tenants.`);
+      else toast.success(changed ? `Access ${verb} on ${changed} of ${tools.length} tool(s)` : 'Nothing to change: they already had this access');
+      onSaved();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(errorList(e, 'Failed to save tenant access')[0]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[560px]" data-testid="bulk-access-dialog">
+        <DialogHeader>
+          <DialogTitle>Tenant access · {tools?.length} tool{tools?.length === 1 ? '' : 's'}</DialogTitle>
+          <DialogDescription>{tools?.map((t) => t.name).join(', ')}</DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-4 text-sm" role="radiogroup" aria-label="Give or remove access">
+          <label className="flex items-center gap-2"><input type="radio" name="bulk-grant" checked={grant}
+            onChange={() => setGrant(true)} /> Give access</label>
+          <label className="flex items-center gap-2"><input type="radio" name="bulk-grant" checked={!grant}
+            onChange={() => setGrant(false)} /> Remove access</label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {grant ? 'The tenants ticked below get every selected tool; tenants each tool already has keep it.'
+            : 'The tenants ticked below lose every selected tool, and it is removed from their agents.'}
+        </p>
+        {!tenants ? (
+          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+        ) : tenants.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">No tenants yet.</p>
+        ) : (
+          <div className="max-h-72 overflow-y-auto divide-y divide-border rounded-lg border border-border">
+            {tenants.map((t) => (
+              <label key={t.tenant_id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50">
+                <Checkbox checked={selected.has(t.tenant_id)} aria-label={t.name}
+                  onCheckedChange={(v) => toggle(t.tenant_id, Boolean(v))} />
+                <span className="flex-1 text-sm">{t.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <label className="mt-3 block text-xs font-medium text-muted-foreground">Reason for changing access
+          <Textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} rows={2} className="mt-1" />
+        </label>
+        <DialogFooter>
+          <Button onClick={save} disabled={saving || !selected.size || reason.trim().length < 3}
+            className="bg-primary text-primary-foreground">
+            {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} {grant ? 'Give access' : 'Remove access'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** Super Admin: platform Vapi tools (create, edit, re-sync, delete, tenant access). */
 const MATCHED_BY = {
   chosen: 'chosen by you',
@@ -630,6 +719,14 @@ export default function ToolsManager() {
   const [editor, setEditor] = useState({ open: false, tool: null });
   const [busyId, setBusyId] = useState(null);
   const [accessTool, setAccessTool] = useState(null);
+  // Tools ticked for tenant access at once (ids), and the tools the bulk dialog is open for.
+  const [picked, setPicked] = useState(new Set());
+  const [bulkTools, setBulkTools] = useState(null);
+  const pick = (id, on) => setPicked((s) => {
+    const next = new Set(s);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
   const [registering, setRegistering] = useState(false);
   const [importing, setImporting] = useState(false);
 
@@ -728,9 +825,23 @@ export default function ToolsManager() {
       ) : tools.length === 0 ? (
         <p className="text-sm text-muted-foreground border border-dashed border-border rounded-lg py-6 text-center">No tools yet.</p>
       ) : (
+        <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Checkbox aria-label="Select all tools" checked={picked.size > 0 && picked.size === tools.length}
+              onCheckedChange={(v) => setPicked(v ? new Set(tools.map((t) => t.id)) : new Set())} />
+            {picked.size ? `${picked.size} selected` : 'Select tools to change tenant access for several at once'}
+          </label>
+          <Button size="sm" variant="outline" disabled={!picked.size}
+            onClick={() => setBulkTools(tools.filter((t) => picked.has(t.id)))}>
+            <Building2 className="w-4 h-4 mr-1" /> Tenant access for {picked.size || ''} tool{picked.size === 1 ? '' : 's'}
+          </Button>
+        </div>
         <div className="divide-y divide-border rounded-lg border border-border">
           {tools.map((tool) => (
             <div key={tool.id} className="p-3 flex items-start gap-3">
+              <Checkbox className="mt-1" aria-label={`Select ${tool.name}`} checked={picked.has(tool.id)}
+                onCheckedChange={(v) => pick(tool.id, Boolean(v))} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm font-medium">{tool.name}</span>
@@ -757,9 +868,13 @@ export default function ToolsManager() {
             </div>
           ))}
         </div>
+        </div>
       )}
 
       <ImportVapiToolDialog open={importing} onOpenChange={setImporting} types={types} onImported={load} />
+
+      <BulkAccessDialog tools={bulkTools} onOpenChange={(open) => !open && setBulkTools(null)}
+        onSaved={() => { setPicked(new Set()); load(); }} />
 
       <TenantAccessDialog tool={accessTool} onOpenChange={(open) => !open && setAccessTool(null)} onSaved={load} />
 
