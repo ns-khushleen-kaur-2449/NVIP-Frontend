@@ -231,8 +231,8 @@ export default function SharedAssistantVersionsDialog({ agent, assistant, onClos
         {versions?.length > 0 && (
           <div className="rounded-lg border border-border p-3 space-y-2" data-testid="assistant-tools">
             <p className="text-xs font-medium text-muted-foreground">
-              Tools: ticking one adds its Vapi tool id to <code>model.toolIds</code> below. Save as a draft, check and
-              publish to send it to Vapi.
+              Tools: ticking one adds its Vapi tool id to <code>model.toolIds</code> below. Saving as a draft rewrites
+              the prompt's tools section for the ticked tools; then check and publish to send it to Vapi.
             </p>
             {tools === null ? (
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" aria-label="Loading tools" />

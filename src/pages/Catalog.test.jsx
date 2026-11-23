@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import CatalogPage, { changeFor, templateCsv } from './Catalog';
+import { render } from '@testing-library/react';
+import CatalogPage, { AgentToggle, changeFor, neverSent, templateCsv } from './Catalog';
 import * as api from '@/lib/api';
 import { USERS, renderWithAuth } from '@/test/renderWithAuth';
 
@@ -305,5 +306,26 @@ describe('matching columns before an import', () => {
     await choose(dialog, 'Cost', 'Brand');
     expect(dialog.getByText(/Make and Cost are all set to “Brand”/)).toBeInTheDocument();
     expect(dialog.getByRole('button', { name: 'Import' })).toBeDisabled();
+  });
+});
+
+
+describe('a column the agent never gets', () => {
+  const category = { key: 'category', label: 'Category', agent_visible: false, locked: true };
+  const hiddenPrice = { key: 'price', label: 'Price', agent_visible: false, locked: false };
+  const name = { key: 'name', label: 'Name', agent_visible: true, locked: true };
+
+  it('shows no eye for category: there is nothing to switch', () => {
+    expect(neverSent(category)).toBe(true);
+    const { container } = render(<AgentToggle label="Category" column={category} editable onToggle={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('keeps the eye on columns that can change, and on locked ones the agent sees', () => {
+    expect(neverSent(hiddenPrice)).toBe(false);
+    render(<AgentToggle label="Price" column={hiddenPrice} editable onToggle={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Show Price to the agent' })).toBeInTheDocument();
+    render(<AgentToggle label="Name" column={name} editable onToggle={() => {}} />);
+    expect(screen.getByLabelText('Name: the agent always sees this')).toBeInTheDocument();
   });
 });

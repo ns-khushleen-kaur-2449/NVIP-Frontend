@@ -210,9 +210,13 @@ function FieldDialog({ open, onOpenChange, field, onSaved }) {
   );
 }
 
+/** A column the agent never gets and nobody can change (category): no eye, no strikethrough; nothing to switch. */
+export const neverSent = (column) => Boolean(column.locked && !column.agent_visible);
+
 /** What the agent sees of a column: a toggle for editors where it may change, else a plain icon. */
 export function AgentToggle({ label, column, editable, onToggle }) {
   const visible = column.agent_visible;
+  if (neverSent(column)) return null;
   const Icon = visible ? Eye : EyeOff;
   const tone = visible ? 'text-primary' : 'text-muted-foreground';
   if (column.locked || !editable) {
@@ -481,7 +485,7 @@ export default function CatalogPage() {
                 {columns.map((c) => (
                   <th key={c.key} scope="col" className="px-3 py-2 text-left font-medium whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      <span className={c.agent_visible ? '' : 'line-through decoration-muted-foreground/60'}>{c.label}</span>
+                      <span className={c.agent_visible || neverSent(c) ? '' : 'line-through decoration-muted-foreground/60'}>{c.label}</span>
                       <AgentToggle label={c.label} column={c} editable={editable}
                         onToggle={(visible) => setVisibility(c.key, c.label, visible)} />
                       {c.matching && <Badge variant="outline" className="text-[10px] px-1 py-0" title="The agent can filter by this">match</Badge>}
