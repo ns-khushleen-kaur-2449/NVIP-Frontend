@@ -232,7 +232,8 @@ export function featureEnabled(actor, key) {
 
 // Off unless a Super Admin switched them on (backend core.features.OFF_BY_DEFAULT). /api/auth/me sends them resolved;
 // a missing key here means off, never on.
-export const OFF_BY_DEFAULT_FEATURES = Object.freeze(['agent_instances', 'shared_assistants', 'allow_platform_caller_id']);
+export const OFF_BY_DEFAULT_FEATURES = Object.freeze(['agent_instances', 'shared_assistants', 'allow_platform_caller_id',
+  'all_tools']);
 
 /**
  * The signed-in tenant is in shared-assistant mode: the one place the UI reads it, always from the session's

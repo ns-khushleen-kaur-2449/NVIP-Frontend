@@ -47,7 +47,7 @@ export function PlanCell({ plan }) {
   );
 }
 
-function NewTenantDialog({ open, onOpenChange, onCreated }) {
+function NewTenantDialog({ open, onOpenChange, onCreated, nvip }) {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -94,6 +94,7 @@ function NewTenantDialog({ open, onOpenChange, onCreated }) {
         {created ? (
           <div className="space-y-3" data-testid="tenant-created">
             <p className="text-sm"><span className="font-medium">{created.tenant}</span> is ready. Share these sign-in details with {created.email} securely:</p>
+            {nvip && <p className="text-sm" data-testid="nvip-included">Included: every tool, Outbound SDR and Inbound SDR.</p>}
             <div className="flex items-center gap-2">
               <code className="flex-1 rounded bg-muted px-3 py-2 text-sm">{created.password}</code>
               <Button variant="outline" size="icon" aria-label="Copy password"
@@ -378,6 +379,8 @@ export default function TenantsPage() {
   const [total, setTotal] = useState(0);
   // Readiness counts for the tenants on this page only: {tenant_id: {blocking, recommended}}; null while loading.
   const [readiness, setReadiness] = useState(null);
+  // Whether onboarding creates NVIP tenants now (SHARED_ASSISTANTS_FOR_NEW_TENANTS, the staging gate); null: unknown.
+  const [newTenantsNvip, setNewTenantsNvip] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -385,6 +388,7 @@ export default function TenantsPage() {
       const rows = response.data.tenants || [];
       setTenants(rows);
       setTotal(response.data.total || 0);
+      setNewTenantsNvip(typeof response.data.new_tenants_nvip === 'boolean' ? response.data.new_tenants_nvip : null);
       setReadiness(null);
       if (rows.length) {
         Promise.resolve().then(() => getTenantsReadiness(rows.map((t) => t.tenant_id)))
@@ -463,6 +467,15 @@ export default function TenantsPage() {
           <Button asChild className="bg-primary text-primary-foreground"><Link to="/admin/tenants/new"><Plus className="w-4 h-4 mr-1" /> New tenant</Link></Button>
         </div>
       </div>
+
+      {newTenantsNvip === false && (
+        <div role="status" data-testid="new-tenants-legacy"
+          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          New tenants are created as <span className="font-medium">legacy</span> tenants (their own Assistant builder, tools
+          granted one by one): SHARED_ASSISTANTS_FOR_NEW_TENANTS is off on this server. Turn it on once the staging check
+          passes to create NVIP tenants (shared assistants, every tool).
+        </div>
+      )}
 
       <Card className="card-base p-4">
         <div className="flex flex-wrap gap-3 mb-4">
@@ -548,7 +561,7 @@ export default function TenantsPage() {
         <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground"><span>{total} tenants</span><div className="flex items-center gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Previous</Button><span>Page {page} of {Math.max(1, Math.ceil(total / 25))}</span><Button size="sm" variant="outline" disabled={page >= Math.max(1, Math.ceil(total / 25))} onClick={() => setPage((value) => value + 1)}>Next</Button></div></div>
       </Card>
 
-      <NewTenantDialog open={creating} onOpenChange={setCreating} onCreated={load} />
+      <NewTenantDialog open={creating} onOpenChange={setCreating} onCreated={load} nvip={newTenantsNvip === true} />
       <PhoneNumbersDialog tenant={numbersFor} onClose={() => setNumbersFor(null)} />
       <Dialog open={Boolean(invitesFor)} onOpenChange={(open) => !open && setInvitesFor(null)}>
         <DialogContent className="sm:max-w-[640px]" data-testid="tenant-invites-dialog">

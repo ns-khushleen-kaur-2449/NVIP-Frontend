@@ -111,3 +111,24 @@ test('the review shows the plan read-only and the readiness list, blocking first
   await waitFor(() => expect(api.saveTenantOnboarding).toHaveBeenCalledWith('t-1', 'review', ['details', 'review']));
   expect(await screen.findByText('tenants-list')).toBeInTheDocument();
 });
+
+test('an NVIP tenant gets no tool selection: everything is included', async () => {
+  api.getTenantOnboarding.mockResolvedValue({ data: { ...info({ step: 'tools', completed: ['details'], finished: false }).data, nvip: true } });
+  api.listTools.mockResolvedValue({ data: [{ id: 'tool-a', name: 'Book meeting', type_key: 'book_meeting' }] });
+  open('/admin/tenants/t-1/setup');
+  expect(await screen.findByTestId('nvip-included')).toHaveTextContent('Included: every tool, Outbound SDR and Inbound SDR.');
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.queryByRole('button', { name: /Give access/ })).toBeNull();
+  expect(api.listTools).not.toHaveBeenCalled();
+  expect(api.setManyToolsTenants).not.toHaveBeenCalled();
+});
+
+test('a legacy tenant keeps the tool selection step', async () => {
+  api.getTenantOnboarding.mockResolvedValue({ data: { ...info({ step: 'tools', completed: ['details'], finished: false }).data, nvip: false } });
+  api.listTools.mockResolvedValue({ data: [{ id: 'tool-a', name: 'Book meeting', type_key: 'book_meeting' }] });
+  api.getToolTenants.mockResolvedValue({ data: { tenants: [] } });
+  api.getTenantReadiness.mockResolvedValue({ data: { items: [] } });
+  open('/admin/tenants/t-1/setup');
+  expect(await screen.findByTestId('setup-tool-tool-a')).toBeInTheDocument();
+  expect(screen.queryByTestId('nvip-included')).toBeNull();
+});
