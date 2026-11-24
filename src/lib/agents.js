@@ -79,6 +79,7 @@ export const AGENT_PROBLEM_LABELS = Object.freeze({
   webhook_secret_not_set: 'The Vapi webhook secret is not set',
   campaign_runner_disabled: 'Campaign runner is off on this server',
   call_context_key_not_set: 'The call-context signing key is not set',
+  call_context_key_weak: 'The call-context signing key is too weak (under 32 characters, or the webhook secret)',
   intake_assistant_not_registered: 'No intake assistant is registered',
   recovery_not_running: 'Call recovery is not running (the campaign runner is off)',
   outbound_assistant_not_registered: 'No outbound assistant is registered',
