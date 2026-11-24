@@ -20,6 +20,7 @@ import {
 } from './fields';
 import { CheckChip, Panel as SetupPanel } from '@/components/setup/SetupUi';
 import CallPreviewView from '@/components/voice/CallPreview';
+import HandoffSection from './HandoffSection';
 import useCallPreview from '@/hooks/useCallPreview';
 
 const BOTH = ['sdr_outbound', 'sdr_inbound'];
@@ -31,7 +32,7 @@ export const STEPS = Object.freeze([
   { id: 'identity', label: 'Agent identity', types: BOTH, paths: ['persona', 'voice', 'languages', 'tone', 'opener'] },
   { id: 'campaign_defaults', label: 'Campaign defaults', types: ['sdr_outbound'], paths: ['qualification_questions', 'dispositions', 'extraction_fields'] },
   { id: 'inbound', label: 'Inbound calls', types: ['sdr_inbound'], paths: ['inbound', 'qualification_questions'] },
-  { id: 'actions', label: 'Actions and integrations', types: BOTH, paths: ['calendar', 'call_behaviour.tools', 'call_behaviour.transfer_numbers'] },
+  { id: 'actions', label: 'Actions and integrations', types: BOTH, paths: ['calendar', 'call_behaviour.tools', 'handoff'] },
   { id: 'rules', label: 'Rules and guardrails', types: BOTH, paths: ['calling', 'guardrails'] },
   { id: 'behaviour', label: 'Call behaviour', advanced: true, types: BOTH, paths: ['call_behaviour', 'goal', 'sales_approach', 'conversation_length', 'target_customer'] },
   { id: 'review', label: 'Review and test', types: BOTH, paths: [] },
@@ -389,7 +390,6 @@ export function ActionsStep({ payload, field, readOnly }) {
   const toolsField = field('call_behaviour.tools');
   const setTool = (type, on) => toolsField.onChange(on ? [...new Set([...tools, type])] : tools.filter((t) => t !== type));
   const booking = field('calendar.booking_enabled');
-  const transfers = field('call_behaviour.transfer_numbers');
   return (
     <Section title="Actions and integrations">
       <SwitchField label="Book meetings in the calendar" checked={booking.value} onChange={booking.onChange} readOnly={readOnly}
@@ -406,8 +406,8 @@ export function ActionsStep({ payload, field, readOnly }) {
         path="call_behaviour.tools" onChange={(on) => setTool(TOOL_BROCHURE, on)} />
       <SwitchField label="Arrange callbacks" checked={tools.includes(TOOL_CALLBACK)} readOnly={readOnly}
         path="call_behaviour.tools" onChange={(on) => setTool(TOOL_CALLBACK, on)} />
-      <ListField label="Human transfer numbers" max={3} addLabel="Add a number" placeholder="+919876543210" maxLength={20}
-        hint="In international format (E.164)." {...transfers} values={transfers.value || []} />
+      {/* Human handoff (versioned): replaces the old "Human transfer numbers" list, which no call ever read. */}
+      <HandoffSection field={field} readOnly={readOnly} />
     </Section>
   );
 }
