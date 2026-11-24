@@ -103,6 +103,17 @@ function AdminStep({ info }) {
   );
 }
 
+/** An NVIP tenant: nothing to choose. Every tool and both SDR agent types come with it (backend tenants/nvip.py). */
+export function IncludedStep() {
+  return (
+    <div className="space-y-2" data-testid="nvip-included">
+      <p className="text-sm font-medium">Included: every tool, Outbound SDR and Inbound SDR.</p>
+      <p className="text-xs text-muted-foreground">This is an NVIP organisation: it calls through NVIP's shared
+        assistants, and a tool added to the platform later is included too. Nothing to choose here.</p>
+    </div>
+  );
+}
+
 /** Grants for this tenant through the bulk Tenant access route (the Tools page's): tick tools, give a reason. */
 export function ToolGrantsStep({ info }) {
   const [tools, setTools] = useState(null);
@@ -265,7 +276,7 @@ export default function TenantSetupPage() {
         {step === 'admin' && info && <AdminStep info={info} />}
         {step === 'settings' && info && <TenantSettingsPanel tenant={info} hideAdmins />}
         {step === 'phone' && info && <PhoneNumbersPanel tenant={info} />}
-        {step === 'tools' && info && <ToolGrantsStep info={info} />}
+        {step === 'tools' && info && (info.nvip ? <IncludedStep /> : <ToolGrantsStep info={info} />)}
         {step === 'review' && info && <ReviewStep info={info} />}
         {info && (
           <div className="flex justify-between pt-2 border-t border-border">

@@ -185,3 +185,18 @@ describe('readiness and setup', () => {
     await waitFor(() => expect(screen.getByTestId('tenant-readiness-t-1')).toHaveTextContent('—'));
   });
 });
+
+describe('new tenants: NVIP or legacy', () => {
+  test('the page says so when new tenants will be legacy (the staging gate is off)', async () => {
+    api.listAdminTenants.mockResolvedValue({ data: { tenants: [TENANT], total: 1, new_tenants_nvip: false } });
+    renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
+    expect(await screen.findByTestId('new-tenants-legacy')).toHaveTextContent('SHARED_ASSISTANTS_FOR_NEW_TENANTS is off');
+  });
+
+  test('no banner when new tenants are NVIP tenants', async () => {
+    api.listAdminTenants.mockResolvedValue({ data: { tenants: [TENANT], total: 1, new_tenants_nvip: true } });
+    renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
+    await screen.findByTestId('tenant-row-t-1');
+    expect(screen.queryByTestId('new-tenants-legacy')).toBeNull();
+  });
+});

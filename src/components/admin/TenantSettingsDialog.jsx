@@ -27,6 +27,7 @@ export const FEATURE_DESCRIPTIONS = {
   agent_instances: "Off by default. Managers and Tenant Admins configure agents (drafts, versions, publish) on the Agents page. Calls still use the Assistant builder's configuration unless shared assistants is also on.",
   shared_assistants: "Off by default. Routes outbound campaigns through the platform's published shared Outbound SDR and the tenant's published SDR setup. The tenant also needs Agent instances enabled, SDR catalog access, and a caller ID number (or the platform caller ID switch).",
   allow_platform_caller_id: "Off by default. A shared-assistant tenant without a number of its own may call from the platform's number.",
+  all_tools: 'On for NVIP tenants. Every platform tool is granted, and a tool added later is granted at once. A tool revoked under Tools → Tenant access stays revoked.',
 };
 const number = (value) => (value === '' ? null : Number(value));
 
