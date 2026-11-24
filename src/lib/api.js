@@ -790,6 +790,8 @@ export const markAllNotificationsRead = () => api.post('/api/v1/notifications/re
 // Did the lead ask for a callback on this call, and was one scheduled?
 // { requested, unscheduled, callback_task_id, scheduled_call_id, prospect_id }
 export const getCallCallbackFollowUp = (callId) => api.get(`/api/call-logs/${encodeURIComponent(callId)}/callback-follow-up`);
+// Human handoffs of one call: status (requested, transfer_started, refused, callback_created), target, reason, summary.
+export const getCallHandoffs = (callId) => api.get(`/api/call-logs/${encodeURIComponent(callId)}/handoffs`);
 
 // ── Hand-offs: callbacks a person must make (Tenant Admin / Manager) ──
 // params: { status: open | done | cancelled }

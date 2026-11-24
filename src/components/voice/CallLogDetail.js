@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import LeadTimelineDialog from '@/components/shared/LeadTimelineDialog';
 import IntentAssessmentDetails from '@/components/ops/IntentAssessmentDetails';
 import CallbackFollowUp from '@/components/voice/CallbackFollowUp';
+import CallHandoffs from '@/components/voice/CallHandoffs';
 import AgentTypeBadge, { CallAgentVersion } from '@/components/voice/AgentTypeBadge';
 import OpsStatusBadge from '@/components/ops/StatusBadge';
 import { useCallLogDetail } from '@/hooks/useCallLogs';
@@ -332,6 +333,7 @@ export default function CallLogDetail({ callId, onBack }) {
       )}
 
       <CallbackFollowUp callId={d.id} assistantId={d.assistant_id} />
+      <CallHandoffs callId={d.id} />
 
       {/* Title card */}
       <Card className="bg-card rounded-xl border border-border shadow-sm">
