@@ -29,6 +29,12 @@ export const REFUSALS = Object.freeze({
     title: "Calls can't be placed: the platform's call signing isn't set up",
     fix: () => ({ label: 'Contact your platform administrator, then Resume the campaign' }),
   },
+  // A platform misconfiguration (CALL_CONTEXT_KEYS too weak): tenants never see the cause, only that the platform
+  // paused calling and their platform admin was alerted (the Super Admin sees the cause on the platform overview).
+  call_context_key_weak: {
+    title: 'Calling is paused by the platform',
+    fix: () => ({ label: 'Your platform admin has been alerted. Resume the campaign once they confirm it is fixed.' }),
+  },
   missing_call_details: {
     title: 'Some leads were skipped because details are missing',
     fix: () => ({ label: 'Open prospects', to: '/leads' }),
@@ -62,7 +68,7 @@ export function campaignRefusals(campaign, contacts = [], user = null) {
 
 // Pause reasons that mean no call of the tenant can be placed until someone fixes the account (Agents-page banner).
 export const ACCOUNT_REFUSALS = Object.freeze(['agent_not_ready', 'no_caller_id', 'shared_assistants_off',
-  'call_context_key_not_set']);
+  'call_context_key_not_set', 'call_context_key_weak']);
 
 /**
  * Why calling is blocked for the account right now, from real facts only: [{ code, title, fix }].

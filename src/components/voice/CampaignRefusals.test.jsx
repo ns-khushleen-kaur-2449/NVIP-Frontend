@@ -34,6 +34,16 @@ describe('refusal reasons', () => {
     expect(screen.queryByRole('link', { name: 'Open agent configuration' })).not.toBeInTheDocument();
   });
 
+  test('call_context_key_weak: the tenant sees only that the platform paused calling, never the cause', () => {
+    const { container } = renderWithAuth(<CampaignRefusals user={USERS.tenant_admin}
+      campaign={paused('call_context_key_weak', 'Calling is paused by the platform; your platform admin has been alerted.')}
+      contacts={[]} />, { user: USERS.tenant_admin });
+    expect(screen.getByRole('alert')).toHaveTextContent('Calling is paused by the platform');
+    expect(screen.getByRole('alert')).toHaveTextContent('Your platform admin has been alerted');
+    expect(container.textContent).not.toMatch(/CALL_CONTEXT|signing|key|weak|secret/i);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   test('no_caller_id: tells a tenant user to contact the administrator', () => {
     renderWithAuth(<CampaignRefusals user={USERS.tenant_admin} campaign={paused('no_caller_id', null)} contacts={[]} />,
       { user: USERS.tenant_admin });

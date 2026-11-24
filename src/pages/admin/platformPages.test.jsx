@@ -101,6 +101,18 @@ test('the overview shows alerts, usage and health', async () => {
   expect(screen.getByTestId('overview-health')).toHaveTextContent('Healthy');
 });
 
+test('a weak call signing key is raised to the Super Admin with its cause and a link to the agent catalog', async () => {
+  api.getAdminOverview.mockResolvedValue({ data: { tenants: { total: 1, active: 1, suspended: 0 }, window_days: 30,
+    usage: { calls: 0, minutes: 0, bookings: 0, cost: null }, health: { workers: [] },
+    alerts: [{ code: 'call_context_key_weak', severity: 'critical',
+      label: 'CALL_CONTEXT_KEYS is too weak (a key under 32 characters or equal to VAPI_WEBHOOK_SECRET): shared-assistant calls are refused',
+      count: null }] } });
+  render(<AdminOverviewPage />);
+  const alerts = await screen.findByTestId('overview-alerts');
+  expect(alerts).toHaveTextContent('CALL_CONTEXT_KEYS is too weak');
+  expect(within(alerts).getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/admin/agent-catalog');
+});
+
 test('tenant settings save limits and switches with a reason', async () => {
   const settings = { status: 'active', dialing_paused: false, limits: { monthly_minutes: null, concurrent_calls: null },
     features: [{ key: 'campaigns', label: 'Campaigns', enabled: true }], tenant_admins: [{ id: 1, name: 'Owner', email: 'o@x.example', status: 'active' }] };

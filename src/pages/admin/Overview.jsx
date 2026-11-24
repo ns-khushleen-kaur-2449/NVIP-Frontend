@@ -31,6 +31,8 @@ const WORKER_STATES = {
 // Every other code (workers_late, failed_*) belongs on Operations.
 const ALERT_LINKS = {
   platform_paused: '/admin/controls', tenants_paused: '/admin/controls', limit_warnings: '/admin/usage', limit_warnings_calls: '/admin/usage',
+  // CALL_CONTEXT_KEYS missing or weak: the agent catalog's health check names it (Super Admin only).
+  call_context_key_weak: '/admin/agent-catalog', call_context_key_not_set: '/admin/agent-catalog',
 };
 
 /** Platform health, active alerts and key usage from GET /api/admin/overview. Numbers only (Super Admin). */
