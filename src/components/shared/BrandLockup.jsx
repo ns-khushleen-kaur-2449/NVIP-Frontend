@@ -84,8 +84,27 @@ export function SmartSDRWordmark({ className, style, sdrAt }) {
   );
 }
 
+/**
+ * The NVIP product wordmark, as on the public hero: "NVIP" as one word in Netsmartz orange, with an optional
+ * "Voice Intelligence Platform" tagline. Used for the signed-in workspace (sidebar, top bar).
+ */
+export function NvipWordmark({ className, style, tagline = false, align = 'start' }) {
+  return (
+    <span style={style} className={cn('inline-flex flex-col leading-none', align === 'end' ? 'items-end' : 'items-start', className)}>
+      <span className="nvw-wordmark nvw-vip whitespace-nowrap text-[var(--pine)]">NVIP</span>
+      {tagline && (
+        <span className="mt-1.5 whitespace-nowrap text-[0.62rem] font-medium uppercase tracking-[0.14em] opacity-60">
+          Voice Intelligence Platform
+        </span>
+      )}
+    </span>
+  );
+}
+
 const INLINE_SIZES = {
   sm: { logo: 'h-6', divider: 'h-5', word: 'text-[1.05rem]', gap: 'gap-2.5' },
+  // App sidebars (272px tenant, 240px platform admin): logo │ NVIP on one line.
+  side: { logo: 'h-7', divider: 'h-6', word: 'text-[1.3rem]', gap: 'gap-3' },
   md: { logo: 'h-9', divider: 'h-7', word: 'text-[1.4rem]', gap: 'gap-3' },
   lg: { logo: 'h-10', divider: 'h-8', word: 'text-[1.7rem]', gap: 'gap-4' },
 };
@@ -103,7 +122,29 @@ const STACKED_SIZES = {
 //   "end"     right-aligns it with the logo's (or a full-width lockup's) right edge;
 //   "sdr"     starts the orange "SDR" where the word "netsmartz" ends, so "Smart" sits under
 //             "netsmartz" and "SDR" under the 27.
-export default function BrandLockup({ layout = 'inline', size = 'md', tone = 'auto', wordAlign = 'letters', className, wordClassName }) {
+// product="nvip" (the signed-in workspace) shows the NVIP wordmark; "smartsdr" keeps the legacy SmartSDR one
+// for the old marketing pages.
+export default function BrandLockup({ layout = 'inline', size = 'md', tone = 'auto', wordAlign = 'letters', product = 'nvip', tagline = false, className, wordClassName }) {
+  if (product === 'nvip') {
+    if (layout === 'stacked') {
+      const s = STACKED_SIZES[size];
+      const alignEnd = wordAlign === 'end';
+      return (
+        <span className={cn('inline-flex flex-col', alignEnd ? 'items-end' : 'items-start', s.gap, className)}>
+          <NetsmartzLogo tone={tone} className={cn(s.logo, 'self-start')} />
+          <NvipWordmark className={cn(s.word, wordClassName)} tagline={tagline} align={alignEnd ? 'end' : 'start'} />
+        </span>
+      );
+    }
+    const s = INLINE_SIZES[size];
+    return (
+      <span className={cn('inline-flex items-center', s.gap, className)}>
+        <NetsmartzLogo tone={tone} className={s.logo} />
+        <span aria-hidden="true" className={cn('w-px shrink-0 bg-current opacity-25', s.divider)} />
+        <NvipWordmark className={cn(s.word, '-translate-y-[1px]', wordClassName)} tagline={tagline} />
+      </span>
+    );
+  }
   if (layout === 'stacked') {
     const s = STACKED_SIZES[size];
     const alignEnd = wordAlign === 'end';

@@ -252,7 +252,7 @@ function SidebarShell({ children }) {
       <Sidebar />
       <div className="flex-1 min-w-0 overflow-y-auto">
         <SidebarTopBar />
-        <div className="page-content bg-background">
+        <div className="page-content">
           {children}
         </div>
       </div>

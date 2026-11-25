@@ -5,14 +5,13 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: hsl(var(--background));
+  /* Background (with the NVIP orange glow) is set in index.css, "NVIP signed-in workspace". */
 }
 
 /* App Shell — persistent left Sidebar, no TopBar */
 .app-shell-row {
   display: flex;
   min-height: 100vh;
-  background: hsl(var(--background));
 }
 
 .page-content {

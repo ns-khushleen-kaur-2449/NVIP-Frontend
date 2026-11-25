@@ -27,8 +27,8 @@ test('several agents can be picked and are sent together, in catalog order', asy
   fill();
   fireEvent.click(screen.getByRole('checkbox', { name: 'Hiring / Recruitment' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Outbound Lead Gen' }));
-  fireEvent.click(screen.getByRole('checkbox', { name: 'AI Receptionist' }));
-  fireEvent.click(screen.getByRole('checkbox', { name: 'AI Receptionist' })); // and untick again
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Real Estate Agent' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Real Estate Agent' })); // and untick again
   fireEvent.click(screen.getByRole('button', { name: 'Request demo' }));
   await waitFor(() => expect(accessApi.submitRequest).toHaveBeenCalled());
   const [kind, payload] = accessApi.submitRequest.mock.calls[0];

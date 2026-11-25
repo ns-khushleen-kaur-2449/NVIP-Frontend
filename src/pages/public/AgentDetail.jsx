@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Phone } from 'lucide-react';
 import { AuthContext } from '@/lib/AuthContext';
 import { getAgentCatalog } from '@/lib/api';
 import { canManageBilling } from '@/lib/rbac';
-import { runsOnBackend } from '../../config/agents';
+import { isAvailable } from '../../config/agents';
 import { marketplaceApi } from '../../api/services';
 import { useNvipQuery } from '../../hooks/useNvipQuery';
 import {
@@ -29,7 +29,7 @@ function ListBlock({ title, items }) {
 /**
  * Where this agent stands for the person reading the page, and the way into the real workspace.
  *   Guest                    -> sign in (the real /login).
- *   No backend agent yet     -> not in the workspace yet (Receptionist, Real Estate).
+ *   No backend agent yet     -> not in the workspace yet (Inbound Voice SDR, held back as Coming soon).
  *   Signed-in tenant user    -> GET /api/v1/agents/catalog says whether their organisation may use it: open the
  *                               Agents page (it shows setup state and opens the agent's screens), or Not in plan.
  * The backend decides; this only reads it. If the catalog can't be read, it still offers the Agents page.
@@ -38,7 +38,7 @@ function WorkspaceAccess({ agent }) {
   const auth = useContext(AuthContext);
   const user = auth?.user ?? null;
   const signedIn = Boolean(user || auth?.token);
-  const live = runsOnBackend(agent);
+  const live = isAvailable(agent);
   const { catalogKey, agentType } = agent.backend;
   // undefined: not asked / loading; null: couldn't tell; true / false: the backend's answer.
   const [usable, setUsable] = useState(undefined);

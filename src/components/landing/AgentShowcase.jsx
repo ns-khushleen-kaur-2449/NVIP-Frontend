@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, CircleCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AGENTS, CATEGORIES, runsOnBackend } from '@/config/agents';
+import { AGENTS, CATEGORIES, isAvailable } from '@/config/agents';
 import { AsyncBoundary, ButtonLink, EmptyState } from '@/components/primitives';
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
-/** An agent with a backend agent type is live; the rest are on the way (config/agents.js). */
+/** An agent with a backend agent type that is not held back is live; the rest are on the way (config/agents.js). */
 function StatusBadge({ agent }) {
-  const available = runsOnBackend(agent.backend ? agent : AGENTS.find((a) => a.type === agent.type));
+  const available = isAvailable(agent.backend ? agent : AGENTS.find((a) => a.type === agent.type));
   return (
     <span
       className={cn(

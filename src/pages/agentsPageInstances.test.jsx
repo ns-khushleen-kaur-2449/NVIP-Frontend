@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import AgentsPage from '@/pages/Agents';
 import * as api from '@/lib/api';
 import { USERS, renderWithAuth } from '@/test/renderWithAuth';
@@ -94,6 +94,32 @@ test('Not in plan: an unusable Inbound SDR and catalog agents the tenant cannot 
   ] });
   renderWithAuth(<AgentsPage />, { user: { ...USERS.tenant_admin, ...ON } });
   expect(await screen.findByTestId('agent-card-sdr_inbound')).toHaveTextContent('Not in your plan');
-  expect(screen.getByText('Real estate').closest('[data-testid]')).toHaveTextContent('Not in your plan');
+  // Each catalog agent not bought gets its own card with a Purchase button.
+  const realEstate = screen.getByTestId('agent-card-real_estate');
+  expect(realEstate).toHaveTextContent('Not in your plan');
+  expect(within(realEstate).getByRole('link', { name: /purchase/i })).toHaveAttribute('href', '/billing');
   expect(screen.getAllByRole('link', { name: 'See plans' })[0]).toHaveAttribute('href', '/billing');
+});
+
+test('legacy view: agents in the plan open, the rest of the catalog offers Purchase', async () => {
+  api.listAvailableAgents.mockResolvedValue({ data: [{ ...SDR }] });
+  api.getAgentCatalog.mockResolvedValue({ data: [
+    { ...SDR, agent_type: 'sdr_outbound', usable: true, has_screen: true },
+    { id: 'a-3', key: 'sdr_inbound', name: 'Inbound SDR', agent_type: 'sdr_inbound', usable: false, has_screen: false },
+    { id: 'a-4', key: 'hiring', name: 'Hiring', agent_type: 'hiring', usable: false, has_screen: true },
+  ] });
+  renderWithAuth(<AgentsPage />, { user: { ...USERS.tenant_admin, features: {} } });
+  const hiring = await screen.findByTestId('agent-card-hiring');
+  expect(within(hiring).getByRole('link', { name: /purchase/i })).toHaveAttribute('href', '/billing');
+  expect(within(screen.getByTestId('agent-card-sdr')).queryByRole('link', { name: /purchase/i })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('agent-card-sdr_inbound')).not.toBeInTheDocument();
+});
+
+test('legacy view: a user who cannot manage billing is told to ask their Tenant Admin', async () => {
+  api.listAvailableAgents.mockResolvedValue({ data: [{ ...SDR }] });
+  api.getAgentCatalog.mockResolvedValue({ data: [{ id: 'a-4', key: 'hiring', name: 'Hiring', usable: false, has_screen: true }] });
+  renderWithAuth(<AgentsPage />, { user: { ...USERS.rep, features: {} } });
+  const hiring = await screen.findByTestId('agent-card-hiring');
+  expect(hiring).toHaveTextContent('Ask your Tenant Admin to purchase');
+  expect(within(hiring).queryByRole('link', { name: /purchase/i })).not.toBeInTheDocument();
 });

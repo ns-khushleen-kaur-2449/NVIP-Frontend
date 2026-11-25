@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { LogOut, ShieldCheck } from 'lucide-react';
+import BrandLockup from '@/components/shared/BrandLockup';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 import { PLATFORM_NAV, visibleNavItems } from '@/lib/adminNav';
@@ -22,13 +23,13 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background" data-testid="admin-layout">
       <aside className="mk shrink-0 md:w-[240px] md:h-screen md:sticky md:top-0 flex flex-col bg-[var(--paper)] border-b md:border-b-0 md:border-r border-[var(--line)]">
-        <div className="flex items-center gap-3 px-4 py-4 md:border-b border-[var(--line)]">
-          <ShieldCheck className="h-5 w-5 text-[var(--pine)]" />
-          <div className="min-w-0">
-            <p className="font-display text-base font-semibold text-[var(--ink)]">Platform admin</p>
-            <p className="text-[11px] text-[var(--mist)]">Super Admin</p>
-          </div>
+        <div role="img" aria-label="NVIP by Netsmartz" className="flex h-16 items-center px-4 md:border-b border-[var(--line)]">
+          <BrandLockup size="side" className="text-[var(--ink)]" />
         </div>
+        <p className="flex items-center gap-2 px-5 pt-3 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[var(--mist)]">
+          <ShieldCheck className="h-3.5 w-3.5 text-[var(--pine)]" aria-hidden="true" />
+          Platform admin · Super Admin
+        </p>
 
         <nav aria-label="Platform admin" className="flex md:flex-col gap-1 px-3 pb-3 md:py-3 overflow-x-auto md:flex-1">
           {items.map((item) => {

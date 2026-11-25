@@ -49,7 +49,7 @@ describe('catalog card <-> backend agent', () => {
   });
 
   test('only agents with a backend agent type run in the workspace', () => {
-    expect(AGENTS.filter(runsOnBackend).map((a) => a.type).sort()).toEqual(['hiring', 'outbound', 'sdr']);
+    expect(AGENTS.filter(runsOnBackend).map((a) => a.type).sort()).toEqual(['hiring', 'outbound', 'real_estate', 'sdr']);
   });
 });
 
@@ -72,7 +72,8 @@ describe('brochure page: In your workspace', () => {
   });
 
   test('not in the plan: a Tenant Admin is offered the plans', async () => {
-    renderWithAuth(<p>other</p>, { user: USERS.tenant_admin, path: at('sdr'), routes });
+    api.getAgentCatalog.mockResolvedValue({ data: [{ ...HIRING, agent_type: 'hiring', usable: false, has_screen: true }] });
+    renderWithAuth(<p>other</p>, { user: USERS.tenant_admin, path: at('hiring'), routes });
     expect(await within(await panel()).findByText(/not in your organisation's plan/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/billing');
     expect(screen.queryByRole('link', { name: /open in your workspace/i })).not.toBeInTheDocument();
@@ -84,27 +85,27 @@ describe('brochure page: In your workspace', () => {
     expect(await within(await panel()).findByRole('link', { name: /open in your workspace/i })).toHaveAttribute('href', '/agents');
   });
 
-  test('an agent without a backend is not in the workspace yet, and nothing is asked', async () => {
-    renderWithAuth(<p>other</p>, { user: USERS.manager, path: at('real_estate'), routes });
+  test('Inbound Voice SDR is held back as Coming soon: not in the workspace yet, and nothing is asked', async () => {
+    renderWithAuth(<p>other</p>, { user: USERS.tenant_admin, path: at('sdr'), routes });
     expect(await within(await panel()).findByText(/isn't in the NVIP workspace yet/i)).toBeInTheDocument();
     expect(api.getAgentCatalog).not.toHaveBeenCalled();
+  });
+
+  test('Real Estate runs on the backend: the catalog decides, a manager whose plan lacks it sees Not in plan', async () => {
+    renderWithAuth(<p>other</p>, { user: USERS.manager, path: at('real_estate'), routes });
+    await within(await panel()).findByText(/not in your organisation's plan/i);
+    expect(api.getAgentCatalog).toHaveBeenCalled();
   });
 });
 
 describe('Agents page: the rest of the NVIP lineup', () => {
-  test('Receptionist and Real Estate show as Coming soon, linking to their brochure', async () => {
+  test('every catalog agent runs on the backend: no Coming soon cards, and no AI Receptionist', async () => {
     renderWithAuth(<AgentsPage />, { user: { ...USERS.manager, features: {} } });
     await screen.findByTestId('agent-card-sdr');
-    const section = screen.getByTestId('nvip-coming-soon');
-    ['receptionist', 'real_estate'].forEach((type) => {
-      const card = within(section).getByTestId(`agent-card-nvip-${type}`);
-      expect(within(card).getByText('Coming soon')).toBeInTheDocument();
-      expect(within(card).getByRole('link')).toHaveAttribute('href', `/marketplace/${slugOf(type)}`);
-    });
-    // Agents the backend has are never Coming soon.
-    expect(within(section).queryByTestId('agent-card-nvip-outbound')).not.toBeInTheDocument();
-    expect(within(section).queryByTestId('agent-card-nvip-hiring')).not.toBeInTheDocument();
-    expect(within(section).queryByTestId('agent-card-nvip-sdr')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nvip-coming-soon')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-card-nvip-real_estate')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-card-nvip-receptionist')).not.toBeInTheDocument();
+    expect(screen.queryByText('AI Receptionist')).not.toBeInTheDocument();
   });
 
   test('a catalog agent the backend lists is left to the backend (no duplicate Coming soon card)', async () => {
@@ -112,6 +113,6 @@ describe('Agents page: the rest of the NVIP lineup', () => {
     renderWithAuth(<AgentsPage />, { user: { ...USERS.manager, features: {} } });
     await screen.findByTestId('agent-card-real_estate');
     expect(screen.queryByTestId('agent-card-nvip-real_estate')).not.toBeInTheDocument();
-    expect(screen.getByTestId('agent-card-nvip-receptionist')).toBeInTheDocument();
+    expect(screen.queryByTestId('nvip-coming-soon')).not.toBeInTheDocument();
   });
 });

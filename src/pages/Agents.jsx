@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Bot, Loader2, Lock } from 'lucide-react';
+import { ArrowRight, Bot, Check, Loader2, Lock, ShoppingCart, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { errorText } from '@/components/admin/userBits';
 import {
   getAgentCatalog, getAgentInstanceVersion, getBuilderLanguages, listAgentInstances, listAvailableAgentTypes, listAvailableAgents,
@@ -28,36 +27,97 @@ const TYPE_DESCRIPTIONS = {
 };
 
 /** The NVIP catalog icon of a backend agent (config/agents.js: `sdr` -> Outbound Lead Gen, ...); else a robot. */
-function AgentIcon({ agentKey }) {
-  const Icon = getAgentByBackendKey(agentKey)?.icon || Bot;
+function AgentIcon({ agentKey, icon, muted = false }) {
+  const Icon = icon || getAgentByBackendKey(agentKey)?.icon || Bot;
   return (
-    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-      <Icon className="h-5 w-5" />
+    <span aria-hidden="true" className={cn('nvw-agent-icon h-14 w-14 shrink-0', muted && 'opacity-80')}>
+      <Icon className="h-6 w-6" />
     </span>
   );
 }
 
-/** Today's card: the agent and a link to its screen. */
-function LegacyCard({ agent }) {
-  const route = agentRoute(agent);
+/** Up to three of the agent's tools, with orange check circles (as on the public agent cards). */
+function ToolList({ tools }) {
+  if (!tools?.length) return null;
   return (
-    <Card className="card-base p-5 flex flex-col gap-3" data-testid={`agent-card-${agent.key}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <AgentIcon agentKey={agent.key} />
-          <h2 className="font-semibold">{agent.name}</h2>
+    <ul className="space-y-2 text-sm">
+      {tools.slice(0, 3).map((tool) => (
+        <li key={tool} className="flex items-center gap-2.5 text-foreground/85">
+          <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[var(--nvw-orange-text)]">
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+          {tool}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The action of an agent the organisation hasn't bought: Purchase (billing) for those who manage billing. */
+function PurchaseAction({ agent, user }) {
+  if (!canManageBilling(user)) {
+    return <span className="text-xs text-muted-foreground">Ask your Tenant Admin to purchase</span>;
+  }
+  return (
+    <Button asChild className="group/btn px-5">
+      <Link to="/billing" data-testid={`agent-purchase-${agent.key}`}>
+        <ShoppingCart aria-hidden="true" />Purchase<span className="sr-only"> {agent.name}</span>
+      </Link>
+    </Button>
+  );
+}
+
+/** Today's card: the agent and a link to its screen, or (`locked`: not in the plan) a Purchase button. */
+function LegacyCard({ agent, locked = false, user }) {
+  const route = locked ? null : agentRoute(agent);
+  const nvip = getAgentByBackendKey(agent.key);
+  return (
+    <article className="nvw-agent-card flex flex-col gap-5 p-6" data-featured={route ? 'true' : undefined}
+      data-locked={locked ? 'true' : undefined} data-testid={`agent-card-${agent.key}`}>
+      <div className="relative flex items-start gap-4">
+        <AgentIcon agentKey={agent.key} />
+        <div className="min-w-0 flex-1 pt-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-[1.2rem] font-bold tracking-[-0.02em]">{agent.name}</h2>
+            {agent.industry && (
+              <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-[var(--nvw-orange-ink)]">
+                {agent.industry}
+              </span>
+            )}
+          </div>
+          {route && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
+              Available in your workspace
+            </p>
+          )}
+          {locked && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Lock className="h-3 w-3" aria-hidden="true" />
+              Not in your plan
+            </p>
+          )}
         </div>
-        {agent.industry && <Badge variant="outline" className="text-[11px]">{agent.industry}</Badge>}
       </div>
-      <p className="text-sm text-muted-foreground flex-1">
-        {agent.description || getAgentByBackendKey(agent.key)?.summary || 'No description.'}
+      <p className="relative text-sm leading-relaxed text-muted-foreground">
+        {agent.description || nvip?.summary || 'No description.'}
       </p>
-      {route ? (
-        <Button asChild className="bg-primary text-primary-foreground self-start"><Link to={route}>Open</Link></Button>
-      ) : (
-        <span className="text-xs text-muted-foreground">Coming soon to your workspace</span>
-      )}
-    </Card>
+      <ToolList tools={nvip?.tools} />
+      <div className="relative mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
+        {locked ? (
+          <PurchaseAction agent={agent} user={user} />
+        ) : route ? (
+          <Button asChild className="group/btn px-5"><Link to={route}>Open<ArrowRight className="transition-transform duration-200 group-hover/btn:translate-x-0.5" aria-hidden="true" /></Link></Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">Coming soon to your workspace</span>
+        )}
+        {nvip?.slug && (
+          <Link to={`/marketplace/${nvip.slug}`} className="nvw-link text-sm">
+            Details<span className="sr-only"> about {agent.name}</span>
+          </Link>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -79,19 +139,19 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
       {canConfigure ? INSTANCE_STATE_LABELS[state] : 'Managed by your admin'}
     </Pill>
   );
-  const cardClass = cn('flex flex-col gap-3 rounded-2xl border bg-card p-6',
-    primary && state === INSTANCE_STATES.NOT_SET_UP ? 'border-2 border-primary' : 'border-border');
+  const cardClass = 'nvw-agent-card flex flex-col gap-4 p-6';
+  const featured = primary && state === INSTANCE_STATES.NOT_SET_UP ? 'true' : undefined;
 
   if (summary) {
     const voice = payload?.voice?.voice_id;
     return (
-      <article className={cardClass} data-testid={`agent-card-${agentType}`}>
-        <div className="flex items-start gap-3">
-          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+      <article className={cardClass} data-featured="true" data-testid={`agent-card-${agentType}`}>
+        <div className="relative flex items-start gap-4">
+          <span aria-hidden="true" className="nvw-agent-icon h-14 w-14 shrink-0 text-lg font-bold">
             {(summary.persona || name).charAt(0).toUpperCase()}
           </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold">{name}</h2>
+          <div className="min-w-0 flex-1 pt-1">
+            <h2 className="text-[1.2rem] font-bold tracking-[-0.02em]">{name}</h2>
             <p className="truncate text-sm text-muted-foreground">
               {[summary.persona, languageNames(summary.languages, languages), `v${summary.version}`].filter(Boolean).join(' · ')}
             </p>
@@ -103,7 +163,7 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
           {payload?.persona?.gender || voice ? ` · Voice: ${voice || 'default'}${payload?.persona?.gender ? ` (${payload.persona.gender})` : ''}` : ''}
         </p>
         {agentType === 'sdr_inbound' && <InboundNumberStatus phoneNumbers={phoneNumbers} />}
-        <div className="mt-auto flex flex-wrap gap-2 pt-1">
+        <div className="relative mt-auto flex flex-wrap gap-2 border-t border-border pt-4">
           {canConfigure && <Button asChild variant="outline"><Link to={configure}>Edit configuration</Link></Button>}
           {campaigns && <Button asChild><Link to="/voice-campaigns/new">New campaign</Link></Button>}
         </div>
@@ -112,13 +172,13 @@ function AgentTypeCard({ agentType, name, description, instance, payload, langua
   }
 
   return (
-    <article className={cardClass} data-testid={`agent-card-${agentType}`}>
-      <div className="flex items-start justify-between gap-2">
+    <article className={cardClass} data-featured={featured} data-testid={`agent-card-${agentType}`}>
+      <div className="relative flex items-start justify-between gap-2">
         <AgentIcon agentKey={agentType} />
         {badge}
       </div>
-      <h2 className="text-lg font-semibold">{name}</h2>
-      <p className="flex-1 text-sm text-muted-foreground">{description}</p>
+      <h2 className="text-[1.2rem] font-bold tracking-[-0.02em]">{name}</h2>
+      <p className="flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
       {SETUP_HINTS[agentType] && <p className="text-sm text-muted-foreground">{SETUP_HINTS[agentType]}</p>}
       {agentType === 'sdr_inbound' && <InboundNumberStatus phoneNumbers={phoneNumbers} />}
       {canConfigure ? <Button asChild variant={primary ? 'default' : 'outline'} className="w-full">
@@ -135,23 +195,25 @@ function InboundNumberStatus({ phoneNumbers }) {
 }
 
 /**
- * An NVIP catalog agent with no backend agent type yet (Receptionist, Real Estate): shown so the workspace lists the
+ * An NVIP catalog agent with no backend agent type yet (none today): shown so the workspace lists the
  * whole lineup, never as something to open. "View details" opens its public brochure (/marketplace/:slug).
  */
 function ComingSoonCard({ agent }) {
   const Icon = agent.icon;
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-card/50 p-6" data-testid={`agent-card-nvip-${agent.type}`}>
-      <div className="flex items-start justify-between gap-2">
-        <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-          <Icon className="h-5 w-5" />
+    <article className="nvw-agent-card flex flex-col gap-4 p-6" data-muted="true" data-testid={`agent-card-nvip-${agent.type}`}>
+      <div className="relative flex items-start justify-between gap-2">
+        <AgentIcon icon={Icon} muted />
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+          <Sparkles className="h-3 w-3 text-[var(--nvw-orange-text)]" aria-hidden="true" />
+          Coming soon
         </span>
-        <Pill>Coming soon</Pill>
       </div>
-      <h2 className="text-lg font-semibold">{agent.name}</h2>
-      <p className="flex-1 text-sm text-muted-foreground">{agent.summary}</p>
-      <Link to={`/marketplace/${agent.slug}`} className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline">
+      <h2 className="text-[1.2rem] font-bold tracking-[-0.02em]">{agent.name}</h2>
+      <p className="flex-1 text-sm leading-relaxed text-muted-foreground">{agent.summary}</p>
+      <Link to={`/marketplace/${agent.slug}`} className="nvw-link group/link inline-flex items-center gap-1.5 self-start text-sm">
         View details<span className="sr-only"> about {agent.name}</span>
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5" aria-hidden="true" />
       </Link>
     </article>
   );
@@ -160,12 +222,12 @@ function ComingSoonCard({ agent }) {
 /** Agents the organisation cannot use: one dashed card naming them all. */
 export function NotInPlanCard({ names, user, testId = 'agent-card-locked' }) {
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border-2 border-dashed border-border bg-card/50 p-6" data-testid={testId}>
+    <article className="nvw-agent-card flex flex-col gap-3 p-6" data-muted="true" data-testid={testId}>
       <Pill className="self-start">{INSTANCE_STATE_LABELS.not_in_plan}</Pill>
       <h2 className="flex items-center gap-2 text-lg font-semibold"><Lock className="h-4 w-4" aria-hidden="true" /> {names.join(' · ')}</h2>
       <p className="flex-1 text-sm text-muted-foreground">More agents run on the same platform. Add them when you need them.</p>
       {canManageBilling(user) ? (
-        <Link to="/billing" className="font-semibold text-primary underline underline-offset-2">See plans</Link>
+        <Link to="/billing" className="nvw-link self-start">See plans</Link>
       ) : (
         <p className="text-xs text-muted-foreground">Ask your Tenant Admin about plans.</p>
       )}
@@ -181,6 +243,8 @@ export function NotInPlanCard({ names, user, testId = 'agent-card-locked' }) {
 export default function AgentsPage() {
   const { user } = useAuth();
   const [agents, setAgents] = useState(null);
+  // Every published agent with `usable` (legacy view): the ones not bought get a Purchase card.
+  const [catalog, setCatalog] = useState([]);
   // null: not loaded / not used; { byType, payloads }: loaded.
   const [instances, setInstances] = useState(null);
   const [languages, setLanguages] = useState([]);
@@ -198,8 +262,14 @@ export default function AgentsPage() {
         toast.error(errorText(e, 'Failed to load agents'));
         setAgents([]);
       });
+    // Tenant users only (403 for a Super Admin): a failure just leaves the purchasable agents out.
+    if (!newMode) {
+      Promise.resolve().then(() => getAgentCatalog())
+        .then((response) => { if (!cancelled) setCatalog(response?.data || []); })
+        .catch(() => {});
+    }
     return () => { cancelled = true; };
-  }, []);
+  }, [newMode]);
 
   useEffect(() => {
     if (!newMode) { setInstances(null); return undefined; }
@@ -253,7 +323,14 @@ export default function AgentsPage() {
 
   const cards = (() => {
     if (newMode && instances?.failed) return [];
-    if (!useTypes) return (agents || []).map((agent) => <LegacyCard key={agent.id} agent={agent} />);
+    if (!useTypes) {
+      const owned = new Set((agents || []).map((agent) => agent.id));
+      const purchasable = catalog.filter((entry) => !entry.usable && entry.has_screen !== false && !owned.has(entry.id));
+      return [
+        ...(agents || []).map((agent) => <LegacyCard key={agent.id} agent={agent} user={user} />),
+        ...purchasable.map((agent) => <LegacyCard key={agent.id} agent={agent} locked user={user} />),
+      ];
+    }
     const shown = new Set(instances.types.map((entry) => entry.id));
     const typeOf = (entry) => entry.agent_type || canonicalAgentType(entry.key);
     const list = [];
@@ -263,9 +340,9 @@ export default function AgentsPage() {
       if (!entry.usable) {
         // A type the tenant's pack runs (Inbound SDR) gets its own locked card; others join the group.
         if (isConfigurableAgentType(type)) list.push(<NotInPlanCard key={entry.id} names={[agentTypeLabel(type)]} user={user} testId={`agent-card-${type}`} />);
-        else locked.push(entry.name);
+        else locked.push(entry);
       } else if (!isConfigurableAgentType(type)) {
-        list.push(<LegacyCard key={entry.id} agent={entry} />);
+        list.push(<LegacyCard key={entry.id} agent={entry} user={user} />);
       } else {
         list.push(
           <AgentTypeCard key={entry.id} agentType={type} name={agentTypeLabel(type)} primary={type === 'sdr_outbound'}
@@ -274,14 +351,15 @@ export default function AgentsPage() {
         );
       }
     });
-    instances.catalog.filter((entry) => !entry.usable && !shown.has(entry.id)).forEach((entry) => locked.push(entry.name));
-    if (locked.length) list.push(<NotInPlanCard key="locked" names={locked} user={user} />);
+    instances.catalog.filter((entry) => !entry.usable && !shown.has(entry.id)).forEach((entry) => locked.push(entry));
+    // Each agent not bought gets its own card with a Purchase button.
+    locked.forEach((entry) => list.push(<LegacyCard key={entry.id} agent={entry} locked user={user} />));
     return list;
   })();
 
   // NVIP catalog agents the backend has no agent for, and that no backend list above mentions (by key or type).
   const backendKeys = new Set([
-    ...(agents || []).map((a) => a.key),
+    ...[...(agents || []), ...catalog].map((a) => a.key),
     ...[...(instances?.types || []), ...(instances?.catalog || [])].flatMap((e) => [e.key, e.agent_type]),
   ].filter(Boolean));
   const comingSoon = waiting || instances?.failed ? [] : NVIP_AGENTS.filter(
@@ -289,14 +367,14 @@ export default function AgentsPage() {
   );
 
   return (
-    <div className="ops max-w-6xl mx-auto space-y-6" data-testid="agents-page">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Agents</h1>
-        <p className="mt-1 text-muted-foreground">
+    <div className="ops max-w-6xl mx-auto space-y-8 pt-2" data-testid="agents-page">
+      <header>
+        <h1 className="nvw-h1">Agents</h1>
+        <p className="mt-2 max-w-xl text-[1.02rem] leading-relaxed text-muted-foreground">
           {useTypes ? 'Set an agent up once. Campaigns and phone numbers then use it.' : 'The AI agents available to your organisation.'}
         </p>
-      </div>
-      {useTypes && <h2 className="text-lg font-semibold">Your agents</h2>}
+      </header>
+      {useTypes && <h2 className="text-xl font-bold tracking-[-0.02em]">Your agents</h2>}
       {useTypes && !instances.failed && readiness.length > 0 && (
         <div role="status" className="ops-tone ops-tone-warn space-y-1 rounded-xl px-4 py-3 text-sm" data-testid="calling-readiness">
           {readiness.map((issue) => (
@@ -317,13 +395,13 @@ export default function AgentsPage() {
           No agents are available to your organisation yet. Ask your platform administrator to enable one.
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{cards}</div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{cards}</div>
       )}
 
       {comingSoon.length > 0 && (
-        <section className="space-y-3" aria-labelledby="nvip-more-agents" data-testid="nvip-coming-soon">
-          <h2 id="nvip-more-agents" className="text-lg font-semibold">More NVIP agents</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="space-y-4 pt-2" aria-labelledby="nvip-more-agents" data-testid="nvip-coming-soon">
+          <h2 id="nvip-more-agents" className="text-xl font-bold tracking-[-0.02em]">More NVIP agents</h2>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {comingSoon.map((agent) => <ComingSoonCard key={agent.type} agent={agent} />)}
           </div>
         </section>

@@ -16,7 +16,7 @@
  *
  * Prices are placeholders (doc §13: final amounts need commercial sign-off).
  */
-import { PhoneCall, Megaphone, MessageSquare, UserSearch, House, LayoutGrid, TrendingUp, Headset, Building2 } from 'lucide-react';
+import { Megaphone, MessageSquare, UserSearch, House, LayoutGrid, TrendingUp, Building2 } from 'lucide-react';
 
 export const AGENT_TYPES = {
   RECEPTIONIST: 'receptionist',
@@ -30,28 +30,10 @@ export const CATEGORIES = [
   { id: 'all', label: 'All agents', icon: LayoutGrid },
   { id: 'sales', label: 'Sales', icon: TrendingUp },
   { id: 'recruitment', label: 'Recruitment', icon: UserSearch },
-  { id: 'support', label: 'Support', icon: Headset },
   { id: 'real_estate', label: 'Real Estate', icon: Building2 },
 ];
 
 export const AGENTS = [
-  {
-    type: AGENT_TYPES.RECEPTIONIST,
-    slug: 'ai-receptionist',
-    backend: { catalogKey: 'receptionist', agentType: null },
-    name: 'AI Receptionist',
-    shortName: 'Receptionist',
-    category: 'support',
-    icon: PhoneCall,
-    summary: 'Answers every call, understands intent, and routes to the right agent or department.',
-    startingPrice: 199,
-    primaryUsers: 'All tenants',
-    captures: ['Caller name', 'Company / household', 'Reason for calling', 'Urgency'],
-    tools: ['Intent classification', 'Warm transfer (Twilio)', 'Callback tasks', 'Voicemail'],
-    systemOfRecord: null,
-    booking: 'Callback',
-    guardrails: ['Asks before guessing a department', 'Always offers a human'],
-  },
   {
     type: AGENT_TYPES.OUTBOUND,
     slug: 'outbound-lead-gen',
@@ -60,6 +42,7 @@ export const AGENTS = [
     shortName: 'Outbound',
     category: 'sales',
     icon: Megaphone,
+    popular: true,
     summary: 'Calls approved, consented lists — qualifies interest and books follow-ups automatically.',
     startingPrice: 349,
     primaryUsers: 'Sales teams, MSPs',
@@ -77,7 +60,8 @@ export const AGENTS = [
     shortName: 'SDR',
     category: 'sales',
     icon: MessageSquare,
-    popular: true,
+    // Built in the backend but not offered yet: the public catalog shows it as Coming soon.
+    comingSoon: true,
     summary: 'Qualifies inbound interest, syncs to your CRM, and books demos off a live calendar.',
     startingPrice: 299,
     primaryUsers: 'Businesses receiving sales calls',
@@ -107,7 +91,7 @@ export const AGENTS = [
   {
     type: AGENT_TYPES.REAL_ESTATE,
     slug: 'real-estate',
-    backend: { catalogKey: 'real_estate', agentType: null },
+    backend: { catalogKey: 'real_estate', agentType: 'real_estate' },
     name: 'Real Estate Agent',
     shortName: 'Real Estate',
     category: 'real_estate',
@@ -166,3 +150,6 @@ export function getAgentByBackendKey(key) {
 
 /** Whether the agent has a backend agent type, i.e. a tenant can actually use it in the workspace today. */
 export const runsOnBackend = (agent) => Boolean(agent?.backend?.agentType);
+
+/** Whether the public catalog offers the agent today: it runs on the backend and is not held back as Coming soon. */
+export const isAvailable = (agent) => runsOnBackend(agent) && !agent?.comingSoon;
