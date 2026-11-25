@@ -74,18 +74,28 @@ const VOICE_TABS = [
 //   { path: '/weight-config',                label: 'Score Weights', icon: Sliders,         roles: ['admin'] },
 // ];
 
-const itemClass = (isActive, collapsed) => cn(
-  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-  isActive
-    ? 'bg-[var(--pine)] text-white shadow-[0_10px_24px_-12px_rgba(248,114,23,0.6)]'
-    : 'text-[var(--mist)] hover:text-[var(--ink)] hover:bg-[var(--stone)]',
+// Colours live in index.css (.nvw-item): the active item is an orange pill with a navy label, as on the
+// public NVIP site. NavLinks are styled active through aria-current, plain Links through data-active.
+const itemClass = (_isActive, collapsed) => cn(
+  'nvw-item group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.9rem] font-medium transition-all duration-200',
   collapsed && 'justify-center px-2'
 );
 
-const iconClass = (isActive) => cn(
-  'h-4 w-4 shrink-0 transition-colors',
-  isActive ? 'text-white' : 'text-[var(--mist)] group-hover:text-[var(--pine)]'
-);
+const iconClass = () => 'nvw-icon h-[18px] w-[18px] shrink-0';
+
+const activeAttr = (isActive) => (isActive ? 'true' : undefined);
+
+/** Up to two initials from the signed-in user's name or email, for the avatar. */
+function initialsOf(user) {
+  const source = (user?.name || user?.full_name || user?.email || '').split('@')[0];
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'U';
+}
+
+const ROLE_LABELS = {
+  tenant_admin: 'Tenant Admin', super_admin: 'Super Admin', admin: 'Admin', manager: 'Manager',
+  agent: 'Sales Rep', sales_rep: 'Sales Rep',
+};
 
 // Phone width: start collapsed (icons only) so the page keeps the screen.
 const startCollapsed = () => Boolean(window.matchMedia?.('(max-width: 767px)').matches);
@@ -146,26 +156,27 @@ export function Sidebar() {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'mk flex flex-col h-screen sticky top-0 shrink-0 bg-[var(--paper)] border-r border-[var(--line)] transition-[width] duration-200',
-          collapsed ? 'w-[72px]' : 'w-[264px]'
+          'mk nvw-sidebar flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200',
+          collapsed ? 'w-[76px]' : 'w-[272px]'
         )}
       >
-        <div className={cn('flex shrink-0 items-center border-b border-[var(--line)]', collapsed ? 'h-14 justify-center px-2' : 'px-5 py-4')}>
+        <div className={cn('nvw-divider flex h-16 shrink-0 items-center border-b', collapsed ? 'justify-center px-2' : 'px-5')}>
           {/* The logo is only a brand mark: it does not navigate anywhere. */}
-          <div role="img" aria-label="SmartSDR by Netsmartz" className={cn('flex items-center text-[var(--ink)]', !collapsed && 'w-full')}>
+          <div role="img" aria-label="NVIP by Netsmartz" className={cn('flex items-center', !collapsed && 'w-full')}>
             {collapsed
               ? <NetsmartzMark size={30} />
-              : <BrandLockup layout="stacked" size="sm" wordAlign="end" className="flex w-full" />}
+              : <BrandLockup size="side" className="text-[var(--nvw-side-ink)]" />}
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-3 py-2">
-          <nav className="flex flex-col gap-0.5">
+        <ScrollArea className="flex-1 px-3 py-3">
+          <nav className="flex flex-col gap-1">
+            {!collapsed && <p className="nvw-label pb-1.5 pt-1">Workspace</p>}
             {(agentInstancesMode ? newModeNav : APP_NAV).filter((item) => !item.requires || item.requires(user)).map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
               const Icon = item.icon;
               const link = (
-                <Link key={item.path} to={item.path} aria-label={collapsed ? item.label : undefined} className={itemClass(isActive, collapsed)}>
+                <Link key={item.path} to={item.path} aria-label={collapsed ? item.label : undefined} data-active={activeAttr(isActive)} className={itemClass(isActive, collapsed)}>
                   <Icon className={iconClass(isActive)} />
                   {!collapsed && <span>{item.label}</span>}
                 </Link>
@@ -181,9 +192,11 @@ export function Sidebar() {
             {!agentInstancesMode && <>{/* Voice Agent — expandable group, part of the same list (no separator).
                 Purely a toggle: it does not navigate anywhere by itself, it just
                 opens/closes the sub-list below. */}
+            {!collapsed && <p className="nvw-label pb-1.5 pt-4">Voice</p>}
             <button
               type="button"
               onClick={() => setVoiceOpen((v) => !v)}
+              data-parent-active={activeAttr(onVoiceAgent)}
               className={cn(itemClass(onVoiceAgent, collapsed), 'w-full')}
               title="Voice Agent"
               aria-label="Voice Agent"
@@ -197,14 +210,14 @@ export function Sidebar() {
             </button>
 
             {(voiceOpen || collapsed) && (
-              <div className={collapsed ? '' : 'pl-4 flex flex-col gap-0.5'}>
+              <div className={collapsed ? 'flex flex-col gap-1' : 'nvw-rail pl-6 flex flex-col gap-0.5'}>
                 {VOICE_TABS.filter((tab) => (!tab.requires || tab.requires(user)) && voiceTabEnabled(user, tab.id)).map((tab) => {
                   const isActive = tab.path
                     ? location.pathname.startsWith(tab.path)
                     : onVoiceAgent && currentTab === tab.id;
                   const Icon = tab.icon;
                   const link = (
-                    <Link key={tab.id} to={tab.path || `/voice_agent?tab=${tab.id}`} aria-label={collapsed ? tab.label : undefined} className={itemClass(isActive, collapsed)}>
+                    <Link key={tab.id} to={tab.path || `/voice_agent?tab=${tab.id}`} aria-label={collapsed ? tab.label : undefined} data-active={activeAttr(isActive)} className={cn(itemClass(isActive, collapsed), !collapsed && 'py-2 text-[0.86rem]')}>
                       <Icon className={iconClass(isActive)} />
                       {!collapsed && <span>{tab.label}</span>}
                     </Link>
@@ -233,7 +246,7 @@ export function Sidebar() {
             </button>
 
             {(reportOpen || collapsed) && (
-              <div className={collapsed ? '' : 'pl-4 flex flex-col gap-0.5'}>
+              <div className={collapsed ? 'flex flex-col gap-1' : 'nvw-rail pl-6 flex flex-col gap-0.5'}>
                 {REPORT_TABS.filter((tab) => !user || tab.roles.includes(user.role)).map((tab) => {
                   const [tabPath, tabQuery] = tab.path.split('?');
                   const isActive = tabQuery
@@ -257,11 +270,12 @@ export function Sidebar() {
             )}
             */}
 
+            {!collapsed && PENDING_NAV.some((item) => !item.requires || item.requires(user)) && <p className="nvw-label pb-1.5 pt-4">Pipeline</p>}
             {PENDING_NAV.filter((item) => !item.requires || item.requires(user)).map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
               const Icon = item.icon;
               const link = (
-                <Link key={item.path} to={item.path} aria-label={collapsed ? item.label : undefined} className={itemClass(isActive, collapsed)}>
+                <Link key={item.path} to={item.path} aria-label={collapsed ? item.label : undefined} data-active={activeAttr(isActive)} className={itemClass(isActive, collapsed)}>
                   <Icon className={iconClass(isActive)} />
                   {!collapsed && <span>{item.label}</span>}
                 </Link>
@@ -276,7 +290,7 @@ export function Sidebar() {
           </nav>
         </ScrollArea>
 
-        <div className="border-t border-[var(--line)] px-3 py-3 space-y-1 shrink-0">
+        <div className="nvw-divider border-t px-3 py-3 space-y-1.5 shrink-0">
           {/* Admin — hidden for now.
           {hasRole('admin', 'manager') && (
             <Link to="/admin" className={itemClass(false, collapsed)}>
@@ -287,17 +301,28 @@ export function Sidebar() {
           */}
           {/* Users, Teams and Tenants open from Settings → General → Administration (lib/adminNav.js), not from here. */}
           <NavLink to="/settings" aria-label={collapsed ? 'Settings' : undefined} className={({ isActive }) => itemClass(isActive, collapsed)}>
-            <Settings className="h-4 w-4 shrink-0 text-[var(--mist)] group-hover:text-[var(--pine)]" />
+            <Settings className={iconClass()} />
             {!collapsed && <span>Settings</span>}
           </NavLink>
-          <div className={cn('flex items-center gap-2 px-1 pt-1', collapsed ? 'flex-col' : 'justify-between')}>
-            {!collapsed && user?.email && <span className="text-xs text-[var(--mist)] truncate">{user.email}</span>}
-            <ThemeToggle className="h-8 w-8 shrink-0" />
+          {/* Who is signed in, with the theme switch. */}
+          <div className={cn('nvw-user flex items-center gap-2.5 rounded-2xl', collapsed ? 'flex-col p-1.5' : 'p-2.5')}>
+            <span aria-hidden="true" className="nvw-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[0.78rem] font-bold">
+              {initialsOf(user)}
+            </span>
+            {!collapsed && (
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block truncate text-[0.8rem] font-semibold text-[var(--nvw-side-ink)]" title={user?.email}>
+                  {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Signed in'}
+                </span>
+                {user?.email && <span className="block truncate text-[0.7rem] text-[var(--nvw-side-muted)]">{ROLE_LABELS[user?.role] || user.email}</span>}
+              </span>
+            )}
+            <ThemeToggle className="h-8 w-8 shrink-0 border-[var(--nvw-side-line)] bg-[var(--nvw-raised)]" />
           </div>
           {/* Upgrade Plan — the organisation's subscription; only its Tenant Admin sees it. Sits just above Logout. */}
           {billingAdmin && plan && !collapsed && (
-            <p data-testid="current-plan" className="px-3 pt-1 text-xs text-[var(--mist)]">
-              You are on the <span className="font-semibold text-[var(--pine)]">{plan.name}</span> plan
+            <p data-testid="current-plan" className="px-3 pt-1.5 text-xs text-[var(--nvw-side-muted)]">
+              You are on the <span className="font-semibold text-[var(--nvw-orange-text)]">{plan.name}</span> plan
             </p>
           )}
           {billingAdmin && (
@@ -305,28 +330,23 @@ export function Sidebar() {
               to="/billing"
               aria-label={collapsed ? (topPlan ? 'Manage Plan' : 'Upgrade Plan') : undefined}
               title={collapsed ? (topPlan ? `${plan.name} plan` : plan ? `${plan.name} plan - upgrade` : 'Upgrade Plan') : undefined}
-              className={({ isActive }) => cn(
-                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 hover:translate-x-0.5',
-                isActive
-                  ? 'bg-[var(--pine)] text-white shadow-[0_10px_24px_-12px_rgba(248,114,23,0.6)]'
-                  : 'text-[var(--pine)] hover:bg-[rgba(248,114,23,0.12)]',
-                collapsed && 'justify-center px-2 hover:translate-x-0'
+              className={cn(
+                'nvw-upgrade group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200',
+                collapsed && 'justify-center px-2'
               )}
             >
               <Crown className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
-              {!collapsed && <span>{topPlan ? 'Manage Plan' : 'Upgrade Plan'}</span>}
+              {!collapsed && <span className="flex-1">{topPlan ? 'Manage Plan' : 'Upgrade Plan'}</span>}
+              {!collapsed && <ChevronRight className="h-4 w-4 shrink-0 opacity-60 transition-transform duration-200 group-hover:translate-x-0.5" />}
             </NavLink>
           )}
           <button
             type="button"
             aria-label={collapsed ? 'Logout' : undefined}
             onClick={logout}
-            className={cn(
-              'flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--mist)] hover:text-[var(--pine)] hover:bg-[var(--stone)] transition-colors',
-              collapsed && 'justify-center px-2'
-            )}
+            className={cn(itemClass(false, collapsed), 'w-full')}
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className={iconClass()} />
             {!collapsed && <span>Logout</span>}
           </button>
         </div>
@@ -335,7 +355,7 @@ export function Sidebar() {
           type="button"
           aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
           onClick={() => setCollapsed((v) => !v)}
-          className="flex items-center justify-center py-2.5 border-t border-[var(--line)] text-[var(--mist)] hover:text-[var(--pine)] hover:bg-[var(--stone)] transition-colors shrink-0"
+          className="nvw-divider nvw-item flex items-center justify-center py-2.5 border-t transition-colors shrink-0"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

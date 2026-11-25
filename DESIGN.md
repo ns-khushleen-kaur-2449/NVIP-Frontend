@@ -106,20 +106,22 @@ components:
 
 # Design System: NVIP public site
 
-Scope: this document governs the public site only, meaning everything rendered inside the public layout's `.nv-public` scope: `/`, `/marketplace/:slug`, `/pricing`, `/how-it-works`, `/request-demo` and `/request-quote`. The signed-in workspace keeps its own `:root` `--nv-*` tokens and the SmartSDR styles. The public tokens are scoped overrides of the same `--nv-*` names (src/index.css, "NVIP public site" block), so shared primitives read correctly in both places. Changing a public value never changes the workspace.
+Scope: this document governs the public site only, meaning everything rendered inside the public layout's `.nv-public` scope: `/`, `/marketplace/:slug`, `/pricing`, `/how-it-works`, `/request-demo` and `/request-quote`. The public tokens are scoped overrides of the same `--nv-*` names (src/index.css, "NVIP public site" block), so shared primitives read correctly in both places.
+
+The signed-in workspace (2026-11-25) wears the same NVIP look: its shadcn HSL tokens, `.mk` tokens and `:root` `--nv-*` tokens use this palette (cream / white / navy ink in light, #0B0C11 lit with orange in dark), Inter throughout, pill buttons with navy labels on orange, and the Netsmartz logo with the N·VIP wordmark in the sidebar. Its shell styles (sidebar, top bar, page glow, agent cards) are the `nvw-*` classes in src/index.css, "NVIP signed-in workspace" block. The SmartSDR wordmark remains only as `product="smartsdr"` on BrandLockup.
 
 ## Overview
 
 **Creative North Star: "The agent on the stand"**
 
-The look follows the user's approved mockup (2026-11-19). It is a warm cream page with white cards, Netsmartz orange and navy ink. The hero follows the SmartSDR arrangement: a large Netsmartz logo with a two-tone "NVIP" wordmark (N in ink, VIP in orange) set directly beneath it, aligned to the logo's right edge, then the headline, CTAs and three true proof points. On the right, a dark glass voice orb wears headphones and floats over a glowing pedestal, with four capability chips around it. An integrations strip sits under the hero, followed by the centred agent catalog.
+The look follows the user's approved mockup (2026-11-19). It is a warm cream page with white cards, Netsmartz orange and navy ink. The Netsmartz logo sits at the top-left of the header on every page. The hero opens with the full product name, "Netsmartz Voice Intelligence Platform", with its initials N, V, I and P in orange so they spell NVIP, then the headline, CTAs and three true proof points. On the right, a dark glass voice orb wears headphones and floats over a glowing pedestal, with four capability chips around it. An integrations strip sits under the hero, followed by the centred agent catalog.
 
 The dark theme is the SmartSDR look: a near-black ground, orange light, and a faint grid in the hero. Light is the default theme, and the public site opens light unless the visitor has saved a choice.
 
 **Key Characteristics:**
 - Cream ground (#FFF8F3) with a peach wash and an orange glow behind the orb, white cards and warm hairlines.
 - Pill buttons with navy text on orange, because white on #FE7725 fails AA.
-- Inter only, with heavy headings (700, and 800 for the wordmark) and negative tracking.
+- Inter only, with semibold display headings (600) and negative tracking; 700 is kept for small titles and the NVIP tag.
 - Large orange text uses #E4580B, which passes AA for large text on cream. Body-size orange text uses orange-ink #AD4A0C.
 - Navy bands remain for the sample call, the Netsmartz proof band and the footer. The close is an orange panel.
 
@@ -149,9 +151,10 @@ The dark theme is the SmartSDR look: a near-black ground, orange light, and a fa
 ## Typography
 
 Inter throughout. It is a brand commitment, so do not substitute another face.
-- **Wordmark** (800, 40px to 56px, -0.04em; smaller than the Netsmartz logo above it): "NVIP" under the hero logo. N is ink and VIP is orange.
-- **Display** (700, 32px to 46px, 1.1): the hero H1, held to about 19ch.
-- **Headline** (700, 32px to 45.6px): section H2s. The catalog H2 is centred.
+- **Product name** (`.nvp-fullname`: 800, 25.6px to 38.4px, -0.035em, with a thin orange bar at left): "Netsmartz" in muted ink over "Voice Intelligence Platform" in ink, initials in orange. /login uses the same block, above its own medium-weight headline. The H1 sits 40px to 48px below it, so the two read as separate.
+- **Wordmark**: "NVIP" is always one word in one colour (orange), never split as N + VIP.
+- **Display** (500, 30px to 43px, 1.14, -0.03em): the hero H1, held to about 19ch. It stays light so the product name above it leads.
+- **Headline** (600, 30px to 41.6px): section H2s. The catalog H2 is centred.
 - **Title** (700, 1.2rem): card names.
 - **Lede** (400, 16.8px to 19.2px, 1.6) in muted ink.
 
@@ -159,7 +162,7 @@ Inter throughout. It is a brand commitment, so do not substitute another face.
 
 The container is 1280px (max-w-7xl) with 16px gutters on mobile and 24px from sm upward. The hero is a 6/6 split at lg: the logo stack on the left, the orb scene (an 11:10 box up to 610px) on the right. The integrations strip spans the container under both. The catalog has a centred heading, then centred wrapping filter pills, then a 1 / 2 / 3 column grid with 24px gaps. Below lg everything stacks in reading order: copy, then the orb.
 
-The header is 76px, sticky and translucent cream with a backdrop blur. The desktop nav shows from xl; below xl there is the theme toggle, Book a demo (from sm) and a menu. On `/` the header has no logo, because the hero leads with it. Inner pages show the Netsmartz | NVIP lockup in the header.
+The header is 76px, sticky and translucent cream with a backdrop blur. The desktop nav shows from xl; below xl there is the theme toggle, Book a demo (from sm) and a menu. Every page, `/` included, shows the Netsmartz | NVIP lockup at the header's left.
 
 ## Elevation & Depth
 
@@ -186,7 +189,7 @@ Shadows are soft, offset downward and tinted warm brown (`rgba(120,53,15,…)`).
 ### Do:
 - **Do** keep labels on orange in navy.
 - **Do** use #E4580B for large orange text, and #AD4A0C or #FF9555 for small orange text.
-- **Do** keep the hero order: logo, wordmark, H1, lede, CTAs, proof.
+- **Do** keep the hero order: product name, H1, lede, CTAs, proof.
 - **Do** label illustrative calls as samples and keep integrations to shipped ones.
 - **Do** honour reduced motion: a still orb, the full transcript, and no drift or tilt.
 
@@ -194,4 +197,4 @@ Shadows are soft, offset downward and tinted warm brown (`rgba(120,53,15,…)`).
 - **Don't** put white text on #FE7725.
 - **Don't** add eyebrow labels above headings, or gradient text.
 - **Don't** claim speed or scale ("deploy in minutes", "enterprise ready") the product has not committed to.
-- **Don't** restyle the signed-in workspace from these tokens.
+- **Don't** reintroduce the SmartSDR wordmark or Manrope/Outfit in the signed-in workspace.

@@ -16,38 +16,38 @@
    to read as dark in both themes (hero, footer, CTA banner).
    ============================================================ */
 .mk {
-  --ink:    #17130F;   /* default text — flips        */
-  --pine:   #F87217;   /* brand orange (primary)      */
-  --pine-2: #D9600F;   /* orange, hover/pressed        */
-  --brass:  #F5A623;   /* amber accent                */
-  --brass-2:#FFD9A8;   /* light peach — text on --deep */
-  --paper:  #FBF9F7;   /* page bg — flips             */
-  --stone:  #FBEFE4;   /* panel bg — flips            */
-  --mist:   #6B6459;   /* muted text — flips          */
-  --line:   #ECE4DA;   /* hairline — flips            */
-  --deep:    #14110D;  /* fixed dark band bg          */
-  --deep-fg: #F5F1EC;  /* fixed light text on --deep  */
+  --ink:    #141A33;   /* NVIP navy ink — flips       */
+  --pine:   #FE7725;   /* Netsmartz orange (primary)  */
+  --pine-2: #E4580B;   /* orange, hover/pressed       */
+  --brass:  #FF8A45;   /* orange light accent         */
+  --brass-2:#FFD9BF;   /* light peach — text on --deep */
+  --paper:  #FFF8F3;   /* cream page bg — flips       */
+  --stone:  #FFF2E8;   /* peach panel bg — flips      */
+  --mist:   #535B70;   /* muted ink — flips           */
+  --line:   #F1E1D3;   /* warm hairline — flips       */
+  --deep:    #0B1220;  /* fixed navy band bg          */
+  --deep-fg: #F3F5F9;  /* fixed light text on --deep  */
 
   /* NOTE: no forced `background` here — it would beat utilities like
      `bg-transparent` on the nav and paint over the hero. Set page
      backgrounds explicitly on wrappers instead. */
   color: var(--ink);
-  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .dark .mk {
-  --ink:    #F7F3EE;
-  --pine:   #FF8A3D;
-  --pine-2: #FFA35E;
-  --brass:  #FFC15C;
-  --brass-2:#FFE1B8;
-  --paper:  #0B0908;   /* page — darkest layer   */
-  --stone:  #241C15;   /* card — clearly lifted   */
-  --mist:   #B3A494;
-  --line:   #3A2E24;   /* brighter hairline       */
-  --deep:    #060504;  /* hero/footer band        */
-  --deep-fg: #F7F3EE;
+  --ink:    #F2F3F7;
+  --pine:   #FE7725;
+  --pine-2: #FF8A45;
+  --brass:  #FF9555;
+  --brass-2:#FFD9BF;
+  --paper:  #0B0C11;   /* page — NVIP near-black  */
+  --stone:  #171A23;   /* card — clearly lifted   */
+  --mist:   #A6ABBA;
+  --line:   #262A37;   /* hairline                */
+  --deep:    #06070B;  /* hero/footer band        */
+  --deep-fg: #F2F3F7;
 }
 
 /* Light mode: the "deep" bands (hero, voice agent, how-it-works, featured
@@ -70,7 +70,7 @@
 :root:not(.dark) .mk-band [class*="ring-[var(--deep)]"]:not(.mk-dark-card):not(.mk-dark-card *) { --tw-ring-color: #FFF6EC; }
 :root:not(.dark) .mk-band [class*="ring-white"]:not(.mk-dark-card):not(.mk-dark-card *) { --tw-ring-color: var(--line); }
 
-.mk-display { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.02em; }
+.mk-display { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.03em; }
 .mk-eyebrow {
   font-family: 'Inter', sans-serif;
   text-transform: uppercase;
@@ -215,45 +215,46 @@
 
 @layer base {
   :root {
-    --background:         30 25% 98%;
-    --foreground:         20 14% 9%;
+    /* NVIP light: cream ground, white cards, navy ink, Netsmartz orange (see DESIGN.md). */
+    --background:         25 100% 98%;   /* #FFF8F3 */
+    --foreground:         228 44% 14%;   /* #141A33 */
 
     --card:               0 0% 100%;
-    --card-foreground:    20 14% 9%;
+    --card-foreground:    228 44% 14%;
 
     --popover:            0 0% 100%;
-    --popover-foreground: 20 14% 9%;
+    --popover-foreground: 228 44% 14%;
 
-    /* Netsmartz orange primary */
-    --primary:            24 94% 53%;
-    --primary-foreground: 0 0% 100%;
+    /* Netsmartz orange #FE7725; labels on it are navy (white fails AA). */
+    --primary:            23 99% 57%;
+    --primary-foreground: 220 49% 8%;    /* #0B1220 */
 
-    --secondary:          24 60% 96%;
-    --secondary-foreground: 20 14% 9%;
+    --secondary:          26 100% 95%;   /* #FFF2E8 */
+    --secondary-foreground: 228 44% 14%;
 
-    --muted:              30 15% 95%;
-    --muted-foreground:   30 8% 40%;
+    --muted:              26 100% 96%;
+    --muted-foreground:   223 15% 38%;   /* #535B70 */
 
-    --accent:             24 70% 94%;
-    --accent-foreground:  20 14% 9%;
+    --accent:             25 100% 93%;   /* #FFEADB */
+    --accent-foreground:  228 44% 14%;
 
-    --destructive:        0 78% 52%;
+    --destructive:        0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:             30 15% 88%;
-    --input:              30 15% 88%;
-    --ring:               24 94% 53%;
+    --border:             28 52% 89%;    /* #F1E1D3 */
+    --input:              28 45% 86%;
+    --ring:               23 99% 57%;
 
-    --chart-1: 24 94% 53%;
-    --chart-2: 20 14% 20%;
+    --chart-1: 23 99% 57%;
+    --chart-2: 228 44% 24%;
     --chart-3: 38 92% 50%;
     --chart-4: 199 70% 45%;
     --chart-5: 0 78% 52%;
 
     --radius: 0.75rem;
 
-    --surface-2: 30 20% 97%;
-    --surface-3: 30 12% 93%;
+    --surface-2: 25 100% 97%;
+    --surface-3: 25 100% 94%;
 
     --success: 158 64% 42%;
     --warning: 38 92% 50%;
@@ -261,42 +262,43 @@
   }
 
   .dark {
-    --background:         24 16% 5%;
-    --foreground:         30 20% 96%;
+    /* NVIP dark: near-black lit with orange, like the public site's dark theme. */
+    --background:         230 21% 5%;    /* #0B0C11 */
+    --foreground:         230 24% 96%;   /* #F2F3F7 */
 
-    --card:               26 14% 11%;
-    --card-foreground:    30 20% 96%;
+    --card:               228 21% 9%;    /* #13151D */
+    --card-foreground:    230 24% 96%;
 
-    --popover:            26 14% 11%;
-    --popover-foreground: 30 20% 96%;
+    --popover:            228 21% 9%;
+    --popover-foreground: 230 24% 96%;
 
-    --primary:            24 96% 58%;
-    --primary-foreground: 20 14% 9%;
+    --primary:            23 99% 57%;
+    --primary-foreground: 220 49% 8%;
 
-    --secondary:          20 10% 16%;
-    --secondary-foreground: 30 20% 96%;
+    --secondary:          225 21% 11%;   /* #171A23 */
+    --secondary-foreground: 230 24% 96%;
 
-    --muted:              20 10% 14%;
-    --muted-foreground:   30 10% 65%;
+    --muted:              227 21% 13%;   /* #1B1E29 */
+    --muted-foreground:   225 13% 69%;   /* #A6ABBA */
 
-    --accent:             20 10% 18%;
-    --accent-foreground:  30 20% 96%;
+    --accent:             23 45% 12%;    /* orange-tinted hover */
+    --accent-foreground:  230 24% 96%;
 
     --destructive:        0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:             20 10% 20%;
-    --input:              20 10% 20%;
-    --ring:               24 96% 58%;
+    --border:             226 18% 18%;   /* #262A37 */
+    --input:              226 18% 20%;
+    --ring:               23 99% 57%;
 
-    --chart-1: 24 96% 58%;
-    --chart-2: 30 20% 85%;
+    --chart-1: 23 99% 57%;
+    --chart-2: 230 24% 85%;
     --chart-3: 38 92% 55%;
     --chart-4: 199 70% 55%;
     --chart-5: 0 70% 55%;
 
-    --surface-2: 20 12% 11%;
-    --surface-3: 20 10% 15%;
+    --surface-2: 227 22% 8%;
+    --surface-3: 225 21% 11%;
 
     --success: 158 55% 48%;
     --warning: 38 92% 55%;
@@ -310,7 +312,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
   /* Native dropdown lists are painted by the browser (white by default) but inherit
      the theme's text color, which made options unreadable in dark mode. */
@@ -324,7 +326,8 @@
 }
 
 .font-display {
-  font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 .font-ui {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -351,10 +354,12 @@
 }
 
 /* Scrollbar */
-::-webkit-scrollbar        { width: 5px; height: 5px; }
-::-webkit-scrollbar-track  { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb  { background: hsl(0 0% 82%); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(0 0% 68%); }
+::-webkit-scrollbar        { width: 8px; height: 8px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #E3C9B5; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #D4AE92; background-clip: content-box; }
+.dark ::-webkit-scrollbar-thumb { background: #2E3240; background-clip: content-box; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #3E4354; background-clip: content-box; }
 
 /* Marketplace-style agent card */
 .agent-card {
@@ -364,7 +369,7 @@
 
 /* Dashboard layout helpers */
 .gradient-header {
-  background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(229 60% 98%) 100%);
+  background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--surface-2)) 100%);
 }
 .kpi-grid {
   display: grid;
@@ -380,19 +385,21 @@
 
 /* Enterprise Dashboard Components */
 .card-base {
-  @apply bg-card rounded-xl border border-border shadow-sm overflow-hidden;
+  @apply bg-card rounded-2xl border border-border overflow-hidden;
+  box-shadow: var(--nvw-shadow-card);
 }
 
 .card-hover {
-  @apply transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:-translate-y-[2px];
+  @apply transition-all duration-300 hover:border-primary/30 hover:-translate-y-[2px];
 }
+.card-hover:hover { box-shadow: var(--nvw-shadow-lift); }
 
 .kpi-gradient {
   background: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--surface-2)) 100%);
 }
 
 .shadow-soft {
-  box-shadow: 0 4px 24px -4px rgba(49, 63, 128, 0.08);
+  box-shadow: var(--nvw-shadow-card);
 }
 
 .table-row-hover {
@@ -497,9 +504,9 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --nv-bg:          #FAF3E8;  /* page background (light cream)        */
-  --nv-surface:     #FFFAF2;  /* cards, tables, inputs (paler cream)  */
-  --nv-surface-2:   #F5ECDF;  /* hover rows, insets                   */
+  --nv-bg:          #FFF8F3;  /* page background (NVIP cream)         */
+  --nv-surface:     #FFFFFF;  /* cards, tables, inputs                */
+  --nv-surface-2:   #FFF2E8;  /* hover rows, insets (peach)           */
   /* Feature panels (sign-in brand panel, "custom agent" card): a deeper
      cream in light mode, so nothing is navy unless the theme is dark. */
   --nv-feature-bg:     #F2E4D1;
@@ -509,11 +516,11 @@
   --nv-feature-border: #D9C4A9;
   --nv-orange:      #FE7725;  /* brand: primary buttons, active nav   */
   --nv-orange-2:    #E86A1C;  /* primary hover                        */
-  --nv-orange-ink:  #A6490C;  /* orange text/links (AA on surfaces)   */
-  --nv-orange-soft: #FBE3CF;  /* tinted tiles, meters, attention      */
-  --nv-ink:         #262B36;  /* body text (charcoal)                 */
-  --nv-muted:       #5F6573;  /* secondary text                       */
-  --nv-line:        #EADDCB;  /* hairlines                            */
+  --nv-orange-ink:  #AD4A0C;  /* orange text/links (AA on surfaces)   */
+  --nv-orange-soft: #FFEADB;  /* tinted tiles, meters, attention      */
+  --nv-ink:         #141A33;  /* body text (navy ink)                 */
+  --nv-muted:       #535B70;  /* secondary text                       */
+  --nv-line:        #F1E1D3;  /* hairlines                            */
   --nv-success:     #28703F;
   --nv-success-bg:  #E3F1E7;
   --nv-warning:     #9A5B12;
@@ -527,10 +534,10 @@
   /* App chrome: workspace sidebar + public top bar. Same background as the
      page (one continuous surface); separated only by a hairline border. */
   --nv-chrome-bg:     var(--nv-bg);
-  --nv-chrome-fg:     #262B36;
-  --nv-chrome-muted:  #5A606C;
-  --nv-chrome-hover:  #F2E7D8;
-  --nv-chrome-raised: #F3E9DB;
+  --nv-chrome-fg:     #141A33;
+  --nv-chrome-muted:  #535B70;
+  --nv-chrome-hover:  #FFEEE2;
+  --nv-chrome-raised: #FFFFFF;
   --nv-chrome-border: var(--nv-line);
 }
 
@@ -538,21 +545,21 @@
    pure white, and slightly muted status colours to avoid glare. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --nv-bg:          #1A1E25;
-  --nv-surface:     #222731;
-  --nv-surface-2:   #2A303B;
-  --nv-feature-bg:     #151920;
-  --nv-feature-raised: #2A303B;
-  --nv-feature-fg:     #E4E6EA;
-  --nv-feature-muted:  #A3ABB8;
-  --nv-feature-border: #3A414E;
-  --nv-orange:      #F47A2E;
-  --nv-orange-2:    #F7935A;
-  --nv-orange-ink:  #F4A06C;
-  --nv-orange-soft: #3A2A20;
-  --nv-ink:         #E4E6EA;
-  --nv-muted:       #A0A7B3;
-  --nv-line:        #323946;
+  --nv-bg:          #0B0C11;
+  --nv-surface:     #13151D;
+  --nv-surface-2:   #171A23;
+  --nv-feature-bg:     #101219;
+  --nv-feature-raised: #171A23;
+  --nv-feature-fg:     #F2F3F7;
+  --nv-feature-muted:  #A6ABBA;
+  --nv-feature-border: #262A37;
+  --nv-orange:      #FE7725;
+  --nv-orange-2:    #FF8A45;
+  --nv-orange-ink:  #FF9555;
+  --nv-orange-soft: #2A1A10;
+  --nv-ink:         #F2F3F7;
+  --nv-muted:       #A6ABBA;
+  --nv-line:        #262A37;
   --nv-success:     #74C893;
   --nv-success-bg:  #1F3328;
   --nv-warning:     #E3B25C;
@@ -561,13 +568,13 @@
   --nv-danger-bg:   #3D2425;
   --nv-info:        #97B6EE;
   --nv-info-bg:     #222F48;
-  --nv-neutral-bg:  #2E343F;
+  --nv-neutral-bg:  #1B1E29;
 
   --nv-chrome-bg:     var(--nv-bg);
-  --nv-chrome-fg:     #E4E6EA;
-  --nv-chrome-muted:  #A0A7B3;
-  --nv-chrome-hover:  #252A33;
-  --nv-chrome-raised: #222731;
+  --nv-chrome-fg:     #F2F3F7;
+  --nv-chrome-muted:  #A6ABBA;
+  --nv-chrome-hover:  #1B1E29;
+  --nv-chrome-raised: #13151D;
   --nv-chrome-border: var(--nv-line);
 }
 
@@ -783,20 +790,20 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   letter-spacing: -0.04em;
 }
 .nvp-display {
-  font-size: clamp(2rem, 1.45rem + 1.7vw, 2.9rem);
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: clamp(1.9rem, 1.4rem + 1.5vw, 2.7rem);
+  font-weight: 500;
+  line-height: 1.14;
   letter-spacing: -0.03em;
   text-wrap: balance;
 }
 .nvp-h2 {
-  font-size: clamp(2rem, 1.5rem + 1.7vw, 2.85rem);
-  font-weight: 700;
+  font-size: clamp(1.9rem, 1.45rem + 1.5vw, 2.6rem);
+  font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.03em;
   text-wrap: balance;
 }
-.nvp-lede { font-size: clamp(1.05rem, 1rem + 0.25vw, 1.2rem); line-height: 1.6; text-wrap: pretty; }
+.nvp-lede { font-size: clamp(1.02rem, 0.98rem + 0.2vw, 1.14rem); line-height: 1.65; font-weight: 400; text-wrap: pretty; }
 
 /* Logo variants follow the public theme. */
 .nvp-logo-dark { display: none; }
@@ -827,7 +834,7 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   --l-ink: #141A33;
   --l-muted: #535B70;
   --l-card: rgba(255, 255, 255, 0.84);
-  --l-card-line: rgba(254, 119, 37, 0.28);
+  --l-card-line: rgba(254, 119, 37, 0.22);
   --l-field: #FFFFFF;
   --l-field-line: #EAD8CA;
   --l-orange-text: #E4580B;
@@ -844,7 +851,7 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   --l-ink: #F2F3F7;
   --l-muted: #A6ABBA;
   --l-card: rgba(17, 18, 24, 0.78);
-  --l-card-line: rgba(254, 119, 37, 0.38);
+  --l-card-line: rgba(255, 255, 255, 0.09);
   --l-field: rgba(9, 10, 14, 0.85);
   --l-field-line: #2A2D38;
   --l-orange-text: #FF8A45;
@@ -865,3 +872,212 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   -webkit-mask-image: radial-gradient(70% 70% at 35% 40%, #000 25%, transparent 80%);
   mask-image: radial-gradient(70% 70% at 35% 40%, #000 25%, transparent 80%);
 }
+
+/* ====== NVIP signed-in workspace (nvw-*) ======
+   The workspace wears the public NVIP look: cream / white / navy ink in light, near-black lit with
+   Netsmartz orange in dark. Labels on orange fills are navy (#0B1220): white on #FE7725 fails AA. */
+:root {
+  --nvw-shadow-card: 0 1px 2px rgba(120, 53, 15, 0.05), 0 16px 36px -24px rgba(120, 53, 15, 0.28);
+  --nvw-shadow-lift: 0 26px 50px -28px rgba(254, 119, 37, 0.5), 0 14px 28px -20px rgba(120, 53, 15, 0.25);
+  --nvw-glow: rgba(254, 119, 37, 0.14);
+  --nvw-side-bg: #FFFFFF;
+  --nvw-side-wash: linear-gradient(180deg, #FFF1E6 0%, rgba(255, 241, 230, 0) 220px);
+  --nvw-side-line: #F1E1D3;
+  --nvw-side-ink: #141A33;
+  --nvw-side-muted: #5B6378;
+  --nvw-side-hover: #FFF2E8;
+  --nvw-side-label: #8A90A2;
+  --nvw-orange-text: #E4580B;
+  --nvw-orange-ink: #AD4A0C;
+  --nvw-orange-soft: #FFEADB;
+  --nvw-on-orange: #0B1220;
+  --nvw-raised: #FFFFFF;
+}
+.dark {
+  --nvw-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px -22px rgba(0, 0, 0, 0.8);
+  --nvw-shadow-lift: 0 28px 56px -28px rgba(254, 119, 37, 0.45), 0 18px 32px -20px rgba(0, 0, 0, 0.8);
+  --nvw-glow: rgba(254, 119, 37, 0.13);
+  --nvw-side-bg: #0E1016;
+  --nvw-side-wash: linear-gradient(180deg, rgba(254, 119, 37, 0.10) 0%, rgba(254, 119, 37, 0) 240px);
+  --nvw-side-line: #1F222D;
+  --nvw-side-ink: #F2F3F7;
+  --nvw-side-muted: #A6ABBA;
+  --nvw-side-hover: #171A23;
+  --nvw-side-label: #6E7486;
+  --nvw-orange-text: #FF8A45;
+  --nvw-orange-ink: #FF9555;
+  --nvw-orange-soft: rgba(254, 119, 37, 0.12);
+  --nvw-raised: #13151D;
+}
+
+/* Page ground: an orange light in the top-right corner, as in the public hero. */
+.app-shell-row,
+.app-shell {
+  background:
+    radial-gradient(48rem 26rem at 100% -6rem, var(--nvw-glow), transparent 70%),
+    radial-gradient(36rem 22rem at 20% -10rem, rgba(254, 119, 37, 0.05), transparent 70%),
+    hsl(var(--background));
+  background-attachment: fixed;
+}
+.dark .app-shell-row::after,
+.dark .app-shell::after {
+  /* A faint grid fading out from the top, like the public dark hero. Fixed and behind everything. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(60% 50% at 70% 0%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(60% 50% at 70% 0%, #000 20%, transparent 80%);
+}
+.app-shell-row, .app-shell { position: relative; isolation: isolate; }
+
+/* Sidebar */
+.nvw-sidebar {
+  background: var(--nvw-side-wash), var(--nvw-side-bg);
+  border-right: 1px solid var(--nvw-side-line);
+  color: var(--nvw-side-ink);
+}
+.nvw-sidebar .nvw-divider { border-color: var(--nvw-side-line); }
+.nvw-label {
+  padding: 0 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nvw-side-label);
+}
+.nvw-item {
+  color: var(--nvw-side-muted);
+}
+.nvw-item:hover {
+  color: var(--nvw-side-ink);
+  background: var(--nvw-side-hover);
+}
+.nvw-item .nvw-icon { color: var(--nvw-side-muted); transition: color 0.2s ease, transform 0.2s ease; }
+.nvw-item:hover .nvw-icon { color: var(--nvw-orange-text); }
+.nvw-item[data-active='true'],
+.nvw-item[aria-current='page'] {
+  color: var(--nvw-on-orange);
+  font-weight: 600;
+  background: linear-gradient(135deg, #FE7725 0%, #FF8F4D 100%);
+  box-shadow: 0 12px 26px -14px rgba(254, 119, 37, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.nvw-item[data-active='true'] .nvw-icon,
+.nvw-item[aria-current='page'] .nvw-icon { color: var(--nvw-on-orange); }
+.nvw-item[data-parent-active='true'] { color: var(--nvw-side-ink); }
+.nvw-item[data-parent-active='true'] .nvw-icon { color: var(--nvw-orange-text); }
+/* Sub-items of an expandable group hang off a thin rail. */
+.nvw-rail { position: relative; }
+.nvw-rail::before {
+  content: '';
+  position: absolute;
+  left: 1.3rem;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 1px;
+  background: var(--nvw-side-line);
+}
+.nvw-user {
+  background: var(--nvw-side-hover);
+  border: 1px solid var(--nvw-side-line);
+}
+.nvw-avatar {
+  background: linear-gradient(135deg, #FE7725 0%, #FFB27F 100%);
+  color: #0B1220;
+}
+.nvw-upgrade {
+  color: var(--nvw-orange-ink);
+  background: var(--nvw-orange-soft);
+  border: 1px solid rgba(254, 119, 37, 0.28);
+}
+.nvw-upgrade:hover { border-color: rgba(254, 119, 37, 0.6); }
+.nvw-upgrade[aria-current='page'] {
+  color: #0B1220;
+  background: linear-gradient(135deg, #FE7725 0%, #FF8F4D 100%);
+  border-color: transparent;
+}
+
+/* Wordmark: N in ink, VIP in orange (public hero lockup). */
+.nvw-wordmark { font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.nvw-wordmark .nvw-vip { color: var(--nvw-orange-text); }
+
+/* Top bar */
+.nvw-topbar {
+  background: color-mix(in srgb, hsl(var(--background)) 72%, transparent);
+  border-bottom: 1px solid hsl(var(--border) / 0.8);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+}
+
+/* Page headings and agent cards */
+.nvw-h1 { font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.nvw-agent-card {
+  position: relative;
+  border-radius: 22px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--nvw-shadow-card);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+}
+.nvw-agent-card::before {
+  /* An orange light that rises behind the card's top edge on hover. */
+  content: '';
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 120px;
+  background: radial-gradient(70% 100% at 20% 0%, rgba(254, 119, 37, 0.14), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.nvw-agent-card:hover { transform: translateY(-4px); border-color: rgba(254, 119, 37, 0.45); box-shadow: var(--nvw-shadow-lift); }
+.nvw-agent-card:hover::before { opacity: 1; }
+.nvw-agent-card[data-featured='true'] {
+  border-color: rgba(254, 119, 37, 0.55);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #FE7725 7%, transparent) 0%, transparent 140px),
+    hsl(var(--card));
+}
+.nvw-agent-card[data-muted='true'] {
+  border-style: dashed;
+  background: color-mix(in srgb, hsl(var(--card)) 60%, transparent);
+  box-shadow: none;
+}
+.nvw-agent-card[data-muted='true']:hover { transform: translateY(-2px); border-color: rgba(254, 119, 37, 0.35); }
+.nvw-agent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--nvw-orange-soft);
+  color: var(--nvw-orange-text);
+  box-shadow: inset 0 0 0 1px rgba(254, 119, 37, 0.18);
+}
+.nvw-link { color: var(--nvw-orange-ink); font-weight: 600; }
+.nvw-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nvw-agent-card, .nvw-agent-card:hover { transition: none; transform: none; }
+}
+
+/* Hero product name: "Netsmartz Voice Intelligence Platform", initials in orange so they spell NVIP. */
+.nvp-fullname {
+  font-size: clamp(1.6rem, 1.2rem + 1.5vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: var(--nv-ink);
+}
+.nvp-fullname > span:first-child { color: var(--nv-muted); font-weight: 700; }
+.nvp-fullname .nvp-initial { color: var(--nvp-orange-text, #E4580B); }
+
+/* Sign-in page: the hero's product name (.nvp-fullname), recoloured with the login's own light/dark tokens. */
+.nv-login .nvp-fullname { color: var(--l-ink); }
+.nv-login .nvp-fullname > span:first-child { color: var(--l-muted); }
+.nv-login .nvp-fullname .nvp-initial { color: var(--l-orange-text); }

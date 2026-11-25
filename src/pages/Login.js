@@ -8,7 +8,6 @@ import { motion, MotionConfig } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import HeroWave3D from '@/components/marketing/HeroWave3D';
 import ThemeToggle from '@/components/shared/ThemeToggle';
-import { NetsmartzLogo } from '@/components/shared/BrandLockup';
 import OrbStage from '@/components/landing/OrbStage';
 import { cn } from '@/lib/utils';
 import { homePath } from '@/lib/rbac';
@@ -29,28 +28,14 @@ const writeRememberedEmail = (email) => {
   } catch { /* storage unavailable: nothing to remember */ }
 };
 
+// Only what the platform does today (DESIGN.md, The True Claims Rule): no "at scale" or compliance claims.
 const FEATURES = [
-  { icon: AudioLines, t: 'Intelligent Voice Agents', d: 'Automate and scale your conversations.' },
-  { icon: Activity, t: 'Real-time Call Insights', d: 'Analyze, qualify and score every call.' },
-  { icon: ShieldCheck, t: 'Secure & Reliable', d: 'Enterprise-grade security and compliance.' },
+  { icon: AudioLines, t: 'Voice agents with guardrails', d: 'Consent, do-not-call lists and calling hours are checked before every dial.' },
+  { icon: Activity, t: 'Every call on record', d: 'Transcripts, recordings and lead scores for each conversation.' },
+  { icon: ShieldCheck, t: 'Your CRM stays in charge', d: 'Leads and outcomes sync to Zoho CRM.' },
 ];
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
-
-/** The NVIP mark (as in the workspace sidebar) with the product name set large beside it. */
-function NvipBrand() {
-  return (
-    <div className="flex items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[linear-gradient(140deg,#FF9A4D_0%,#FE7725_50%,#EE5F0E_100%)] text-[1.4rem] font-extrabold leading-none text-white shadow-[0_12px_26px_-12px_rgba(254,119,37,0.9)] sm:h-11 sm:w-11 sm:text-[1.55rem] lg:h-12 lg:w-12 lg:text-[1.7rem]"
-      >
-        N
-      </span>
-      <span className="text-[2.25rem] font-extrabold leading-none tracking-[-0.04em] sm:text-[2.5rem] lg:text-[2.85rem]">NVIP</span>
-    </div>
-  );
-}
 
 export default function LoginPage() {
   const { login, completeMfaLogin, user, token } = useAuth();
@@ -117,16 +102,16 @@ export default function LoginPage() {
   // Field colours live in CSS variables so the autofill override below can
   // repaint Chrome's blue autofill background with the same surface colour.
   const fieldClass = cn(
-    'peer w-full h-[52px] rounded-xl border pl-11 pr-4 text-[0.95rem] outline-none transition-[border-color,box-shadow,background-color] duration-200',
+    'peer w-full h-12 rounded-xl border pl-11 pr-4 text-[0.95rem] outline-none transition-[border-color,box-shadow,background-color] duration-200',
     'bg-[var(--l-field)] border-[var(--l-field-line)] text-[var(--l-ink)] caret-[#FE7725] placeholder:text-[var(--l-muted)]',
     'hover:border-[rgba(254,119,37,0.45)] focus:border-[#FE7725] focus:ring-4 focus:ring-[rgba(254,119,37,0.16)] focus-visible:outline-none',
     'autofill:shadow-[inset_0_0_0_1000px_var(--l-field)] autofill:[-webkit-text-fill-color:var(--l-ink)]',
   );
   const fieldIconClass = 'pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--l-muted)] transition-colors peer-focus:text-[#FE7725]';
   const primaryButton = cn(
-    'group flex h-[52px] w-full items-center justify-center gap-2 rounded-xl text-[0.98rem] font-bold text-[#0B1220]',
-    'bg-[linear-gradient(135deg,#FF9A4D_0%,#FE7725_45%,#F2620F_100%)] shadow-[0_16px_32px_-14px_rgba(254,119,37,0.8)]',
-    'transition-[transform,box-shadow,filter] duration-200 hover:-translate-y-px hover:brightness-105 hover:shadow-[0_20px_38px_-14px_rgba(254,119,37,0.95)] active:translate-y-0',
+    'group flex h-12 w-full items-center justify-center gap-2 rounded-full text-[0.95rem] font-semibold text-[#0B1220]',
+    'bg-[#FE7725] shadow-[0_14px_28px_-16px_rgba(254,119,37,0.9)]',
+    'transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-px hover:bg-[#FF8A45] hover:shadow-[0_18px_34px_-16px_rgba(254,119,37,1)] active:translate-y-0',
     'disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:brightness-100',
   );
   const linkButton = 'rounded-md font-semibold text-[var(--l-link)] underline-offset-4 transition-colors hover:underline';
@@ -148,9 +133,9 @@ export default function LoginPage() {
       {/* ── Top bar ── */}
       <header className="relative z-10 mx-auto flex w-full max-w-[90rem] items-center justify-end gap-4 px-5 pt-5 sm:px-8 sm:pt-7 lg:px-12">
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-          <Link to="/" className="group flex items-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium text-[var(--l-muted)] transition-colors hover:text-[var(--l-ink)]">
+          <Link to="/" aria-label="Back to home" className="group flex items-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium text-[var(--l-muted)] transition-colors hover:text-[var(--l-ink)]">
             <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" aria-hidden="true" />
-            Back to Home
+<span className="hidden sm:inline">Back to home</span>
           </Link>
           <ThemeToggle className="h-10 w-10 border-[var(--l-field-line)] text-[var(--l-muted)] hover:text-[var(--l-link)]" />
         </div>
@@ -161,30 +146,41 @@ export default function LoginPage() {
         {/* ── Brand: compact above the form on small screens; copy, features and the orb on desktop ── */}
         <section aria-label="NVIP" className="mx-auto w-full max-w-[28rem] lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-center lg:gap-2">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT }}>
-            {/* The Netsmartz logo leads and is the larger mark; NVIP sits beneath it. */}
-            <div className="flex max-w-full items-center">
-              <NetsmartzLogo className="h-14 sm:h-16 lg:h-20" />
+            {/* Same product name as the public hero: orange bar, "Netsmartz" over "Voice Intelligence Platform",
+                initials in orange so they spell NVIP. */}
+            <div className="flex items-stretch gap-4">
+              <span aria-hidden="true" className="w-1 shrink-0 rounded-full bg-gradient-to-b from-[#FE7725] to-[#FE7725]/0" />
+              <p className="nvp-fullname">
+                <span className="block">
+                  <span className="nvp-initial">N</span>etsmartz
+                </span>
+                <span className="block">
+                  <span className="nvp-initial">V</span>oice <span className="nvp-initial">I</span>ntelligence{' '}
+                  <span className="nvp-initial">P</span>latform
+                </span>
+                <span className="sr-only"> (NVIP)</span>
+              </p>
             </div>
-            <div className="mt-5 lg:mt-6"><NvipBrand /></div>
-            <p className="mt-4 text-[1.55rem] font-bold leading-tight tracking-[-0.025em] sm:text-[1.8rem] lg:mt-5 lg:text-[2.05rem]">
-              AI Voice Agent <span className="text-[var(--l-orange-text)]">Platform</span>
+            {/* Headline set like the public hero H1: medium weight, so the product name leads. */}
+            <p className="mt-10 max-w-[17ch] text-[1.9rem] font-medium leading-[1.14] tracking-[-0.03em] sm:mt-12 sm:text-[2.25rem] lg:text-[2.5rem]">
+              Your voice agents, <span className="text-[var(--l-orange-text)]">one workspace.</span>
             </p>
-            <p className="mt-4 hidden max-w-[30rem] text-[1.02rem] leading-relaxed text-[var(--l-muted)] sm:block">
-              Build, deploy, and manage intelligent voice agents that qualify leads, automate conversations, and book
-              meetings — at scale.
+            <p className="mt-4 hidden max-w-[29rem] text-[1.02rem] leading-relaxed text-[var(--l-muted)] sm:block">
+              Run calling campaigns, review every conversation and book meetings with the AI voice agents your
+              organisation uses.
             </p>
 
-            <ul className="mt-9 hidden max-w-[28rem] space-y-5 lg:block">
+            <ul className="mt-10 hidden max-w-[29rem] divide-y divide-[var(--l-field-line)] border-y border-[var(--l-field-line)] lg:block">
               {FEATURES.map((f, i) => (
-                <motion.li key={f.t} className="flex items-start gap-4"
+                <motion.li key={f.t} className="flex items-start gap-3.5 py-4"
                   initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.25 + i * 0.1, ease: EASE_OUT }}>
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[rgba(254,119,37,0.38)] bg-[var(--l-tile)] text-[var(--l-orange-text)]">
-                    <f.icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--l-tile)] text-[var(--l-orange-text)]">
+                    <f.icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
                   </span>
-                  <span className="pt-0.5">
-                    <span className="block font-semibold">{f.t}</span>
-                    <span className="mt-0.5 block text-sm leading-relaxed text-[var(--l-muted)]">{f.d}</span>
+                  <span>
+                    <span className="block text-[0.95rem] font-semibold tracking-[-0.01em]">{f.t}</span>
+                    <span className="mt-0.5 block text-[0.88rem] leading-relaxed text-[var(--l-muted)]">{f.d}</span>
                   </span>
                 </motion.li>
               ))}
@@ -206,7 +202,7 @@ export default function LoginPage() {
         <section className="flex justify-center lg:justify-end">
           <motion.div
             initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}
-            className="relative w-full max-w-[28rem] rounded-[1.5rem] border border-[var(--l-card-line)] bg-[var(--l-card)] p-7 shadow-[var(--l-card-shadow)] backdrop-blur-xl sm:p-9"
+            className="relative w-full max-w-[27rem] rounded-[1.25rem] border border-[var(--l-card-line)] bg-[var(--l-card)] p-7 shadow-[var(--l-card-shadow)] backdrop-blur-xl sm:p-10"
           >
             <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[inherit]"
               style={{ background: 'radial-gradient(120% 55% at 0% 0%, rgba(254,119,37,0.12), transparent 60%)' }} />
@@ -214,7 +210,7 @@ export default function LoginPage() {
             {mfa ? (
               <form onSubmit={handleMfa} className="space-y-5" data-testid="login-mfa-form">
                 <div>
-                  <h1 className="text-[1.9rem] font-bold leading-tight tracking-[-0.025em]">Two-factor check</h1>
+                  <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.03em]">Two-factor check</h1>
                   <p className="mt-1.5 text-[0.95rem] text-[var(--l-muted)]">
                     {useRecovery ? 'Enter one of your recovery codes. Each works once.'
                       : 'Enter the 6-digit code from your authenticator app.'}
@@ -241,12 +237,12 @@ export default function LoginPage() {
                 </div>
               </form>
             ) : (<>
-            <h1 className="text-[1.9rem] font-bold leading-tight tracking-[-0.025em] sm:text-[2.1rem]">Welcome to NVIP</h1>
-            <p className="mt-2 text-[0.98rem] text-[var(--l-muted)]">Sign in to your AI Voice Agent workspace.</p>
+            <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.03em] sm:text-[1.8rem]">Welcome back</h1>
+            <p className="mt-1.5 text-[0.95rem] text-[var(--l-muted)]">Sign in to your NVIP workspace.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">
-                <label htmlFor="login-email" className="block text-sm font-semibold">Email address</label>
+                <label htmlFor="login-email" className="block text-[0.85rem] font-medium">Email address</label>
                 <div className="relative">
                   <input id="login-email" type="email" autoComplete="email" placeholder="Enter your email" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -256,7 +252,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="login-password" className="block text-sm font-semibold">Password</label>
+                <label htmlFor="login-password" className="block text-[0.85rem] font-medium">Password</label>
                 <div className="relative">
                   <input id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
                     placeholder="Enter your password" value={password}
@@ -308,9 +304,9 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-            <p className="mt-6 text-center text-sm text-[var(--l-muted)]">
+            <p className="mt-7 border-t border-[var(--l-field-line)] pt-6 text-center text-sm text-[var(--l-muted)]">
               New to NVIP?{' '}
-              <Link to="/request-demo" className="font-semibold text-[var(--l-link)] underline underline-offset-4 transition-colors hover:text-[var(--l-ink)]">
+              <Link to="/request-demo" className="font-semibold text-[var(--l-link)] underline-offset-4 transition-colors hover:underline">
                 Book a demo
               </Link>
             </p>

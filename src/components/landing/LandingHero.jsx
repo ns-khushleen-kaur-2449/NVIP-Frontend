@@ -6,8 +6,6 @@ import {
 import { cn } from '@/lib/utils';
 import { ButtonLink } from '@/components/primitives';
 import { INTEGRATIONS } from '@/config/platform';
-import netsmartzOnLight from '@/assets/netsmartz-27-on-light.png';
-import netsmartzOnDark from '@/assets/netsmartz-27-on-dark.png';
 import zohoLogo from '@/assets/zoho.png';
 import twilioLogo from '@/assets/twilio.png';
 import OrbStage from './OrbStage';
@@ -146,37 +144,29 @@ export default function LandingHero() {
       <div aria-hidden className="nvp-hero-grid pointer-events-none absolute inset-0" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-12 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-12 lg:gap-4 lg:pb-14 lg:pt-12">
         <div className="lg:col-span-6 lg:pr-2">
-          {/* Brand lockup: the Netsmartz logo, with NVIP set under its right-hand foot (the SmartSDR arrangement). */}
-          <div className="flex w-fit max-w-full flex-col">
-            <motion.div {...rise(0)}>
-              <img
-                src={netsmartzOnLight}
-                width={860}
-                height={198}
-                alt="Netsmartz, celebrating 27 years"
-                className="nvp-logo-light h-[58px] w-auto max-w-full sm:h-[72px] lg:h-[80px]"
-              />
-              <img
-                src={netsmartzOnDark}
-                width={860}
-                height={198}
-                alt="Netsmartz, celebrating 27 years"
-                className="nvp-logo-dark h-[58px] w-auto max-w-full sm:h-[72px] lg:h-[80px]"
-              />
-            </motion.div>
-            <motion.p className="nvp-wordmark mt-2 self-end sm:mt-3" {...rise(0.06)}>
-              N<span className="text-[var(--nv-orange)]">VIP</span>
-              <span className="sr-only">, the Voice Intelligence Platform</span>
-            </motion.p>
-          </div>
-          <motion.h1 id="hero-title" className="nvp-display mt-6 max-w-[19ch] sm:mt-7" {...rise(0.12)}>
+          {/* Product name. The Netsmartz logo sits in the header's top-left; here the full name is spelled out with
+              its initials in orange, so they read as one word: NVIP. */}
+          <motion.div className="flex items-stretch gap-4" {...rise(0)}>
+            <span aria-hidden className="w-1 shrink-0 rounded-full bg-gradient-to-b from-[#FE7725] to-[#FE7725]/0" />
+            <p className="nvp-fullname">
+              <span className="block">
+                <span className="nvp-initial">N</span>etsmartz
+              </span>
+              <span className="block">
+                <span className="nvp-initial">V</span>oice <span className="nvp-initial">I</span>ntelligence{' '}
+                <span className="nvp-initial">P</span>latform
+              </span>
+              <span className="sr-only"> (NVIP)</span>
+            </p>
+          </motion.div>
+          <motion.h1 id="hero-title" className="nvp-display mt-10 max-w-[19ch] sm:mt-12" {...rise(0.08)}>
             Meet the AI voice agents that move <span className="text-[var(--nvp-orange-text)]">your business forward.</span>
           </motion.h1>
-          <motion.p className="nvp-lede mt-5 max-w-[33rem] text-[var(--nv-muted)]" {...rise(0.18)}>
+          <motion.p className="nvp-lede mt-5 max-w-[32rem] text-[var(--nv-muted)]" {...rise(0.16)}>
             Automate conversations, qualify leads, manage customer interactions and book appointments — all through
             intelligent AI voice agents.
           </motion.p>
-          <motion.div className="mt-8 flex flex-wrap gap-3" {...rise(0.24)}>
+          <motion.div className="mt-9 flex flex-wrap gap-3" {...rise(0.24)}>
             <ButtonLink to="/request-demo" size="lg" className="shadow-[0_14px_28px_-14px_rgba(254,119,37,0.9)]">
               <Phone className="h-4 w-4" aria-hidden /> Book a demo
             </ButtonLink>

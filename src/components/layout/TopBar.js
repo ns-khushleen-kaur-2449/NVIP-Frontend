@@ -95,7 +95,7 @@ export const TopBar = () => {
             )}
 
             {/* Logo / Brand */}
-            <Link to="/dashboard" aria-label="SmartSDR by Netsmartz — home" className="flex items-center text-[var(--ink)]">
+            <Link to="/dashboard" aria-label="NVIP by Netsmartz — home" className="flex items-center text-[var(--ink)]">
               <BrandLockup size="sm" />
             </Link>
           </div>

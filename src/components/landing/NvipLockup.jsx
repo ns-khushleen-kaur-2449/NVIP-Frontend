@@ -30,8 +30,8 @@ export default function NvipLockup({ tone = 'auto', to = '/', className, onClick
       )}
       <span aria-hidden="true" className="h-8 w-px shrink-0 bg-current opacity-20" />
       <span className="flex flex-col leading-none">
-        <span className="text-[1.05rem] font-bold tracking-[-0.03em]">N<span className="text-[var(--nvp-orange-text,#E4580B)]">VIP</span></span>
-        <span className="mt-1 hidden text-[0.66rem] font-medium tracking-[0.01em] opacity-70 lg:block">Voice Intelligence Platform</span>
+        <span className="text-[1.1rem] font-bold tracking-[-0.02em] text-[var(--nvp-orange-text,#E4580B)]">NVIP</span>
+        <span className="mt-1 hidden text-[0.68rem] font-medium tracking-[0.01em] opacity-65 lg:block">Voice Intelligence Platform</span>
       </span>
     </Link>
   );

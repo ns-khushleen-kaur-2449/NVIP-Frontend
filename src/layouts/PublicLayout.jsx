@@ -1,5 +1,5 @@
 import { useContext, useMemo, useState } from 'react';
-import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, Link } from 'react-router-dom';
 import { Menu, X, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggle from '../components/ThemeToggle';
@@ -63,8 +63,6 @@ export default function PublicLayout() {
   const signedIn = Boolean(auth?.user || auth?.token);
   const workspace = homePath(auth?.user);
   const themeValue = usePublicTheme();
-  // The landing hero carries the large Netsmartz logo and NVIP wordmark, so the header drops its lockup there.
-  const onHome = useLocation().pathname === '/';
 
   const linkClass = ({ isActive }) =>
     cn(
@@ -93,7 +91,7 @@ export default function PublicLayout() {
       </a>
       <header className="sticky top-0 z-40 border-b border-[var(--nv-chrome-border)] bg-[var(--nv-chrome-bg)] backdrop-blur-xl backdrop-saturate-150">
         <div className="relative mx-auto flex h-[76px] max-w-7xl items-center gap-8 px-4 sm:px-6">
-          {!onHome && <NvipLockup onClick={() => setOpen(false)} />}
+          <NvipLockup onClick={() => setOpen(false)} />
           {/* Centred on the header, independent of what sits left and right of it. */}
           <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 xl:flex" aria-label="Main">
             {LINKS.map((l) => navItem(l, linkClass))}

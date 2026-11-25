@@ -20,16 +20,16 @@ test('hero: the Netsmartz logo, the headline and both calls to action', () => {
   expect(screen.getByRole('link', { name: 'Explore AI agents' })).toHaveAttribute('href', '/#agents');
 });
 
-test('five agents: the three with a backend are Available, the rest Coming soon', async () => {
+test('four agents: Outbound, Hiring and Real Estate are Available, Inbound SDR Coming soon, no Receptionist', async () => {
   page();
   const status = async (name) => {
     const card = (await screen.findByRole('heading', { name })).closest('a');
     return within(card).getByText(/^(Available|Coming soon)$/).textContent;
   };
-  const available = await Promise.all(['Outbound Lead Gen', 'Inbound Voice SDR', 'Hiring / Recruitment'].map(status));
+  const available = await Promise.all(['Outbound Lead Gen', 'Hiring / Recruitment', 'Real Estate Agent'].map(status));
   expect(available).toEqual(['Available', 'Available', 'Available']);
-  const comingSoon = await Promise.all(['AI Receptionist', 'Real Estate Agent'].map(status));
-  expect(comingSoon).toEqual(['Coming soon', 'Coming soon']);
+  expect(await status('Inbound Voice SDR')).toBe('Coming soon');
+  expect(screen.queryByRole('heading', { name: 'AI Receptionist' })).not.toBeInTheDocument();
   expect((await screen.findByRole('heading', { name: 'Outbound Lead Gen' })).closest('a')).toHaveAttribute('href', '/marketplace/outbound-lead-gen');
 });
 
