@@ -14,7 +14,7 @@ const page = () => render(
 
 test('hero: the Netsmartz logo, the headline and both calls to action', () => {
   page();
-  expect(screen.getAllByAltText('Netsmartz, celebrating 27 years')[0]).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'NVIP by Netsmartz, home' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Meet the AI voice agents that move your business forward.');
   expect(screen.getAllByRole('link', { name: 'Book a demo' })[0]).toHaveAttribute('href', '/request-demo');
   expect(screen.getByRole('link', { name: 'Explore AI agents' })).toHaveAttribute('href', '/#agents');

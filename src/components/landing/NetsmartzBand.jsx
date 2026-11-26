@@ -1,5 +1,4 @@
 import { ArrowUpRight } from 'lucide-react';
-import netsmartzOnDark from '@/assets/netsmartz-27-on-dark.png';
 import { NETSMARTZ_FACTS, NETSMARTZ_URL } from '@/config/platform';
 
 /** Parent-brand proof: only the Netsmartz facts the user approved (config/platform.js). */
@@ -8,8 +7,8 @@ export default function NetsmartzBand() {
     <section aria-labelledby="netsmartz-title" className="nvp-band">
       <div className="mx-auto grid max-w-7xl items-end gap-14 px-4 py-20 sm:px-6 lg:grid-cols-12 lg:py-24">
         <div className="lg:col-span-7">
-          <img src={netsmartzOnDark} width={860} height={198} alt="Netsmartz, celebrating 27 years" className="h-10 w-auto sm:h-12" />
-          <h2 id="netsmartz-title" className="nvp-h2 mt-9">Built and backed by Netsmartz</h2>
+          {/* No logo here: the header already carries it; the heading names Netsmartz. */}
+          <h2 id="netsmartz-title" className="nvp-h2">Built and backed by Netsmartz</h2>
           <p className="nvp-lede mt-5 max-w-xl text-[var(--nv-muted)]">
             NVIP is a Netsmartz product. Netsmartz is a software and AI services company that has worked with clients around the world since 1999.
           </p>

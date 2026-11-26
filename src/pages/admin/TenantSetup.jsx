@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { TenantSettingsPanel } from '@/components/admin/TenantSettingsDialog';
+import TimezoneSelect from '@/components/shared/TimezoneSelect';
+import { NEW_TENANT_TIME_ZONE } from '@/lib/ops';
 import { InvitationsList, InviteDialog } from '@/components/admin/Invitations';
 import ReadinessList from '@/components/admin/ReadinessList';
 import { errorText } from '@/components/admin/userBits';
@@ -44,7 +46,7 @@ function PlanNote({ plan }) {
 }
 
 function DetailsStep({ info, onCreated }) {
-  const [form, setForm] = useState({ name: '', default_timezone: 'Asia/Kolkata' });
+  const [form, setForm] = useState({ name: '', default_timezone: NEW_TENANT_TIME_ZONE });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   if (info) {
@@ -64,8 +66,8 @@ function DetailsStep({ info, onCreated }) {
     if (!form.name.trim()) { setError('A tenant name is required'); return; }
     setSaving(true); setError(null);
     try {
-      const res = await createTenant({ name: form.name.trim(), default_timezone: form.default_timezone.trim() || 'Asia/Kolkata',
-        start_onboarding: true });
+      const res = await createTenant({ name: form.name.trim(),
+        ...(form.default_timezone ? { default_timezone: form.default_timezone } : {}), start_onboarding: true });
       onCreated(res.data.tenant_id);
     } catch (e) {
       setError(errorText(e, 'Could not create the tenant'));
@@ -78,9 +80,10 @@ function DetailsStep({ info, onCreated }) {
       <label className="block text-sm font-medium">Tenant name
         <Input className="mt-1" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </label>
-      <label className="block text-sm font-medium">Default time zone
-        <Input className="mt-1" value={form.default_timezone} onChange={(e) => setForm({ ...form, default_timezone: e.target.value })} />
-      </label>
+      <div className="block text-sm font-medium">Default time zone
+        <TimezoneSelect className="mt-1" aria-label="Default time zone" required value={form.default_timezone}
+          onChange={(default_timezone) => setForm({ ...form, default_timezone })} />
+      </div>
       <p className="text-xs text-muted-foreground">Creating it saves straight away; you can leave and continue the setup later.</p>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Create tenant</Button>

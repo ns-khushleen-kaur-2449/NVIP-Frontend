@@ -37,7 +37,7 @@ export default function GoLiveSection() {
               You get a login to your NVIP workspace, never raw provider credentials. NVIP manages the voice stack for you.
             </p>
           </div>
-          <ul className="grid gap-px overflow-hidden rounded-2xl border border-[var(--nv-line)] bg-[var(--nv-line)] sm:grid-cols-2 lg:col-span-8">
+          <ul className="grid gap-px overflow-hidden rounded-2xl border border-[var(--nv-line)] bg-[var(--nv-line)] sm:grid-cols-3 lg:col-span-8">
             {VOICE_STACK.map((s) => (
               <li key={s.name} className="bg-[var(--nv-surface)] p-6 sm:p-7">
                 <p className="text-xl font-bold tracking-[-0.02em]">{s.name}</p>

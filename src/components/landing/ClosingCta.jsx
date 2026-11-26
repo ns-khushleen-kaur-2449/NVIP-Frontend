@@ -5,9 +5,9 @@ import { ButtonLink } from '@/components/primitives';
 export default function ClosingCta() {
   return (
     <section aria-labelledby="cta-title" className="px-4 py-20 sm:px-6 lg:py-24">
-      <div className="nvp-cta mx-auto flex max-w-7xl flex-col gap-8 rounded-[28px] px-6 py-12 shadow-[0_34px_70px_-40px_rgba(194,65,12,0.75)] sm:px-10 sm:py-14 lg:flex-row lg:items-center lg:justify-between lg:px-14">
+      <div className="nvp-cta mx-auto flex max-w-7xl flex-col gap-8 rounded-[28px] px-6 py-12 shadow-[0_34px_70px_-44px_rgba(254,119,37,0.55)] sm:px-10 sm:py-14 lg:flex-row lg:items-center lg:justify-between lg:px-14">
         <div className="max-w-2xl">
-          <h2 id="cta-title" className="nvp-h2">Talk to a sandboxed agent before you buy</h2>
+          <h2 id="cta-title" className="nvp-h2">Talk to an agent before you buy</h2>
           <p className="nvp-lede mt-4 text-[var(--nv-muted)]">
             Book a demo on the same voice stack your agent will run on, with no writes to your real systems.
           </p>

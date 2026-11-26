@@ -3,10 +3,20 @@
 
 const DASH = '—';
 export const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+// The first selection when a Super Admin creates a tenant (the backend's TenantCreate default).
+export const NEW_TENANT_TIME_ZONE = 'Asia/Kolkata';
 
-/** The zone times are shown in: the tenant's default, else IST. */
+// The zone for times when nothing better is known: UTC, always shown with its "UTC" label (never an assumed India time).
+export const FALLBACK_TIME_ZONE = 'UTC';
+
+/** The zone times are shown in: the tenant's default, else UTC (labelled). */
 export function displayTimeZone(user) {
-  return user?.tenant?.default_timezone || DEFAULT_TIME_ZONE;
+  return user?.tenant?.default_timezone || FALLBACK_TIME_ZONE;
+}
+
+/** A campaign's times: its own timezone, else the tenant's, else UTC (labelled). */
+export function campaignTimeZone(campaign, user) {
+  return campaign?.timezone || displayTimeZone(user);
 }
 
 function valid(iso) {

@@ -12,6 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import ReasonDialog from '@/components/ops/ReasonDialog';
 import CallingBoundDialog from '@/components/admin/CallingBoundDialog';
 import TenantSettingsDialog from '@/components/admin/TenantSettingsDialog';
+import TenantTimezoneDialog from '@/components/admin/TenantTimezoneDialog';
+import TimezoneSelect from '@/components/shared/TimezoneSelect';
+import { NEW_TENANT_TIME_ZONE } from '@/lib/ops';
 import { InvitationsList, InviteDialog } from '@/components/admin/Invitations';
 import { ReadinessBadge } from '@/components/admin/ReadinessList';
 import { errorText, EMAIL_IN_USE, EmailInUse } from '@/components/admin/userBits';
@@ -55,7 +58,7 @@ function NewTenantDialog({ open, onOpenChange, onCreated, nvip }) {
 
   useEffect(() => {
     if (!open) return;
-    setForm({ name: '', default_timezone: 'Asia/Kolkata', admin_name: '', admin_email: '', password: generateTemporaryPassword() });
+    setForm({ name: '', default_timezone: NEW_TENANT_TIME_ZONE, admin_name: '', admin_email: '', password: generateTemporaryPassword() });
     setError(null);
     setCreated(null);
   }, [open]);
@@ -72,7 +75,7 @@ function NewTenantDialog({ open, onOpenChange, onCreated, nvip }) {
     setError(null);
     try {
       const response = await createTenantWithAdmin({
-        name: form.name.trim(), default_timezone: form.default_timezone.trim() || 'Asia/Kolkata',
+        name: form.name.trim(), ...(form.default_timezone ? { default_timezone: form.default_timezone } : {}),
         admin: { name: form.admin_name.trim(), email: form.admin_email.trim(), password: form.password },
       });
       setCreated({ tenant: response.data.tenant.name, email: response.data.admin.email, password: form.password });
@@ -107,9 +110,10 @@ function NewTenantDialog({ open, onOpenChange, onCreated, nvip }) {
             <label className="block text-xs font-medium text-muted-foreground">Tenant name
               <Input value={form.name} onChange={(e) => set({ name: e.target.value })} className="mt-1" />
             </label>
-            <label className="block text-xs font-medium text-muted-foreground">Default time zone
-              <Input value={form.default_timezone} onChange={(e) => set({ default_timezone: e.target.value })} className="mt-1" />
-            </label>
+            <div className="block text-xs font-medium text-muted-foreground">Default time zone
+              <TimezoneSelect className="mt-1" aria-label="Default time zone" required value={form.default_timezone}
+                onChange={(default_timezone) => set({ default_timezone })} />
+            </div>
             <label className="block text-xs font-medium text-muted-foreground">First admin name
               <Input value={form.admin_name} onChange={(e) => set({ admin_name: e.target.value })} className="mt-1" />
             </label>
@@ -366,6 +370,7 @@ export default function TenantsPage() {
   const [cancelling, setCancelling] = useState(null);
   const [apolloChange, setApolloChange] = useState(null);
   const [bounding, setBounding] = useState(null);
+  const [zoning, setZoning] = useState(null);
   const [settingsOf, setSettingsOf] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [numbersFor, setNumbersFor] = useState(null);
@@ -543,6 +548,7 @@ export default function TenantsPage() {
                       <Button asChild variant="ghost" size="sm"><Link to={`/admin/tenant-users?tenant_id=${tenant.tenant_id}`}>Admins</Link></Button>
                       <Button variant="ghost" size="sm" onClick={() => setSettingsOf(tenant)}>Settings</Button>
                       <Button variant="ghost" size="sm" onClick={() => setBounding(tenant)}>Calling hours</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setZoning(tenant)}>Time zone</Button>
                       {tenant.offboarding_started_at
                         ? <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setCancelling(tenant)}>Cancel offboarding</Button>
                         : <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setOffboarding(tenant)}>Offboard</Button>}
@@ -581,6 +587,7 @@ export default function TenantsPage() {
           onInvited={() => setInviteKey((k) => k + 1)} />
       )}
       <CallingBoundDialog tenant={bounding} onOpenChange={(open) => !open && setBounding(null)} />
+      <TenantTimezoneDialog tenant={zoning} onOpenChange={(open) => !open && setZoning(null)} onSaved={load} />
       <TenantSettingsDialog tenant={settingsOf} onOpenChange={(open) => { if (!open) { setSettingsOf(null); load(); } }} />
       <ReasonDialog
         open={Boolean(confirming)}

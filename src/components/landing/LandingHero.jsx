@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  AudioLines, AudioWaveform, CalendarCheck, CalendarDays, CirclePlay, DatabaseZap, FlaskConical, Mail, Phone,
+  AudioWaveform, CalendarCheck, CalendarDays, CirclePlay, DatabaseZap, Mail, Phone,
   PhoneCall, ShieldCheck, UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,6 @@ const EASE_OUT = [0.16, 1, 0.3, 1];
 
 /** True statements about the platform; the mockup's "deploy in minutes" style claims are not made. */
 const PROOF = [
-  { icon: FlaskConical, label: 'Sandboxed demo first' },
   { icon: DatabaseZap, label: 'Your CRM stays in charge' },
   { icon: ShieldCheck, label: 'Fixed guardrails' },
 ];
@@ -75,12 +74,13 @@ function HeroVisual({ reduce }) {
 }
 
 const INTEGRATION_MARKS = {
-  zoho: { logo: zohoLogo, className: 'h-10' },
+  // zoho.png has wide transparent margins: 30px tall draws the blocks at about the 16px icon height, and the negative
+  // margin keeps the tile's text row on the same baseline as the others. "CRM" completes it as "ZOHO CRM".
+  zoho: { logo: zohoLogo, className: '-my-[9px] h-[34px]', label: 'CRM' },
   twilio: { logo: twilioLogo, className: 'h-[22px]' },
   'google-calendar': { icon: CalendarDays },
   outlook: { icon: Mail },
   vapi: { icon: AudioWaveform },
-  elevenlabs: { icon: AudioLines },
 };
 
 /** What NVIP connects to. Only shipped integrations (config/platform.js). */
@@ -100,7 +100,7 @@ function IntegrationsStrip({ reduce }) {
             Connect the tools you already use and keep your workflows in sync.
           </p>
         </div>
-        <ul aria-label="Integrations" className="grid flex-1 grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        <ul aria-label="Integrations" className="grid flex-1 grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 [&>li:last-child]:col-span-2 sm:[&>li:last-child]:col-span-1">
           {INTEGRATIONS.map((item) => {
             const mark = INTEGRATION_MARKS[item.id] ?? {};
             const Icon = mark.icon;
@@ -109,7 +109,12 @@ function IntegrationsStrip({ reduce }) {
                 key={item.id}
                 className="flex h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-[var(--nv-line)] px-2 text-center"
               >
-                {mark.logo ? (
+                {mark.logo && mark.label ? (
+                  <span className="flex items-center gap-1.5 whitespace-nowrap text-[0.9rem] font-bold tracking-[-0.015em]">
+                    <img src={mark.logo} alt={item.name.replace(` ${mark.label}`, '')} className={cn('w-auto object-contain', mark.className)} />
+                    {mark.label}
+                  </span>
+                ) : mark.logo ? (
                   <img src={mark.logo} alt={item.name} className={cn('w-auto max-w-full object-contain', mark.className)} />
                 ) : (
                   <span className="flex items-center gap-1.5 whitespace-nowrap text-[0.9rem] font-bold tracking-[-0.015em]">
@@ -144,22 +149,18 @@ export default function LandingHero() {
       <div aria-hidden className="nvp-hero-grid pointer-events-none absolute inset-0" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-12 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-12 lg:gap-4 lg:pb-14 lg:pt-12">
         <div className="lg:col-span-6 lg:pr-2">
-          {/* Product name. The Netsmartz logo sits in the header's top-left; here the full name is spelled out with
-              its initials in orange, so they read as one word: NVIP. */}
-          <motion.div className="flex items-stretch gap-4" {...rise(0)}>
+          {/* Product name, straight under the header's Netsmartz logo, so it starts at "Voice". One colour; the
+              orange bar is the accent. It is the largest line here; the H1 below sits a step smaller. */}
+          <motion.div className="-ml-4 flex items-stretch gap-3 sm:-ml-5 sm:gap-4" {...rise(0)}>
             <span aria-hidden className="w-1 shrink-0 rounded-full bg-gradient-to-b from-[#FE7725] to-[#FE7725]/0" />
-            <p className="nvp-fullname">
-              <span className="block">
-                <span className="nvp-initial">N</span>etsmartz
-              </span>
-              <span className="block">
-                <span className="nvp-initial">V</span>oice <span className="nvp-initial">I</span>ntelligence{' '}
-                <span className="nvp-initial">P</span>latform
-              </span>
+            <p className="nvp-fullname nvp-fullname--hero">
+              {/* Always two lines: "Voice Intelligence" then "Platform", at every width. */}
+              <span className="block">Voice Intelligence</span>
+              <span className="block">Platform</span>
               <span className="sr-only"> (NVIP)</span>
             </p>
           </motion.div>
-          <motion.h1 id="hero-title" className="nvp-display mt-10 max-w-[19ch] sm:mt-12" {...rise(0.08)}>
+          <motion.h1 id="hero-title" className="nvp-display mt-8 max-w-[22ch] sm:mt-10" {...rise(0.08)}>
             Meet the AI voice agents that move <span className="text-[var(--nvp-orange-text)]">your business forward.</span>
           </motion.h1>
           <motion.p className="nvp-lede mt-5 max-w-[32rem] text-[var(--nv-muted)]" {...rise(0.16)}>

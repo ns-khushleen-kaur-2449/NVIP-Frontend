@@ -116,3 +116,27 @@ it('lists every pre-flight problem when a resume is refused', async () => {
   expect(screen.getByText(/saved without customer details/)).toBeInTheDocument();
   expect(screen.getByText(/No contact left to call/)).toBeInTheDocument();
 });
+
+describe('times without a campaign timezone', () => {
+  // 2030-01-07 04:30 UTC: 10:00 in India, 20:30 the evening before in Los Angeles.
+  const SCHEDULED = { ...CAMPAIGN, timezone: null, status: 'scheduled', scheduled_at: '2030-01-07T04:30:00Z' };
+  const openAs = (user) => {
+    api.getVoiceCampaign.mockResolvedValue({ data: SCHEDULED });
+    renderWithAuth(null, { user, path: '/voice-campaigns/c1',
+      routes: [<Route key="detail" path="/voice-campaigns/:campaignId" element={<VoiceCampaignDetail />} />] });
+  };
+
+  it("use the tenant's timezone, not India time", async () => {
+    openAs({ ...USERS.tenant_admin, tenant: { default_timezone: 'America/Los_Angeles' } });
+    const line = await screen.findByText(/Scheduled for/);
+    expect(line.textContent).toMatch(/Sun 6 Jan.*8:30\s?pm/i);
+    expect(line.textContent).not.toMatch(/IST|10:00/);
+  });
+
+  it('show UTC, labelled, when the tenant has none', async () => {
+    openAs(USERS.tenant_admin);
+    const line = await screen.findByText(/Scheduled for/);
+    expect(line.textContent).toMatch(/4:30\s?am UTC/i);
+    expect(line.textContent).not.toMatch(/IST/);
+  });
+});

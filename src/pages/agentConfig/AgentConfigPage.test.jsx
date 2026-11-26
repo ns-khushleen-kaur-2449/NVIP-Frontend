@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router-dom';
 import AgentConfigPage, { AgentConfigEditor } from '@/pages/agentConfig/AgentConfigPage';
 import * as api from '@/lib/api';
 import { USERS, renderWithAuth } from '@/test/renderWithAuth';
+import { resetOpeningLineGuides } from '@/lib/openingLines';
 
 jest.mock('@/lib/api', () => ({
   getAgentInstance: jest.fn(),
@@ -20,6 +21,8 @@ jest.mock('@/lib/api', () => ({
   getCatalogItems: jest.fn(),
   getBuilderLanguages: jest.fn(),
   previewAgentInstance: jest.fn(),
+  suggestOpeningLine: jest.fn(),
+  getOpeningLineGuide: jest.fn(),
 }));
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
 
@@ -59,6 +62,7 @@ const STALE = { response: { status: 409, data: { detail: { code: 'stale_draft', 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetOpeningLineGuides(); // the guide is cached per session
   api.getAgentInstance.mockResolvedValue({ data: INSTANCE });
   api.getAgentInstanceVersion.mockImplementation((type, n) => Promise.resolve({ data: { ...VERSIONS[n], created_at: at } }));
   api.getBusinessProfile.mockResolvedValue({ data: { company_name: 'Acme Motors', locations: [], source: 'api',
@@ -67,9 +71,39 @@ beforeEach(() => {
     { id: 'n-1', vapi_phone_number_id: 'pn-1', phone_number: null, label: 'Sales', inbound_mode: 'fixed', assistant_name: null },
   ] });
   api.getCatalogItems.mockResolvedValue({ data: { items: [] } });
-  api.getBuilderLanguages.mockResolvedValue({ data: [{ code: 'en', english_name: 'English' }] });
+  // As GET /api/v1/assistant-builder/languages answers: `name` is the English name (there is no english_name).
+  api.getBuilderLanguages.mockResolvedValue({ data: [
+    { code: 'en', name: 'English', native_name: 'English', status: 'approved', direction: 'ltr' },
+    { code: 'fr', name: 'French', native_name: 'Français', status: 'approved', direction: 'ltr' },
+  ] });
   api.previewAgentInstance.mockResolvedValue({ data: SERVER_PREVIEW });
   api.updateAgentInstanceDraft.mockImplementation((type, n, p) => Promise.resolve({ data: { version: n, payload: p } }));
+  api.getOpeningLineGuide.mockResolvedValue({ data: { language: 'en', tips: { target: ['Say who is calling first.'], en: [] },
+    example: 'Hi Sam', template: 'Hi', allowed_variables: ['lead_first_name'], recommended_variables: ['lead_first_name'], max_length: 500 } });
+});
+
+describe('the suggested opening line', () => {
+  test('the languages are named: the select and the "Can switch to" chips say French, not fr', async () => {
+    renderEditor(admin);
+    const nav = await screen.findByRole('navigation', { name: /Configuration|Setup steps/ });
+    await userEvent.click(within(nav).getByRole('button', { name: /Agent identity/ }));
+    const select = await screen.findByLabelText('Primary language');
+    await waitFor(() => expect(within(select).getByRole('option', { name: 'French' })).toHaveValue('fr'));
+    expect(within(select).getByRole('option', { name: 'English' })).toHaveValue('en');
+    expect(within(select).queryByRole('option', { name: 'fr' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'French' })).toBeInTheDocument();
+  });
+
+  test('opening an existing draft on the identity step asks for no suggestion (the guide only)', async () => {
+    renderEditor(admin);
+    const nav = await screen.findByRole('navigation', { name: /Configuration|Setup steps/ });
+    await userEvent.click(within(nav).getByRole('button', { name: /Agent identity/ }));
+    expect(await screen.findByLabelText('Opening line')).toHaveValue('Hi {{lead_first_name}}');
+    await waitFor(() => expect(api.getOpeningLineGuide).toHaveBeenCalledWith('sdr_outbound', 'en'));
+    await act(() => new Promise((r) => setTimeout(r, 400))); // past the suggestion debounce
+    expect(api.suggestOpeningLine).not.toHaveBeenCalled();
+    expect(api.updateAgentInstanceDraft).not.toHaveBeenCalled();
+  });
 });
 
 const renderEditor = (user) => renderWithAuth(<AgentConfigEditor agentType="sdr_outbound" user={user} />, { user });

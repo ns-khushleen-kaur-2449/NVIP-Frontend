@@ -15,25 +15,24 @@ export const GO_LIVE_STEPS = [
 /** The three steps the landing page shows; the full five live on /how-it-works. */
 export const GO_LIVE_SHORT = ['demo', 'connect', 'live'].map((id) => GO_LIVE_STEPS.find((s) => s.id === id));
 
-/** The managed voice stack every agent runs on. */
+/** The managed voice stack the public site names (landing, How it works, footer). ElevenLabs is not named publicly. */
 export const VOICE_STACK = [
   { name: 'Twilio', role: 'Phone numbers, call control and SMS' },
   { name: 'Vapi', role: 'Real-time conversation, speech-to-text, interruptions' },
-  { name: 'ElevenLabs', role: 'Natural, brandable voices' },
   { name: 'Nylas', role: 'Calendar booking and email across Google, Outlook, Exchange' },
 ];
 
 /**
  * The landing page's integrations strip. Only tools the platform actually connects to: the Zoho CRM integration
  * (Settings → Integrations), calendars through Nylas, and the voice stack. No HubSpot or Salesforce until they ship.
+ * ElevenLabs is left out on purpose: it is part of the managed voice stack, not something a customer connects.
  */
 export const INTEGRATIONS = [
-  { id: 'zoho', name: 'Zoho CRM', role: 'CRM sync' },
+  { id: 'zoho', name: 'Zoho CRM', role: 'Lead and outcome sync' },
   { id: 'google-calendar', name: 'Google Calendar', role: 'Booking via Nylas' },
   { id: 'outlook', name: 'Outlook', role: 'Booking via Nylas' },
   { id: 'twilio', name: 'Twilio', role: 'Numbers and calls' },
   { id: 'vapi', name: 'Vapi', role: 'Voice runtime' },
-  { id: 'elevenlabs', name: 'ElevenLabs', role: 'Natural voices' },
 ];
 
 /** Netsmartz company facts approved for the public site (as published on netsmartz.com). */
