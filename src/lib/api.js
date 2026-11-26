@@ -350,7 +350,7 @@ export const saveRealEstateKnowledgeBase = (knowledgeBase) => api.put(`${REAL_ES
   { knowledge_base: knowledgeBase });
 // Every saved version, newest first: { version, knowledge_base, saved_at, saved_by, current, restored_from }.
 export const listRealEstateKnowledgeBaseVersions = () => api.get(`${REAL_ESTATE}/knowledge-base/versions`);
-// Calls use that version from now on (copied as a new version, so the history is kept). Answers like GET.
+// Calls use that saved version from now on, as it is (no new version). Answers like GET.
 export const applyRealEstateKnowledgeBaseVersion = (version) => api.post(`${REAL_ESTATE}/knowledge-base/versions/${version}/use`);
 export const getRealEstateCallTranscript = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/transcript`);
 export const getRealEstateCallRecording = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/recording`);

@@ -46,7 +46,7 @@ beforeEach(() => {
     data: { knowledge_base: text, version: 4, saved_at: AT, last_used: 'Old notes' } }));
   api.listRealEstateKnowledgeBaseVersions.mockResolvedValue({ data: VERSIONS });
   api.applyRealEstateKnowledgeBaseVersion.mockResolvedValue({
-    data: { knowledge_base: 'Palm Springs villas', version: 4, saved_at: AT, last_used: 'Old notes' } });
+    data: { knowledge_base: 'Palm Springs villas', version: 1, saved_at: AT, last_used: 'Old notes' } });
 });
 
 function open(role, path = '/real_estate_agent') {

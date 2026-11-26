@@ -19,7 +19,7 @@ import useHiringData from '../hiring/useHiringData';
 
 /**
  * Every saved version, newest first, with the one calls use marked. Each can be opened to read; those who may place
- * calls can make an earlier one the one in use (the backend copies it as a new version, so the history is kept).
+ * calls can make any of them the one in use, as it is (no new version is made).
  */
 function KnowledgeBaseVersions({ canEdit, refreshKey, onUsed }) {
   const { data: versions, error, reload } = useHiringData(() => listRealEstateKnowledgeBaseVersions(), [refreshKey]);
@@ -34,7 +34,7 @@ function KnowledgeBaseVersions({ canEdit, refreshKey, onUsed }) {
     setUsing(version);
     try {
       const response = await applyRealEstateKnowledgeBaseVersion(version);
-      toast.success(`Version ${version} is now in use, saved as version ${response.data.version}.`);
+      toast.success(`Version ${response.data.version} is now in use. New calls use it.`);
       onUsed(response.data);
     } catch (e) {
       toast.error(e?.response ? callRefusal(e).message : 'The version was not changed. Try again.');
@@ -51,26 +51,31 @@ function KnowledgeBaseVersions({ canEdit, refreshKey, onUsed }) {
           const expanded = open === v.version;
           return (
             <li key={v.version} className="py-2" data-testid={`knowledge-base-version-${v.version}`}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-start justify-between gap-3">
                 <button type="button" onClick={() => setOpen(expanded ? null : v.version)} aria-expanded={expanded}
-                  className="flex min-w-0 items-center gap-1 text-left">
-                  {expanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-                  <span className="font-medium">Version {v.version}</span>
-                  <span className="text-muted-foreground">
-                    {' · saved '}<RelativeTime iso={v.saved_at} focusable={false} />
-                    {v.saved_by ? ` by ${v.saved_by}` : ''}
-                    {v.restored_from ? ` · copy of version ${v.restored_from}` : ''}
-                    {v.knowledge_base ? ` · ${v.knowledge_base.length.toLocaleString()} characters` : ' · empty'}
+                  className="flex min-w-0 flex-1 items-start gap-1 text-left">
+                  {expanded ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0" />
+                    : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />}
+                  <span className="min-w-0">
+                    <span className="font-medium">Version {v.version}</span>
+                    <span className="text-muted-foreground">
+                      {' · saved '}<RelativeTime iso={v.saved_at} focusable={false} />
+                      {v.saved_by ? ` by ${v.saved_by}` : ''}
+                      {v.restored_from ? ` · copy of version ${v.restored_from}` : ''}
+                      {v.knowledge_base ? ` · ${v.knowledge_base.length.toLocaleString()} characters` : ' · empty'}
+                    </span>
                   </span>
                 </button>
-                {v.current
-                  ? <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold">In use</span>
-                  : canEdit && (
-                    <OpsButton size="sm" type="button" busy={using === v.version} disabled={using !== null}
-                      onClick={() => use(v.version)}>
-                      Use this version
-                    </OpsButton>
-                  )}
+                <div className="shrink-0">
+                  {v.current
+                    ? <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold">In use</span>
+                    : canEdit && (
+                      <OpsButton size="sm" type="button" busy={using === v.version} disabled={using !== null}
+                        onClick={() => use(v.version)}>
+                        Use this version
+                      </OpsButton>
+                    )}
+                </div>
               </div>
               {expanded && (v.knowledge_base
                 ? <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/40 p-3 font-sans text-muted-foreground">{v.knowledge_base}</pre>
@@ -86,7 +91,7 @@ function KnowledgeBaseVersions({ canEdit, refreshKey, onUsed }) {
 /**
  * "Knowledge base": the organisation's projects, locations, prices, amenities and offers, saved once and used by
  * every call (backend app/agents/real_estate/knowledge_base.py). Typed, pasted or read from a text file. Each save
- * is a new version, listed under the editor, where an earlier one can be read and put back in use; saving it empty
+ * is a new version, listed under the editor, where any one can be read and put in use; saving it empty
  * means none, and the agent uses its standard script. Until one is saved, the latest call's knowledge base is filled
  * in to start from (nothing is saved until Save is pressed). Those who may place calls edit it; everyone else reads it.
  */
