@@ -63,9 +63,13 @@ export function FieldNotes({ id, error, conflict, hint, path }) {
 
 const describedBy = (id, { error, hint }) => [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
 
-/** A text input or textarea. `counter` shows the characters used of `maxLength`. */
+/**
+ * A text input or textarea. `counter` shows the characters used of `maxLength`. `dir`: the text direction ("rtl" for
+ * Arabic); `inputRef`: the control's element (to insert at the cursor); `labelExtra`: shown next to the label;
+ * `busy`: marks the control aria-busy while something fills it.
+ */
 export function TextField({ label, path, value, onChange, error, conflict, hint, maxLength, multiline = false, counter = false,
-  readOnly = false, placeholder, type = 'text', required = false, className }) {
+  readOnly = false, placeholder, type = 'text', required = false, className, dir, inputRef, labelExtra, busy = false }) {
   const id = useId();
   const Control = multiline ? Textarea : Input;
   const length = (value || '').length;
@@ -73,10 +77,12 @@ export function TextField({ label, path, value, onChange, error, conflict, hint,
     <div className={className}>
       <div className="flex items-baseline justify-between gap-2">
         <label htmlFor={id} className="text-sm font-medium">{label}{required && <span aria-hidden="true"> *</span>}</label>
+        {labelExtra}
         <span className="ml-auto"><UseBadge path={path} /></span>
         {counter && maxLength && <span className="text-xs text-muted-foreground" aria-live="polite">{length}/{maxLength}</span>}
       </div>
-      <Control id={id} data-field={path} value={value ?? ''} readOnly={readOnly} placeholder={placeholder} type={type}
+      <Control id={id} ref={inputRef} dir={dir} aria-busy={busy || undefined} data-field={path} value={value ?? ''}
+        readOnly={readOnly} placeholder={placeholder} type={type}
         maxLength={maxLength} required={required} aria-invalid={Boolean(error)} aria-describedby={describedBy(id, { error, hint })}
         onChange={(e) => onChange?.(type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)}
         className={cn('mt-1', conflict && 'border-amber-500', multiline && 'min-h-[90px]')} />

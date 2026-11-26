@@ -21,6 +21,7 @@ import {
 import { CheckChip, Panel as SetupPanel } from '@/components/setup/SetupUi';
 import CallPreviewView from '@/components/voice/CallPreview';
 import HandoffSection from './HandoffSection';
+import { OpeningLineField, VoiceReadiness, useOpeningLineSuggestion } from './OpeningLine';
 import useCallPreview from '@/hooks/useCallPreview';
 
 const BOTH = ['sdr_outbound', 'sdr_inbound'];
@@ -233,10 +234,22 @@ export function CatalogStep({ agentType, context, field, readOnly }) {
 // ── 3. Agent identity ──
 
 export function IdentityStep({ agentType, payload, context, field }) {
-  const languageOptions = withCurrent((context.languages || []).map((l) => ({ value: l.code, label: l.english_name || l.code })),
+  const languageOptions = withCurrent((context.languages || []).map((l) => ({ value: l.code, label: l.name || l.code })),
     payload?.languages?.primary);
   const supported = field('languages.supported');
+  const primary = field('languages.primary');
+  const opener = field('opener.first_message');
+  const outbound = agentType === 'sdr_outbound';
   const voice = payload?.voice || {};
+  // Outbound only: changing the primary language suggests the opening line in it (OpeningLine.jsx).
+  const suggestion = useOpeningLineSuggestion({
+    agentType, enabled: outbound && !opener.readOnly, getLine: () => opener.value, setLine: opener.onChange,
+  });
+  const changePrimary = (next) => {
+    const previous = primary.value;
+    primary.onChange(next);
+    if (outbound && next && next !== previous) suggestion.languageChanged(next, previous);
+  };
   return (
     <Section title="Agent identity">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -252,7 +265,11 @@ export function IdentityStep({ agentType, payload, context, field }) {
         <p className="mt-1 text-xs text-muted-foreground">Choosing from tested voices arrives with the voice list.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <SelectField label="Primary language" options={languageOptions} placeholder="Choose a language" {...field('languages.primary')} />
+        <div>
+          <SelectField label="Primary language" options={languageOptions} placeholder="Choose a language" {...primary}
+            onChange={changePrimary} />
+          {outbound && <VoiceReadiness languages={context.languages} language={primary.value} gender={payload?.persona?.gender} />}
+        </div>
         <fieldset data-field="languages.supported" tabIndex={-1}>
           <legend className="text-sm font-medium">Can switch to</legend>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -269,11 +286,10 @@ export function IdentityStep({ agentType, payload, context, field }) {
         </fieldset>
       </div>
       <ChoiceField label="Tone" cards options={withCurrent(TONES, payload?.tone)} {...field('tone')} />
-      {agentType === 'sdr_outbound' && (
+      {outbound && (
         <div className="space-y-2">
-          <TextField label="Opening line" multiline maxLength={500} counter
-            hint="Placeholders: {{lead_first_name}}, {{agent_name}}, {{company_name}}, {{call_purpose}}."
-            {...field('opener.first_message')} />
+          <OpeningLineField agentType={agentType} field={opener} languages={context.languages}
+            language={primary.value || 'en'} suggestion={suggestion} />
           <TextField label="Default call reason" maxLength={300} counter
             placeholder="I'm calling about the linen samples you asked for."
             hint="One spoken sentence: why the agent is calling when the call has no campaign (Single call). A campaign's own purpose replaces it. Fills {{call_purpose}}."

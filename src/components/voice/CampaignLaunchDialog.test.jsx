@@ -1,10 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { createVoiceCampaign, previewCampaignOffer } from '@/lib/api';
+import { createVoiceCampaign, getTimezones, previewCampaignOffer } from '@/lib/api';
 import CampaignLaunchDialog from './CampaignLaunchDialog';
+import { AuthContext } from '@/lib/AuthContext';
+import { resetTimezoneCache } from '@/components/shared/TimezoneSelect';
+import { USERS, authValue } from '@/test/renderWithAuth';
 
 jest.mock('@/lib/api', () => ({
   checkCampaignSchedule: jest.fn().mockResolvedValue({ data: {} }),
   createVoiceCampaign: jest.fn(),
+  getTimezones: jest.fn().mockResolvedValue({ data: [
+    { id: 'America/Los_Angeles', label: '(UTC−08:00) Pacific Time – America/Los_Angeles', offset_minutes: -480, common: true },
+  ] }),
   previewCampaignOffer: jest.fn().mockResolvedValue({ data: { offer_name: 'Creta SX', offer: '₹50,000 off',
     valid_until_spoken: 'Thursday, January thirty-first', expired: false, sample_line: 'By the way…', missing: [],
     assistant_warning: null, direction: 'ltr' } }),
@@ -89,5 +95,40 @@ describe('the campaign offer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start campaign' }));
     expect(await screen.findByText("Offer name can't include a price or amount. Put amounts only in Offer details."))
       .toBeInTheDocument();
+  });
+});
+
+describe('the campaign timezone', () => {
+  const ASSISTANTS = [{ id: 2, name: 'Riya', vapi_assistant_id: 'asst-1', is_live: true }];
+  const openAs = (user) => render(
+    <AuthContext.Provider value={authValue(user)}>
+      <CampaignLaunchDialog open onOpenChange={() => {}} source={{ type: 'leads', prospectIds: ['p-1'] }} assistants={ASSISTANTS} />
+    </AuthContext.Provider>,
+  );
+  const start = async () => {
+    fireEvent.change(screen.getByPlaceholderText(/october site-visit/i), { target: { value: 'Zones' } });
+    fireEvent.change(screen.getByPlaceholderText(/invite leads/i), { target: { value: 'Calls' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Start campaign' }));
+    await waitFor(() => expect(createVoiceCampaign).toHaveBeenCalled());
+    return createVoiceCampaign.mock.calls[0][0];
+  };
+  beforeEach(() => {
+    resetTimezoneCache();
+    getTimezones.mockResolvedValue({ data: [
+      { id: 'America/Los_Angeles', label: '(UTC−08:00) Pacific Time – America/Los_Angeles', offset_minutes: -480, common: true },
+    ] });
+    createVoiceCampaign.mockReset().mockResolvedValue({ data: { id: 'c-2', total_leads: 1 } });
+  });
+
+  it("preselects the tenant's timezone and sends it", async () => {
+    openAs({ ...USERS.tenant_admin, tenant: { default_timezone: 'America/Los_Angeles' } });
+    const picker = await screen.findByRole('combobox', { name: 'Campaign timezone' });
+    await waitFor(() => expect(picker).toHaveTextContent('Pacific Time'));
+    expect((await start()).timezone).toBe('America/Los_Angeles');
+  });
+
+  it("sends no timezone when the tenant's is unknown, not the browser's", async () => {
+    openAs(USERS.tenant_admin);
+    expect(await start()).not.toHaveProperty('timezone');
   });
 });

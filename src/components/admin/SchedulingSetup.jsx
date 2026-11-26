@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarClock, CheckCircle2, Loader2, Pencil, Plus, Spar
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import TimezoneSelect from '@/components/shared/TimezoneSelect';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -320,8 +321,9 @@ function ExecutiveDialog({ open, onOpenChange, executive, meetingTypes, candidat
             )}
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Time zone" hint="IANA name, e.g. Asia/Kolkata. Blank = company default.">
-              <Input value={form.timezone} onChange={(e) => set({ timezone: e.target.value })} placeholder="Asia/Kolkata" className={fieldClass} />
+            <Field label="Time zone" hint={editing ? 'Their working hours are read in it.' : 'Company default: the tenant\'s timezone.'}>
+              <TimezoneSelect value={form.timezone} onChange={(timezone) => set({ timezone })} aria-label="Executive timezone"
+                clearLabel={editing ? undefined : 'Company default'} className={fieldClass} />
             </Field>
             <NumberField label="Meetings per day" hint="Blank = no limit." min={1} max={50} value={form.daily_meeting_limit}
               onChange={(v) => set({ daily_meeting_limit: v })} />

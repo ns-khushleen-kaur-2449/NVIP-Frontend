@@ -12,6 +12,7 @@ import CalendarConnections from '@/components/CalendarConnections';
 import SchedulingSetup from '@/components/admin/SchedulingSetup';
 import OperationsSettings from '@/components/ops/OperationsSettings';
 import LeadScoringSettings from '@/components/ops/LeadScoringSettings';
+import TenantTimezoneSettings from '@/components/ops/TenantTimezoneSettings';
 import ZohoIntegration from '@/components/integrations/ZohoIntegration';
 import { useAuth } from '@/lib/AuthContext';
 import { canUseAdmin, canViewOperations, featureEnabled } from '@/lib/rbac';
@@ -104,6 +105,9 @@ export default function SettingsPage() {
               </div>
             </Card>
           )}
+
+          {/* The organisation's default timezone: Tenant Admins only. */}
+          {hasRole('tenant_admin') && <TenantTimezoneSettings />}
 
           {settings && (
             <Card className="card-base p-5 space-y-4">
