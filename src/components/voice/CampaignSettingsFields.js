@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { checkCampaignSchedule } from '@/lib/api';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import TimezoneSelect from '@/components/shared/TimezoneSelect';
 
 // Mirrors CallingWindow / CallingConfig in app/schemas/requests/voice_campaigns.py.
 export const WEEKDAYS = [
@@ -40,21 +41,11 @@ export const withRetryDefaults = (config, defaults) => {
   return out;
 };
 
-export const browserTimeZone = () => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
-  } catch {
-    return 'Asia/Kolkata';
-  }
-};
+/** The tenant's default timezone (from /api/auth/me), the one a new campaign starts with; '' when unknown. */
+export const tenantTimeZone = (user) => user?.tenant?.default_timezone || '';
 
-const TIME_ZONES = (() => {
-  try {
-    return Intl.supportedValuesOf('timeZone');
-  } catch {
-    return ['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London', 'America/New_York'];
-  }
-})();
+/** `timezone` for a campaign body: the picked zone, or nothing (the backend then uses the tenant's). Never a guess. */
+export const timezoneField = (timeZone) => (timeZone?.trim() ? { timezone: timeZone.trim() } : {});
 
 // Offset (ms) of timeZone from UTC at the instant utcMs.
 const zoneOffset = (timeZone, utcMs) => {
@@ -164,14 +155,13 @@ export function ScheduleWarnings({ check }) {
 
 const Label = ({ children }) => <label className="text-xs font-medium text-muted-foreground">{children}</label>;
 
-export function TimeZoneField({ value, onChange }) {
+/** The campaign's timezone (the calling window and the start time are read in it). Submits the IANA id only. */
+export function TimeZoneField({ value, onChange, disabled = false }) {
   return (
     <div className="space-y-1.5">
       <Label>Timezone</Label>
-      <Input list="campaign-timezones" value={value} onChange={(e) => onChange(e.target.value)} placeholder="Asia/Kolkata" />
-      <datalist id="campaign-timezones">
-        {TIME_ZONES.map((tz) => <option key={tz} value={tz} />)}
-      </datalist>
+      <TimezoneSelect value={value} onChange={onChange} disabled={disabled} aria-label="Campaign timezone"
+        placeholder="The tenant's default timezone" />
     </div>
   );
 }
@@ -281,8 +271,10 @@ export function CallingConfigFields({ value, onChange, errors = {} }) {
 }
 
 /** Client-side check matching the backend rules; returns an error message or null. */
-export const validateSettings = ({ window, config, timeZone }) => {
-  if (!timeZone?.trim()) return 'Pick a timezone.';
+/** `zoneRequired`: a timezone must be picked (an edit, or a start time to convert); a new campaign without one gets
+ * the tenant's from the backend. */
+export const validateSettings = ({ window, config, timeZone, zoneRequired = true }) => {
+  if (zoneRequired && !timeZone?.trim()) return 'Pick a timezone.';
   if (window) {
     if (!window.days.length) return 'Pick at least one calling day.';
     if (!window.start_time || !window.end_time || window.end_time <= window.start_time) {

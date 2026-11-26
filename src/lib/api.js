@@ -147,6 +147,8 @@ export const initiateTenantOffboarding = (id, reason) => api.post(`/api/admin/te
 export const cancelTenantOffboarding = (id, reason) => api.post(`/api/admin/tenants/${id}/offboarding/cancel`, { reason });
 // Grant (true) or revoke (false) a tenant's Apollo Preview access → the tenant, with apollo_access_enabled.
 export const setTenantApolloAccess = (id, enabled, reason) => api.put(`/api/admin/tenants/${id}/apollo-access`, { enabled, reason });
+// Super Admin: the tenant's default timezone (IANA id), with a reason (step-up, audited). 400 for an unknown name.
+export const setTenantTimezone = (id, defaultTimezone, reason) => api.put(`/api/admin/tenants/${id}/timezone`, { default_timezone: defaultTimezone, reason });
 // Super Admin only: the Vapi phone numbers a tenant may attach to its assistants (nothing is sent to Vapi).
 export const listTenantPhoneNumbers = (tenantId) => api.get(`/api/admin/tenants/${tenantId}/phone-numbers`);
 export const addTenantPhoneNumber = (tenantId, data) => api.post(`/api/admin/tenants/${tenantId}/phone-numbers`, data);
@@ -169,6 +171,10 @@ export const getAgentCatalog = () => api.get('/api/v1/agents/catalog');
 // The tenant's business profile: Tenant Admins and Managers read, Tenant Admins replace it (PUT, every field).
 export const getBusinessProfile = () => api.get('/api/v1/business-profile');
 export const updateBusinessProfile = (profile) => api.put('/api/v1/business-profile', profile);
+// Tenant Admin: their own tenant's default timezone (audited). New campaigns default to it; existing ones keep theirs.
+export const updateOwnTenantTimezone = (defaultTimezone) => api.put('/api/v1/tenant-timezone', { default_timezone: defaultTimezone });
+// Every IANA timezone the API accepts: [{ id, label, offset_minutes, common }], common zones first.
+export const getTimezones = () => api.get('/api/v1/timezones');
 // The tenant's own phone numbers, read-only: [{ id, vapi_phone_number_id, phone_number (E.164 or null), label,
 // inbound_mode, assistant_name }].
 export const listOwnPhoneNumbers = () => api.get('/api/v1/phone-numbers');

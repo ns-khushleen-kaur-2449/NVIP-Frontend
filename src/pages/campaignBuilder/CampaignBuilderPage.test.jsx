@@ -4,6 +4,7 @@ import CampaignBuilderPage from '@/pages/campaignBuilder/CampaignBuilderPage';
 import * as api from '@/lib/api';
 import { USERS, renderWithAuth } from '@/test/renderWithAuth';
 import { pickToProspect } from '@/pages/Prospecting';
+import { resetTimezoneCache } from '@/components/shared/TimezoneSelect';
 
 jest.mock('@/lib/api', () => ({
   getProspects: jest.fn(),
@@ -15,6 +16,7 @@ jest.mock('@/lib/api', () => ({
   createVoiceCampaign: jest.fn(),
   getAgentInstance: jest.fn(),
   getAgentInstanceVersion: jest.fn(),
+  getTimezones: jest.fn(),
 }));
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
 const mockNavigate = jest.fn();
@@ -22,6 +24,7 @@ jest.mock('react-router-dom', () => ({ ...jest.requireActual('react-router-dom')
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetTimezoneCache();
   api.getProspects.mockResolvedValue({ data: { prospects: [
     { prospect_id: 'p-1', full_name: 'Asha Verma', phone: '+919876543210', source: 'Trade fair' },
     { prospect_id: 'p-2', full_name: 'Ravi Kumar', phone: '+919876543211', source: 'CRM import' },
@@ -30,6 +33,10 @@ beforeEach(() => {
   api.getCatalogItems.mockResolvedValue({ data: { items: [] } });
   api.checkCampaignSchedule.mockResolvedValue({ data: { warnings: [], retry_defaults: null } });
   api.createVoiceCampaign.mockResolvedValue({ data: { id: 'c-9', total_leads: 2 } });
+  api.getTimezones.mockResolvedValue({ data: [
+    { id: 'America/Los_Angeles', label: '(UTC−08:00) Pacific Time – America/Los_Angeles', offset_minutes: -480, common: true },
+    { id: 'Asia/Kolkata', label: '(UTC+05:30) India Standard Time – Asia/Kolkata', offset_minutes: 330, common: true },
+  ] });
   // The server preview (POST /api/campaigns/preview): one opening per lead, built by the server.
   api.previewCampaign.mockImplementation((body) => Promise.resolve({ data: {
     mode: 'own_assistant', first_message: `Server opening for ${body.prospect_id || 'nobody'}`, rendered_prompt: null,
@@ -135,4 +142,46 @@ test('shared assistants on: no assistant is chosen or sent', async () => {
   await user.click(await screen.findByRole('button', { name: 'Launch now' }));
   await waitFor(() => expect(api.createVoiceCampaign).toHaveBeenCalled());
   expect(api.createVoiceCampaign.mock.calls[0][0]).not.toHaveProperty('assistant_id');
+});
+
+describe('the campaign timezone', () => {
+  // The browser says Berlin; that must never reach the API.
+  let browserZone;
+  beforeEach(() => {
+    const real = Intl.DateTimeFormat.prototype.resolvedOptions;
+    browserZone = jest.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
+      .mockImplementation(function resolved() { return { ...real.call(this), timeZone: 'Europe/Berlin' }; });
+  });
+  afterEach(() => browserZone.mockRestore());
+
+  const launch = async (account) => {
+    const user = userEvent.setup();
+    renderWithAuth(<CampaignBuilderPage />, { user: account });
+    await user.click(await screen.findByRole('checkbox', { name: 'Select Asha Verma' }));
+    await user.click(screen.getByRole('button', { name: 'Next: Configure campaign' }));
+    await screen.findByRole('heading', { name: 'Campaign basics' });
+    await waitFor(() => expect(screen.getByLabelText(/Assistant that places the calls/)).toHaveValue('va-1'));
+    fill(/Campaign name/, 'Zones');
+    fill(/Why are we calling/, 'Hello.');
+    return user;
+  };
+
+  test("starts in the tenant's timezone and sends it, never the browser's", async () => {
+    const user = await launch({ ...USERS.manager, tenant: { tenant_id: 't-1', name: 'Acme', default_timezone: 'America/Los_Angeles' } });
+    expect(await screen.findByRole('combobox', { name: 'Campaign timezone' }))
+      .toHaveTextContent('(UTC−08:00) Pacific Time – America/Los_Angeles');
+    await user.click(screen.getByRole('button', { name: 'Next: Review and launch' }));
+    await user.click(await screen.findByRole('button', { name: 'Launch now' }));
+    await waitFor(() => expect(api.createVoiceCampaign).toHaveBeenCalled());
+    expect(api.createVoiceCampaign.mock.calls[0][0].timezone).toBe('America/Los_Angeles');
+  });
+
+  test("without a known tenant timezone none is sent (the backend uses the tenant's)", async () => {
+    const user = await launch(USERS.manager);
+    await user.click(screen.getByRole('button', { name: 'Next: Review and launch' }));
+    await user.click(await screen.findByRole('button', { name: 'Launch now' }));
+    await waitFor(() => expect(api.createVoiceCampaign).toHaveBeenCalled());
+    expect(api.createVoiceCampaign.mock.calls[0][0]).not.toHaveProperty('timezone');
+    expect(JSON.stringify(api.createVoiceCampaign.mock.calls[0][0])).not.toContain('Europe/Berlin');
+  });
 });

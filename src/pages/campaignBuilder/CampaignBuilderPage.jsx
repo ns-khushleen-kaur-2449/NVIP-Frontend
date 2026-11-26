@@ -10,7 +10,8 @@ import ImportLeadsDialog from '@/components/voice/ImportLeadsDialog';
 import { OfferPreview, PreflightProblems } from '@/components/voice/CampaignOfferFields';
 import {
   CallingConfigFields, CallingWindowFields, DEFAULT_CONFIG, ScheduleWarnings, TimeZoneField, announceCalendarSync,
-  apiErrorMessage, browserTimeZone, configErrors, useScheduleCheck, validateSettings, withRetryDefaults, zonedToIso,
+  apiErrorMessage, configErrors, tenantTimeZone, timezoneField, useScheduleCheck, validateSettings, withRetryDefaults,
+  zonedToIso,
 } from '@/components/voice/CampaignSettingsFields';
 import { CheckChip, LockedRules, Panel, Pill, SetupHeader, StepPills } from '@/components/setup/SetupUi';
 import useOfferPreview from '@/hooks/useOfferPreview';
@@ -193,7 +194,7 @@ function callShape(form, settings, defaults, sharedMode) {
   return {
     ...campaignBriefFields(form, { defaultQuestions: defaults.payload?.qualification_questions || [] }),
     ...(!sharedMode && settings.assistantId ? { assistant_id: settings.assistantId } : {}),
-    timezone: settings.timeZone.trim(),
+    ...timezoneField(settings.timeZone),
   };
 }
 
@@ -432,7 +433,7 @@ function ReviewStep({ form, settings, leads, checklist, limitConflicts, check, s
         <Stat label="Campaign" value={form.name || '—'} sub={`Goal: ${goalLabel(form.goal).toLowerCase()}`} />
         <Stat label="Leads" value={`${ready} ready`} sub={leads.length - ready ? `${leads.length - ready} skipped (no phone)` : 'none skipped'} />
         <Stat label="Calling hours" value={callWindow ? `${callWindow.start_time}–${callWindow.end_time}` : 'Any time in the bound'}
-          sub={callWindow ? `${callWindow.days.join(', ')} · ${settings.timeZone}` : settings.timeZone} />
+          sub={`${callWindow ? `${callWindow.days.join(', ')} · ` : ''}${settings.timeZone || "Tenant's timezone"}`} />
         <Stat label="Attempts" value={`Up to ${settings.config.max_attempts_per_lead} per lead`} sub={`Concurrency ${settings.config.max_concurrent_calls}`} />
       </div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -477,7 +478,7 @@ function ReviewStep({ form, settings, leads, checklist, limitConflicts, check, s
             {start.mode === 'scheduled' && (
               <div className="grid grid-cols-2 gap-3" data-field="scheduledAt">
                 <TextField label="Date" type="date" value={start.date} onChange={(date) => setStart((s) => ({ ...s, date }))} />
-                <TextField label={`Time (${settings.timeZone})`} type="time" value={start.time} onChange={(time) => setStart((s) => ({ ...s, time }))} />
+                <TextField label={`Time (${settings.timeZone || 'pick a timezone'})`} type="time" value={start.time} onChange={(time) => setStart((s) => ({ ...s, time }))} />
               </div>
             )}
             <PreflightProblems problems={problems} />
@@ -510,7 +511,12 @@ export default function CampaignBuilderPage() {
   const [catalog, setCatalog] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
   const [form, setForm] = useState(() => emptyBriefForm());
-  const [settings, setSettings] = useState({ assistantId: '', timeZone: browserTimeZone(), callingWindow: null, config: DEFAULT_CONFIG });
+  // A new campaign starts in the tenant's timezone (from /api/auth/me); unknown: none is sent and the backend uses it.
+  const [settings, setSettings] = useState({ assistantId: '', timeZone: tenantTimeZone(user), callingWindow: null, config: DEFAULT_CONFIG });
+  useEffect(() => {
+    const zone = tenantTimeZone(user);
+    if (zone) setSettings((s) => (s.timeZone ? s : { ...s, timeZone: zone }));
+  }, [user]);
   const [start, setStart] = useState({ mode: 'now', date: '', time: '' });
   const [errors, setErrors] = useState({});
   const [problems, setProblems] = useState(null);
@@ -590,7 +596,8 @@ export default function CampaignBuilderPage() {
     if (!sharedMode && !settings.assistantId) found.assistant = 'Pick the assistant that will make the calls.';
     if (!form.callPurpose.trim()) found.callPurpose = 'Say why the agent is calling.';
     if (form.offer.enabled && !form.offer.text.trim()) found.offerText = 'Write the offer, or turn it off.';
-    const settingsProblem = validateSettings({ window: settings.callingWindow, config: settings.config, timeZone: settings.timeZone });
+    const settingsProblem = validateSettings({ window: settings.callingWindow, config: settings.config, timeZone: settings.timeZone,
+      zoneRequired: start.mode === 'scheduled' });
     if (settingsProblem) found.config = settingsProblem;
     return found;
   };
@@ -629,7 +636,7 @@ export default function CampaignBuilderPage() {
       // The campaign API requires a description: the call purpose is what the campaign is about.
       description: form.callPurpose.trim(),
       ...(!sharedMode ? { assistant_id: settings.assistantId } : {}),
-      timezone: settings.timeZone.trim(),
+      ...timezoneField(settings.timeZone),
       calling_window: settings.callingWindow,
       calling_config: settings.config,
       start: start.mode,

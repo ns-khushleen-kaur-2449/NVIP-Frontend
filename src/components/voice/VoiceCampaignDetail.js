@@ -10,7 +10,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { canManageCampaigns, canOperate } from '@/lib/rbac';
-import { formatDateTime } from '@/lib/ops';
+import { campaignTimeZone, formatDateTime } from '@/lib/ops';
 import { formatDuration } from '@/lib/voiceDashboard';
 import { callStatusMeta } from '@/lib/callOutcome';
 import { campaignBanner, insideWindow } from '@/lib/campaignView';
@@ -79,7 +79,8 @@ function DateTimeFields({ date, time, setDate, setTime, zone }) {
 }
 
 function CampaignActionDialog({ action, campaign, onClose, onDone, onRefused }) {
-  const zone = campaign.timezone || 'Asia/Kolkata';
+  const { user } = useAuth();
+  const zone = campaignTimeZone(campaign, user);
   const start = isoToZoned(campaign.scheduled_at, zone);
   const [date, setDate] = useState(start.date);
   const [time, setTime] = useState(start.time);
@@ -145,7 +146,8 @@ function CampaignActionDialog({ action, campaign, onClose, onDone, onRefused }) 
 
 function ContactActionDialog({ action, contact, campaign, onClose, onDone }) {
   const meta = CONTACT_ACTIONS[action];
-  const zone = campaign.timezone || 'Asia/Kolkata';
+  const { user } = useAuth();
+  const zone = campaignTimeZone(campaign, user);
   const initial = isoToZoned(contact.next_attempt_at || new Date().toISOString(), zone);
   const [phone, setPhone] = useState('');
   const [date, setDate] = useState(initial.date);
@@ -248,7 +250,7 @@ function ContactsTab({ campaign, contacts, user, onChanged, onOpenCall }) {
     return sort === 'queue' ? list : [...list].sort(SORTS[sort].fn);
   }, [contacts, status, sort]);
   const operator = canOperate(user);
-  const zone = campaign.timezone || 'Asia/Kolkata';
+  const zone = campaignTimeZone(campaign, user);
 
   return (
     <div className="space-y-3">
@@ -389,7 +391,7 @@ export default function VoiceCampaignDetail() {
   const refresh = usePolling(load, REFRESH_MS, [load]);
 
   if (callId) return <div className="p-4"><CallLogDetail callId={callId} onBack={() => setCallId(null)} /></div>;
-  const zone = campaign?.timezone || 'Asia/Kolkata';
+  const zone = campaignTimeZone(campaign, user);
   const banner = campaignBanner(campaign, zone);
   const operator = canOperate(user);
   // A Super Admin reads campaigns but cannot run or edit them (the backend answers 403).

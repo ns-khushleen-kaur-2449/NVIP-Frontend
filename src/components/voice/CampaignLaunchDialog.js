@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createVoiceCampaign } from '@/lib/api';
+import { AuthContext } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, Play, CalendarClock, Users, FileSpreadsheet } from 'lucide-react';
 import {
   CallingConfigFields, CallingWindowFields, DEFAULT_CONFIG, ScheduleWarnings, TimeZoneField,
-  announceCalendarSync, apiErrorMessage, browserTimeZone, configErrors, useScheduleCheck, validateSettings,
+  announceCalendarSync, apiErrorMessage, configErrors, tenantTimeZone, timezoneField, useScheduleCheck, validateSettings,
   withRetryDefaults, zonedToIso,
 } from './CampaignSettingsFields';
 import CampaignOfferFields, { PreflightProblems } from './CampaignOfferFields';
@@ -41,7 +42,9 @@ export default function CampaignLaunchDialog({ open, onOpenChange, source, assis
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [assistantId, setAssistantId] = useState('');
-  const [timeZone, setTimeZone] = useState(browserTimeZone());
+  // A new campaign starts in the tenant's timezone (from /api/auth/me); unknown: none is sent and the backend uses it.
+  const tenantZone = tenantTimeZone(useContext(AuthContext)?.user);
+  const [timeZone, setTimeZone] = useState(tenantZone);
   const [startMode, setStartMode] = useState('now');
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -56,8 +59,9 @@ export default function CampaignLaunchDialog({ open, onOpenChange, source, assis
   useEffect(() => {
     if (!open) return;
     setAssistantId((prev) => prev || defaultAssistantId || assistants[0]?.vapi_assistant_id || '');
+    setTimeZone((prev) => prev || tenantZone);
     setError('');
-  }, [open, defaultAssistantId, assistants]);
+  }, [open, defaultAssistantId, assistants, tenantZone]);
 
   const [tried, setTried] = useState(false);
   let plannedStart = null;
@@ -73,7 +77,7 @@ export default function CampaignLaunchDialog({ open, onOpenChange, source, assis
 
   const reset = () => {
     setName(''); setDescription(''); setNotes(''); setStartMode('now'); setStartDate(''); setStartTime('');
-    setCallingWindow(null); setConfig(withRetryDefaults(DEFAULT_CONFIG, check.retryDefaults)); setTimeZone(browserTimeZone());
+    setCallingWindow(null); setConfig(withRetryDefaults(DEFAULT_CONFIG, check.retryDefaults)); setTimeZone(tenantZone);
     setOffer(offerFormFrom(null)); setProblems(null);
     setError(''); setTried(false);
   };
@@ -86,7 +90,7 @@ export default function CampaignLaunchDialog({ open, onOpenChange, source, assis
       (!assistantId && 'Pick the assistant that will make the calls.') ||
       (offer.announce && (!offer.offering_name.trim() || !offer.offer_text.trim())
         && `${OFFER_TOGGLE_LABEL} is on: fill in the offer name and offer details, or turn it off.`) ||
-      validateSettings({ window: callingWindow, config, timeZone });
+      validateSettings({ window: callingWindow, config, timeZone, zoneRequired: startMode === 'scheduled' });
     if (problem) { setError(problem); return; }
 
     let scheduledAt = null;
@@ -109,7 +113,7 @@ export default function CampaignLaunchDialog({ open, onOpenChange, source, assis
       description: description.trim(),
       notes: notes.trim() || null,
       assistant_id: assistantId,
-      timezone: timeZone.trim(),
+      ...timezoneField(timeZone),
       calling_window: callingWindow,
       calling_config: config,
       start: startMode,

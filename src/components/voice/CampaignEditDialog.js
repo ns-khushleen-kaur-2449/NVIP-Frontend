@@ -11,7 +11,8 @@ import { toast } from 'sonner';
 import { Loader2, Search } from 'lucide-react';
 import {
   CallingConfigFields, CallingWindowFields, DEFAULT_CONFIG, ScheduleWarnings, TimeZoneField,
-  announceCalendarSync, apiErrorMessage, configErrors, isoToZoned, useScheduleCheck, validateSettings, zonedToIso,
+  announceCalendarSync, apiErrorMessage, configErrors, isoToZoned, timezoneField, useScheduleCheck, validateSettings,
+  zonedToIso,
 } from './CampaignSettingsFields';
 
 const OPEN_STATUSES = ['draft', 'scheduled'];
@@ -34,7 +35,8 @@ export default function CampaignEditDialog({ campaign, open, onOpenChange, onSav
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
-  const [timeZone, setTimeZone] = useState('Asia/Kolkata');
+  // The campaign's own stored timezone: never the tenant's or the browser's.
+  const [timeZone, setTimeZone] = useState('');
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [callingWindow, setCallingWindow] = useState(null);
@@ -50,8 +52,9 @@ export default function CampaignEditDialog({ campaign, open, onOpenChange, onSav
 
   useEffect(() => {
     if (!open || !campaign) return;
-    const tz = campaign.timezone || 'Asia/Kolkata';
-    const zoned = isoToZoned(campaign.scheduled_at, tz);
+    const tz = campaign.timezone || '';
+    // Without a stored zone (old rows) the start cannot be read back: it waits for a picked zone.
+    const zoned = tz ? isoToZoned(campaign.scheduled_at, tz) : { date: '', time: '' };
     setName(campaign.name || '');
     setDescription(campaign.description || '');
     setNotes(campaign.notes || '');
@@ -119,8 +122,9 @@ export default function CampaignEditDialog({ campaign, open, onOpenChange, onSav
       if (live) body.reason = reason.trim();
     }
     if (isOpen) {
-      body.timezone = timeZone.trim();
+      Object.assign(body, timezoneField(timeZone));
       if (startDate && startTime) {
+        if (!timeZone.trim()) { toast.error('Pick a timezone.'); return; }
         let iso;
         try {
           iso = zonedToIso(startDate, startTime, timeZone.trim());
