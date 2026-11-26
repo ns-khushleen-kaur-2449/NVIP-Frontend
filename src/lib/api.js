@@ -211,8 +211,20 @@ export const listHiringJobs = (params) => api.get(`${HIRING}/jobs`, { params });
 export const getHiringJob = (id) => api.get(`${HIRING}/jobs/${id}`);
 export const createHiringJob = (data) => api.post(`${HIRING}/jobs`, data);
 export const updateHiringJob = (id, data) => api.patch(`${HIRING}/jobs/${id}`, data);
+// Intake questions: `[{ text, section_key }]` (section_key is one of the resume sections, or null for "the AI decides").
 export const replaceHiringQuestions = (id, questions) =>
-  api.put(`${HIRING}/jobs/${id}/questions`, { questions: questions.map((text) => ({ question_text: text })) });
+  api.put(`${HIRING}/jobs/${id}/questions`, {
+    questions: questions.map(({ text, section_key: sectionKey }) => ({ question_text: text, section_key: sectionKey || null })),
+  });
+// The AI writes up to `count` (1 to 15) screening questions from the job's description: `{ questions, requested }`.
+// A proposal only, nothing is saved. 422 no description (detail.code "jd_required"), 503 no AI set up, 502 AI failed.
+export const generateHiringScreeningQuestions = (id, count) =>
+  api.post(`${HIRING}/jobs/${id}/screening-questions/generate`, { count });
+// Audio-screening questions: `[{ text, source }]` with source "manual" or "ai". An empty list clears them.
+export const replaceHiringScreeningQuestions = (id, questions) =>
+  api.put(`${HIRING}/jobs/${id}/screening-questions`, {
+    questions: questions.map(({ text, source }) => ({ question_text: text, source: source || 'manual' })),
+  });
 export const listHiringCandidates = (params) => api.get(`${HIRING}/candidates`, { params });
 export const createHiringCandidate = (data) => api.post(`${HIRING}/candidates`, data);
 export const updateHiringCandidate = (id, data) => api.patch(`${HIRING}/candidates/${id}`, data);
@@ -221,6 +233,53 @@ export const getHiringBooking = (id) => api.get(`${HIRING}/bookings/${id}`);
 // The same idempotency_key again returns the first booking (200) instead of a second one.
 export const createHiringBooking = (data) => api.post(`${HIRING}/bookings`, data);
 export const getHiringCandidate = (id) => api.get(`${HIRING}/candidates/${id}`);
+// Resumes. Upload one or up to 30 (PDF or Word, 5 MB each) for a job: a candidate is made for each usable file and its
+// details are read and its resume scored in the background. `{ accepted, rejected, results: [{ filename, status,
+// candidate_id, code, message }] }`: a file that cannot be used is rejected by name and the rest go ahead.
+export const uploadHiringResumes = (jobId, files) => {
+  const form = new FormData();
+  form.append('job_id', jobId);
+  files.forEach((file) => form.append('files', file));
+  return api.post(`${HIRING}/resumes`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
+// Add or replace one candidate's uploaded resume (202: it is read and scored in the background).
+export const attachHiringResume = (candidateId, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post(`${HIRING}/candidates/${candidateId}/resume`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
+export const getHiringResume = (candidateId) => api.get(`${HIRING}/candidates/${candidateId}/resume`);
+// The uploaded file itself, as a Blob to save.
+export const downloadHiringResume = (candidateId) =>
+  api.get(`${HIRING}/candidates/${candidateId}/resume/file`, { responseType: 'blob' });
+// Every score of a candidate: `[{ kind, status, score, reason, bullets, categories, weights, failure_message }]`.
+export const listHiringScores = (candidateId) => api.get(`${HIRING}/candidates/${candidateId}/scores`);
+// Score the uploaded resume again (the first try failed, or the job's description was added).
+export const retryHiringResumeScore = (candidateId) =>
+  api.post(`${HIRING}/candidates/${candidateId}/scores/resume/retry`);
+// Where a candidate is in the pipeline: `{ stage, stage_label, next_stage, next_label, can_advance, blockers, warnings,
+// decisions, intake_completed, history }`. Blockers stop advancing; warnings are shown and may be accepted.
+export const getHiringPipeline = (candidateId) => api.get(`${HIRING}/candidates/${candidateId}/pipeline`);
+// The resume the AI wrote from the intake call: `{ status, failure_message, sections, has_pdf }`; 404 until one exists.
+export const getHiringAiResume = (candidateId) => api.get(`${HIRING}/candidates/${candidateId}/ai-resume`);
+export const downloadHiringAiResume = (candidateId) =>
+  api.get(`${HIRING}/candidates/${candidateId}/ai-resume/file`, { responseType: 'blob' });
+// Write the AI resume and the call's scores again (the first try failed).
+export const rebuildHiringAiResume = (candidateId) => api.post(`${HIRING}/candidates/${candidateId}/ai-resume/rebuild`);
+// Every call to a candidate, newest first: result, answers, the questions it was placed with, `has_transcript` and
+// `has_recording`, and `booking_id` to read them through the booking's transcript and recording routes.
+export const listHiringCandidateCalls = (candidateId) => api.get(`${HIRING}/candidates/${candidateId}/calls`);
+// Move to the next round. `expectedStage` refuses the move if someone else already moved the candidate (a stale screen).
+export const advanceHiringCandidate = (candidateId, expectedStage, note) =>
+  api.post(`${HIRING}/candidates/${candidateId}/advance`, { expected_stage: expectedStage, note: note || null });
+// A person's final decision: "selected" (from the last round) or "rejected" (from any round).
+export const decideHiringCandidate = (candidateId, decision, expectedStage, note) =>
+  api.post(`${HIRING}/candidates/${candidateId}/decision`,
+    { decision, expected_stage: expectedStage, note: note || null });
+// Place the intake call for a candidate (a booking is made if there is none open). One key per click, kept only to retry
+// that click. 201 placed; 200 that key's call again; 202 sent but not confirmed; 409 refused (detail.code).
+export const callHiringCandidate = (candidateId, idempotencyKey) =>
+  api.post(`${HIRING}/candidates/${candidateId}/calls`, { round: 'intake', idempotency_key: idempotencyKey });
 // Place the booking's intake call. One key per click, kept only to retry that click: the same key never dials twice.
 // 201 placed; 200 that key's call again; 202 sent but not confirmed; 409 refused (detail.code); 502/503 not placed.
 export const startHiringCall = (bookingId, idempotencyKey) =>

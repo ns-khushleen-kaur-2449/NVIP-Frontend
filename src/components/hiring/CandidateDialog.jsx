@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import OpsButton from '@/components/ops/OpsButton';
 import { CONTROL, Field, FormError } from '@/components/hiring/HiringBits';
 import { errorMessage } from '@/hooks/useApiAction';
-import { createHiringCandidate, updateHiringCandidate } from '@/lib/api';
-import { CONSENT_STATUS, candidateName, candidateProblem } from '@/lib/hiring';
+import { createHiringCandidate, listHiringJobs, updateHiringCandidate } from '@/lib/api';
+import { CONSENT_STATUS, candidateName, candidateProblem, readFromResume } from '@/lib/hiring';
 
 const FIELDS = ['first_name', 'last_name', 'phone_number', 'email', 'consent_status', 'consent_source'];
 const blank = { first_name: '', last_name: '', phone_number: '', email: '', consent_status: 'unknown', consent_source: '' };
@@ -25,17 +25,27 @@ function changes(form, candidate) {
   return body;
 }
 
-/** Add a candidate, or edit `candidate`.  Consent is recorded with who recorded it and when (by the backend). */
+/**
+ * Add a candidate by typing their details, or edit `candidate`.  Consent is recorded with who recorded it and when (by
+ * the backend). A new candidate may be given a job now; a candidate with no job can be linked to one here (a candidate
+ * already on a job stays on it). Details read from a resume are marked, and become the tenant's own once edited.
+ */
 export default function CandidateDialog({ open, candidate = null, onOpenChange, onSaved }) {
   const [form, setForm] = useState(blank);
+  const [jobs, setJobs] = useState([]);
+  const [jobId, setJobId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const linked = Boolean(candidate?.job_id);
 
   useEffect(() => {
-    if (open) {
-      setForm(formOf(candidate));
-      setError(null);
-    }
+    if (!open) return undefined;
+    let cancelled = false;
+    setForm(formOf(candidate));
+    setJobId('');
+    setError(null);
+    listHiringJobs({ limit: 200 }).then(({ data }) => { if (!cancelled) setJobs(data); }).catch(() => {});
+    return () => { cancelled = true; };
   }, [open, candidate]);
 
   const set = (field) => (event) => setForm((f) => ({ ...f, [field]: event.target.value }));
@@ -43,12 +53,13 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
   const submit = async (event) => {
     event.preventDefault();
     if (busy) return;
-    const problem = candidateProblem(form);
+    const problem = candidateProblem(form, Boolean(candidate && !candidate.phone_number));
     if (problem) {
       setError(problem);
       return;
     }
     const body = changes(form, candidate);
+    if (jobId && !linked) body.job_id = jobId;
     if (candidate && !Object.keys(body).length) {
       onOpenChange(false);
       return;
@@ -83,7 +94,13 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
               {(id) => <input id={id} value={form.last_name} onChange={set('last_name')} maxLength={120} className={CONTROL} />}
             </Field>
           </div>
-          <Field label="Phone number" required hint="Any format. Without a country code, your organisation's region is used.">
+          {candidate && !candidate.phone_number && (
+            <p className="text-xs text-muted-foreground">
+              No phone number was found in the resume. Add one to be able to call this candidate.
+            </p>
+          )}
+          <Field label="Phone number" required={!candidate || Boolean(candidate.phone_number)}
+            hint="Any format. Without a country code, your organisation's region is used.">
             {(id) => <input id={id} type="tel" value={form.phone_number} onChange={set('phone_number')} maxLength={32}
               className={CONTROL} />}
           </Field>
@@ -103,6 +120,24 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
                 className={CONTROL} placeholder="Application form" />}
             </Field>
           </div>
+          {linked ? (
+            <p className="text-sm"><span className="text-muted-foreground">Job: </span>{candidate.job_title || 'Linked'}</p>
+          ) : (
+            <Field label="Job" hint={candidate ? 'Link this candidate to a job so their resume can be scored against it.'
+              : 'Optional. Resumes are scored against a candidate’s job.'}>
+              {(id) => (
+                <select id={id} value={jobId} onChange={(e) => setJobId(e.target.value)} className={CONTROL}>
+                  <option value="">No job yet</option>
+                  {jobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
+                </select>
+              )}
+            </Field>
+          )}
+          {candidate && ['first_name', 'last_name', 'email', 'phone_number'].some((field) => readFromResume(candidate, field)) && (
+            <p className="text-xs text-muted-foreground">
+              Details marked "From resume" in the list were read by the AI. Check them; once you edit one it is yours.
+            </p>
+          )}
           {candidate && (
             <p className="text-xs text-muted-foreground">A consent change is saved with your name and the time.</p>
           )}

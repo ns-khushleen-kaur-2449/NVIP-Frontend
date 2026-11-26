@@ -40,15 +40,18 @@ function CallQuestions({ call }) {
   );
 }
 
-/** One call attempt: what happened, the interview result, its questions, and its transcript and recording. */
-export default function CallCard({ bookingId, call, number }) {
+/**
+ * One call attempt: what happened, the interview result, its questions, and its transcript and recording.
+ * `title` names it when the card is not on its booking's page (for example, on a candidate's profile).
+ */
+export default function CallCard({ bookingId, call, number, title: given = null }) {
   const status = statusOf(CALL_STATUS, call.status);
   const outcome = callOutcome(call);
   const result = interviewResult(call);
   const problem = callProblem(call);
   const reviewReason = resultProblem(call);
   const review = reviewReason ? `Needs review: ${reviewReason}` : null; // one string: one text node
-  const title = `Call ${number}`;
+  const title = given || `Call ${number}`;
 
   return (
     <article aria-label={title} data-testid={`call-${call.id}`}

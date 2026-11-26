@@ -12,6 +12,9 @@ const SEARCH_DELAY_MS = 300;
 /**
  * Book a candidate's intake call for an open job. One key per opening of the dialog, kept while it is retried, so
  * a repeated click or a retry after a lost answer makes one booking (the backend returns the first one).
+ *
+ * Only the candidates on the chosen job are offered (a candidate belongs to one job), so a job is chosen first and the
+ * search looks inside that job's candidates.
  */
 export default function BookingDialog({ open, jobs, onOpenChange, onCreated }) {
   const [jobId, setJobId] = useState('');
@@ -34,24 +37,34 @@ export default function BookingDialog({ open, jobs, onOpenChange, onCreated }) {
   }, [open]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    setCandidateId('');
+    setSearch('');
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!open || !jobId) {
+      setCandidates([]);
+      return undefined;
+    }
     let cancelled = false;
     const timer = setTimeout(() => {
-      listHiringCandidates({ q: search.trim() || undefined, limit: 20 })
+      listHiringCandidates({ job_id: jobId, q: search.trim() || undefined, limit: 50 })
         .then((response) => { if (!cancelled) setCandidates(response.data); })
         .catch(() => { if (!cancelled) setCandidates([]); });
     }, search ? SEARCH_DELAY_MS : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [open, search]);
+  }, [open, search, jobId]);
 
   const job = openJobs.find((j) => j.id === jobId);
   const candidate = candidates.find((c) => c.id === candidateId);
   // Plain strings: an <option> may hold only text.
   const choices = candidates.map((c) => ({
     id: c.id,
-    label: `${candidateName(c)} · ${c.phone_number} · consent ${statusOf(CONSENT_STATUS, c.consent_status).label.toLowerCase()}`,
+    label: `${candidateName(c)} · ${c.phone_number || 'no phone number'} · consent ${statusOf(CONSENT_STATUS, c.consent_status).label.toLowerCase()}`,
   }));
-  const placeholder = candidates.length ? 'Choose a candidate' : 'No matching candidates';
+  const placeholder = !jobId ? 'Choose a job first'
+    : candidates.length ? 'Choose a candidate'
+      : search.trim() ? 'No matching candidates on this job' : 'No candidates on this job yet';
 
   const submit = async (event) => {
     event.preventDefault();
@@ -93,13 +106,16 @@ export default function BookingDialog({ open, jobs, onOpenChange, onCreated }) {
           {job && job.question_count === 0 && (
             <p className="text-xs text-[color:var(--ops-warn)]">This job has no questions yet: add them before calling.</p>
           )}
-          <Field label="Find a candidate">
+          <Field label="Find a candidate" hint={jobId ? 'Searches the candidates on this job.' : undefined}>
             {(id) => <input id={id} type="search" value={search} onChange={(e) => setSearch(e.target.value)}
-              className={CONTROL} placeholder="Name, phone or email" />}
+              className={CONTROL} placeholder="Name, phone or email" disabled={!jobId} />}
           </Field>
-          <Field label="Candidate" required>
+          <Field label="Candidate" required
+            hint={jobId && !candidates.length && !search.trim()
+              ? 'Upload their resumes on the Candidates tab, or link a candidate to this job there.' : undefined}>
             {(id) => (
-              <select id={id} value={candidateId} onChange={(e) => setCandidateId(e.target.value)} className={CONTROL}>
+              <select id={id} value={candidateId} onChange={(e) => setCandidateId(e.target.value)} className={CONTROL}
+                disabled={!jobId}>
                 <option value="">{placeholder}</option>
                 {choices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
               </select>
@@ -108,6 +124,11 @@ export default function BookingDialog({ open, jobs, onOpenChange, onCreated }) {
           {candidate && candidate.consent_status !== 'granted' && (
             <p className="text-xs text-[color:var(--ops-warn)]">
               Consent is not granted, so this candidate cannot be called until it is.
+            </p>
+          )}
+          {candidate && !candidate.phone_number && (
+            <p className="text-xs text-[color:var(--ops-warn)]">
+              This candidate has no phone number, so they cannot be called until one is added.
             </p>
           )}
           <FormError>{error}</FormError>
