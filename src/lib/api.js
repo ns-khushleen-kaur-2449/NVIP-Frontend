@@ -233,6 +233,13 @@ export const rebaseAgentInstanceDraft = (agentType, version) => api.post(`${inst
 // F-08: the call this agent would make with version `version_n` (default: open draft, else published), built by the
 // server's own call code. body: { version_n?, prospect_id?, sample_lead?: { first_name, company, timezone, notes } }.
 export const previewAgentInstance = (agentType, body = {}) => api.post(`${instancePath(agentType)}/preview`, body);
+// The outbound opening line in another language (sdr_outbound only; saves nothing; a translation can take ~5 s).
+// body: { language, current_opening_line? } -> { language, opening_line, source: "template" | "translated",
+// fallback_reason, current_is_default, variables, unknown_variables, tips: { target, en }, example }.
+export const suggestOpeningLine = (agentType, body) => api.post(`${instancePath(agentType)}/opening-line/suggest`, body);
+// -> { language, tips: { target, en }, example, template, allowed_variables, recommended_variables, max_length }.
+export const getOpeningLineGuide = (agentType, language) =>
+  api.get(`${instancePath(agentType)}/opening-line/guide`, { params: { language } });
 // A new draft copying an older version.
 export const restoreAgentInstanceVersion = (agentType, version) =>
   api.post(`${instancePath(agentType)}/versions/${version}/restore`);
