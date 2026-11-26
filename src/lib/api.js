@@ -335,6 +335,10 @@ export const startRealEstateCall = (data) => api.post(`${REAL_ESTATE}/calls`, da
 export const getRealEstateKnowledgeBase = () => api.get(`${REAL_ESTATE}/knowledge-base`);
 export const saveRealEstateKnowledgeBase = (knowledgeBase) => api.put(`${REAL_ESTATE}/knowledge-base`,
   { knowledge_base: knowledgeBase });
+// Every saved version, newest first: { version, knowledge_base, saved_at, saved_by, current, restored_from }.
+export const listRealEstateKnowledgeBaseVersions = () => api.get(`${REAL_ESTATE}/knowledge-base/versions`);
+// Calls use that version from now on (copied as a new version, so the history is kept). Answers like GET.
+export const applyRealEstateKnowledgeBaseVersion = (version) => api.post(`${REAL_ESTATE}/knowledge-base/versions/${version}/use`);
 export const getRealEstateCallTranscript = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/transcript`);
 export const getRealEstateCallRecording = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/recording`);
 // Users the caller may see (was /api/auth/users, which never existed).

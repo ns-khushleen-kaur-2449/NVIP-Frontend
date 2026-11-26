@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { RealEstateRoute } from '@/pages/realEstate/RealEstateAgent';
@@ -15,11 +15,18 @@ jest.mock('@/lib/api', () => ({
   getRealEstateCallRecording: jest.fn(),
   getRealEstateKnowledgeBase: jest.fn(),
   saveRealEstateKnowledgeBase: jest.fn(),
+  listRealEstateKnowledgeBaseVersions: jest.fn(),
+  applyRealEstateKnowledgeBaseVersion: jest.fn(),
 }));
 
 const AT = '2026-11-18T09:00:00Z';
 const SAVED = { knowledge_base: 'Oakwood floors from 1.15 Cr.', version: 3, saved_at: AT, last_used: 'Old notes' };
 const NOTHING_SAVED = { knowledge_base: null, version: null, saved_at: null, last_used: null };
+const VERSIONS = [
+  { version: 3, knowledge_base: 'Oakwood floors from 1.15 Cr.', saved_at: AT, saved_by: 'Asha Admin', current: true, restored_from: null },
+  { version: 2, knowledge_base: null, saved_at: AT, saved_by: 'Asha Admin', current: false, restored_from: null },
+  { version: 1, knowledge_base: 'Palm Springs villas', saved_at: AT, saved_by: null, current: false, restored_from: null },
+];
 const CALL = {
   id: 'r-1', lead_name: 'Asha Rao', phone_number: '+919812345670', has_knowledge_base: true, status: 'ended',
   outcome: 'answered', failure_code: null, requested_by: 2, dialed_at: AT, ended_at: AT, created_at: AT, updated_at: AT,
@@ -37,6 +44,9 @@ beforeEach(() => {
   api.getRealEstateKnowledgeBase.mockResolvedValue({ data: SAVED });
   api.saveRealEstateKnowledgeBase.mockImplementation(async (text) => ({
     data: { knowledge_base: text, version: 4, saved_at: AT, last_used: 'Old notes' } }));
+  api.listRealEstateKnowledgeBaseVersions.mockResolvedValue({ data: VERSIONS });
+  api.applyRealEstateKnowledgeBaseVersion.mockResolvedValue({
+    data: { knowledge_base: 'Palm Springs villas', version: 4, saved_at: AT, last_used: 'Old notes' } });
 });
 
 function open(role, path = '/real_estate_agent') {
@@ -202,6 +212,36 @@ describe('Real Estate: the knowledge base tab', () => {
     expect(await screen.findByText('Oakwood floors from 1.15 Cr.')).toBeInTheDocument();
     expect(screen.queryByLabelText(/Knowledge base/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Save/ })).not.toBeInTheDocument();
+  });
+
+  test('every version is listed, newest first, with the one in use marked', async () => {
+    const user = userEvent.setup();
+    open('tenant_admin', PATH);
+    const newest = await screen.findByTestId('knowledge-base-version-3');
+    expect(newest).toHaveTextContent('Version 3');
+    expect(newest).toHaveTextContent('by Asha Admin');
+    expect(newest).toHaveTextContent('In use');
+    expect(screen.getByTestId('knowledge-base-version-2')).toHaveTextContent('empty');
+    expect(screen.queryByText('Palm Springs villas')).not.toBeInTheDocument(); // closed until opened
+    await user.click(screen.getByRole('button', { name: /Version 1/ }));
+    expect(screen.getByText('Palm Springs villas')).toBeInTheDocument();
+  });
+
+  test('an earlier version can be put back in use, and the editor shows it', async () => {
+    const user = userEvent.setup();
+    open('tenant_admin', PATH);
+    const first = await screen.findByTestId('knowledge-base-version-1');
+    await user.click(within(first).getByRole('button', { name: 'Use this version' }));
+    await waitFor(() => expect(api.applyRealEstateKnowledgeBaseVersion).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(screen.getByLabelText(/Knowledge base/)).toHaveValue('Palm Springs villas'));
+    expect(within(screen.getByTestId('knowledge-base-version-3')).queryByRole('button', { name: 'Use this version' }))
+      .not.toBeInTheDocument(); // the one in use has no button
+  });
+
+  test('a rep sees the versions but cannot switch them', async () => {
+    open('rep', PATH);
+    expect(await screen.findByTestId('knowledge-base-version-1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use this version' })).not.toBeInTheDocument();
   });
 
   test('one that is too long cannot be saved', async () => {
