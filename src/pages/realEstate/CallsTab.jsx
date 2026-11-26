@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarCheck, CalendarClock } from 'lucide-react';
 import RelativeTime from '@/components/ops/RelativeTime';
@@ -9,20 +9,25 @@ import { listRealEstateCalls } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { PERMISSIONS } from '@/lib/rbac';
 import {
-  CALL_STATUS, IDLE_REFRESH_MS, MAX_ROWS, PAGE_SIZE, callOutcome, callPath, statusOf,
+  CALL_STATUS, IDLE_REFRESH_MS, LIVE_REFRESH_MS, MAX_ROWS, PAGE_SIZE, callOutcome, callPath, isCallActive, statusOf,
 } from '@/lib/realEstate';
 import useHiringData from '../hiring/useHiringData';
 import { RealEstateError } from '@/components/realEstate/RealEstateBits';
 
-/** Every call the organisation placed, newest first; refreshed every 30 s. */
+/** Every call the organisation placed, newest first; refreshed every 5 s while a call runs, otherwise every 30 s. */
 export default function CallsTab() {
   const { can } = useAuth();
   const [q, setQ] = useState('');
   const [callStatus, setCallStatus] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [refreshMs, setRefreshMs] = useState(IDLE_REFRESH_MS);
   const { data: calls, error, reload } = useHiringData(
     () => listRealEstateCalls({ q: q.trim() || undefined, status: callStatus || undefined, limit }),
-    [q, callStatus, limit], { pollMs: IDLE_REFRESH_MS });
+    [q, callStatus, limit], { pollMs: refreshMs });
+
+  useEffect(() => {
+    if (calls) setRefreshMs(calls.some(isCallActive) ? LIVE_REFRESH_MS : IDLE_REFRESH_MS);
+  }, [calls]);
   const filtered = Boolean(q.trim() || callStatus);
 
   return (
