@@ -15,6 +15,7 @@ export const REAL_ESTATE_AGENT_KEY = 'real_estate';
 export const REAL_ESTATE_PATH = '/real_estate_agent';
 export const NEW_CALL_PATH = `${REAL_ESTATE_PATH}/new`;
 export const CALLS_PATH = `${REAL_ESTATE_PATH}/calls`;
+export const KNOWLEDGE_BASE_PATH = `${REAL_ESTATE_PATH}/knowledge-base`;
 export const callPath = (id) => `${CALLS_PATH}/${id}`;
 
 export const NOT_AVAILABLE = 'Real Estate is not available to your organisation';
@@ -55,6 +56,14 @@ const REFUSAL_HINT = Object.freeze({
   not_configured: 'Ask your platform administrator to finish setting up Real Estate calls.',
   call_context_unavailable: 'Ask your platform administrator to finish setting up Real Estate calls.',
   knowledge_base_too_long: `Shorten the knowledge base to ${MAX_KNOWLEDGE_BASE_CHARS.toLocaleString()} characters.`,
+  // The organisation-wide rules every agent call follows (backend app/features/calls/agent_rules.py).
+  platform_paused: 'Calling is paused for everyone. Try again when the platform administrator resumes it.',
+  tenant_paused: 'Calling is paused for your organisation. An administrator can resume it.',
+  feature_disabled: 'Ask your platform administrator to switch calling on for your organisation.',
+  concurrent_call_limit: 'Wait for a call to end, then try again.',
+  monthly_call_limit: 'Your organisation has used its calls for this month. Ask your platform administrator.',
+  outside_calling_hours: 'Try again when your calling hours open.',
+  do_not_call: 'This person asked not to be called. Remove the number from the do-not-call list only if they agree.',
 });
 
 /** Why the call was not placed, is unconfirmed, or never ended properly; null when nothing went wrong. */
@@ -68,7 +77,12 @@ export function callProblem(call) {
 export function formProblem(form) {
   if (!form.lead_name.trim()) return "Enter the lead's name.";
   if (!form.phone_number.trim()) return 'Enter a phone number.';
-  if (form.knowledge_base.length > MAX_KNOWLEDGE_BASE_CHARS) {
+  return null;
+}
+
+/** The knowledge base's problem before saving, or null. The backend checks the same. */
+export function knowledgeBaseProblem(text) {
+  if (text.length > MAX_KNOWLEDGE_BASE_CHARS) {
     return `The knowledge base can be at most ${MAX_KNOWLEDGE_BASE_CHARS.toLocaleString()} characters.`;
   }
   return null;
@@ -79,7 +93,7 @@ export function callRefusal(error) {
   const detail = error?.response?.data?.detail;
   const code = detail && typeof detail === 'object' && !Array.isArray(detail) ? detail.code : null;
   let message = detail && typeof detail === 'object' && !Array.isArray(detail) ? detail.message : detail;
-  if (Array.isArray(detail)) message = 'Check the name, phone number and knowledge base.';
+  if (Array.isArray(detail)) message = 'Check the name and phone number.';
   return { message: message || CALL_FAILURE[code] || 'The call could not be placed.', hint: REFUSAL_HINT[code] || null };
 }
 

@@ -58,7 +58,7 @@ function KnowledgeBasePanel({ text }) {
 /**
  * One call: its state and outcome, the site visit it booked, its transcript and recording, and the knowledge base
  * it was given. Refreshes every 5 s while the call runs, otherwise every 30 s. "Call again" opens New call with the
- * same details.
+ * same name and number (the new call uses the organisation's saved knowledge base).
  */
 export default function CallPage() {
   const { callId } = useParams();
@@ -84,8 +84,9 @@ export default function CallPage() {
   const outcome = callOutcome(call);
   const problem = callProblem(call);
   const live = refreshMs === LIVE_REFRESH_MS;
+  // A new call uses the organisation's saved knowledge base, not this call's.
   const callAgain = () => navigate(NEW_CALL_PATH, { state: { prefill: {
-    lead_name: call.lead_name, phone_number: call.phone_number, knowledge_base: call.knowledge_base || '' } } });
+    lead_name: call.lead_name, phone_number: call.phone_number } } });
 
   return (
     <section aria-label="Call" className="space-y-5">

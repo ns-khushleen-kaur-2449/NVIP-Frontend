@@ -326,9 +326,15 @@ export const getHiringCallRecording = (bookingId, callId) =>
 const REAL_ESTATE = '/api/v1/real_estate';
 export const listRealEstateCalls = (params) => api.get(`${REAL_ESTATE}/calls`, { params });
 export const getRealEstateCall = (id) => api.get(`${REAL_ESTATE}/calls/${id}`);
-// { lead_name, phone_number, knowledge_base?, idempotency_key }. One key per submit, kept only to retry that submit.
+// { lead_name, phone_number, idempotency_key }: the call uses the organisation's saved knowledge base (a
+// knowledge_base field would be this call's own instead). One key per submit, kept only to retry that submit.
 // 201 placed; 200 that key's call again; 202 sent but not confirmed; 409/422 refused (detail.code); 502/503 not placed.
 export const startRealEstateCall = (data) => api.post(`${REAL_ESTATE}/calls`, data);
+// The organisation's saved knowledge base: { knowledge_base, version, saved_at, last_used }; version is null until one
+// is saved, last_used is the latest call's to start from. Saving (real_estate.call) publishes a new version.
+export const getRealEstateKnowledgeBase = () => api.get(`${REAL_ESTATE}/knowledge-base`);
+export const saveRealEstateKnowledgeBase = (knowledgeBase) => api.put(`${REAL_ESTATE}/knowledge-base`,
+  { knowledge_base: knowledgeBase });
 export const getRealEstateCallTranscript = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/transcript`);
 export const getRealEstateCallRecording = (callId) => api.get(`${REAL_ESTATE}/calls/${callId}/recording`);
 // Users the caller may see (was /api/auth/users, which never existed).

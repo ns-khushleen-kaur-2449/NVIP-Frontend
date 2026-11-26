@@ -8,10 +8,11 @@ import { listAvailableAgents } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { PERMISSIONS } from '@/lib/rbac';
 import {
-  CALLS_PATH, NEW_CALL_PATH, NOT_AVAILABLE, REAL_ESTATE_AGENT_KEY, REAL_ESTATE_PATH,
+  CALLS_PATH, KNOWLEDGE_BASE_PATH, NEW_CALL_PATH, NOT_AVAILABLE, REAL_ESTATE_AGENT_KEY, REAL_ESTATE_PATH,
 } from '@/lib/realEstate';
 import CallPage from './CallPage';
 import CallsTab from './CallsTab';
+import KnowledgeBaseTab from './KnowledgeBaseTab';
 import NewCallTab from './NewCallTab';
 
 /** Whether the organisation may use Real Estate now; `available` is null while asking. Every route checks too. */
@@ -31,8 +32,9 @@ function useRealEstateAvailable() {
 }
 
 /**
- * The Real Estate agent's screen: "New call" (name, phone number and an optional knowledge base) for those who may
- * place calls, "Calls" for everyone, and one page per call (/real_estate_agent/calls/<id>).
+ * The Real Estate agent's screen: "New call" (name and phone number) for those who may place calls, "Calls" and
+ * "Knowledge base" (the organisation's saved one, editable by those who may place calls) for everyone, and one page
+ * per call (/real_estate_agent/calls/<id>).
  */
 export default function RealEstateAgentPage() {
   const { available, error, retry } = useRealEstateAvailable();
@@ -42,6 +44,7 @@ export default function RealEstateAgentPage() {
   const tabs = [
     ...(canCall ? [{ path: NEW_CALL_PATH, label: 'New call' }] : []),
     { path: CALLS_PATH, label: 'Calls' },
+    { path: KNOWLEDGE_BASE_PATH, label: 'Knowledge base' },
   ];
 
   return (
@@ -80,6 +83,7 @@ export default function RealEstateAgentPage() {
               {canCall && <Route path="new" element={<NewCallTab />} />}
               <Route path="calls" element={<CallsTab />} />
               <Route path="calls/:callId" element={<CallPage />} />
+              <Route path="knowledge-base" element={<KnowledgeBaseTab />} />
               <Route path="*" element={<Navigate to={canCall ? NEW_CALL_PATH : CALLS_PATH} replace />} />
             </Routes>
           </>

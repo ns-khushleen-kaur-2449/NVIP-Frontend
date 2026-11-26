@@ -1,21 +1,40 @@
 import { useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { FileUp, Phone, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import OpsButton from '@/components/ops/OpsButton';
 import { CONTROL, Field, FormError } from '@/components/hiring/HiringBits';
-import { startRealEstateCall } from '@/lib/api';
+import { getRealEstateKnowledgeBase, startRealEstateCall } from '@/lib/api';
 import {
-  KNOWLEDGE_BASE_FILE_TYPES, MAX_KNOWLEDGE_BASE_CHARS, callPath, callRefusal, callStarted, formProblem, newKey,
+  KNOWLEDGE_BASE_PATH, callPath, callRefusal, callStarted, formProblem, newKey,
 } from '@/lib/realEstate';
+import useHiringData from '../hiring/useHiringData';
 
-const blank = { lead_name: '', phone_number: '', knowledge_base: '' };
+const blank = { lead_name: '', phone_number: '' };
+
+/** Which knowledge base the call will use: the organisation's saved one (edited on the Knowledge base tab). */
+function SavedKnowledgeBase() {
+  const { data, error } = useHiringData(() => getRealEstateKnowledgeBase(), []);
+  if (error || !data) return null; // the call itself still works; the backend uses whatever is saved
+  const link = (
+    <Link to={KNOWLEDGE_BASE_PATH} className="font-medium text-[color:var(--ops-accent-ink)] hover:underline">
+      {data.knowledge_base ? 'View or change it' : 'Add one'}
+    </Link>
+  );
+  return (
+    <p className="text-sm text-muted-foreground" data-testid="saved-knowledge-base">
+      {data.knowledge_base
+        ? <>The agent talks from your saved knowledge base (version {data.version}). {link}</>
+        : <>No knowledge base saved: the agent uses its standard script. {link}</>}
+    </p>
+  );
+}
 
 /**
- * "New call": the lead's name and phone number, and an optional knowledge base (typed, pasted or read from a text
- * file) that the agent talks from on this call. One idempotency key per submit, kept only when no answer came back,
- * so pressing again retries that same submit and the backend never dials twice. A placed call opens its page.
- * "Call again" on a call page comes back here with that call's details filled in.
+ * "New call": the lead's name and phone number. The agent talks from the organisation's saved knowledge base. One
+ * idempotency key per submit, kept only when no answer came back, so pressing again retries that same submit and the
+ * backend never dials twice. A placed call opens its page. "Call again" on a call page comes back here with that
+ * call's name and number filled in.
  */
 export default function NewCallTab() {
   const navigate = useNavigate();
@@ -23,28 +42,12 @@ export default function NewCallTab() {
   const [form, setForm] = useState(() => ({ ...blank, ...(state?.prefill || {}) }));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState(null);
-  const [fileName, setFileName] = useState(null);
   const unanswered = useRef(null);
   const inFlight = useRef(false);
-  const fileInput = useRef(null);
 
   const set = (field) => (event) => {
     unanswered.current = null; // a changed form is a new call
     setForm((f) => ({ ...f, [field]: event.target.value }));
-  };
-
-  const readFile = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    try {
-      const text = await file.text();
-      unanswered.current = null;
-      setForm((f) => ({ ...f, knowledge_base: f.knowledge_base.trim() ? `${f.knowledge_base.trim()}\n\n${text}` : text }));
-      setFileName(file.name);
-    } catch (e) {
-      setProblem({ message: `${file.name} could not be read. Use a text file (.txt, .md, .csv or .json).` });
-    }
   };
 
   const submit = async (event) => {
@@ -64,7 +67,6 @@ export default function NewCallTab() {
       const response = await startRealEstateCall({
         lead_name: form.lead_name.trim(),
         phone_number: form.phone_number.trim(),
-        knowledge_base: form.knowledge_base.trim() || null,
         idempotency_key: key,
       });
       unanswered.current = null;
@@ -84,9 +86,6 @@ export default function NewCallTab() {
     }
   };
 
-  const chars = form.knowledge_base.length;
-  const over = chars > MAX_KNOWLEDGE_BASE_CHARS;
-
   return (
     <section aria-label="New call" className="max-w-2xl space-y-4 rounded-xl border border-border bg-card p-5">
       <form onSubmit={submit} className="space-y-4" noValidate>
@@ -101,35 +100,7 @@ export default function NewCallTab() {
           </Field>
         </div>
 
-        <Field label="Knowledge base (optional)"
-          hint="Projects, locations, prices, amenities and offers the agent may talk about on this call. Without one, the agent uses its standard script.">
-          {(id) => (
-            <div className="space-y-2">
-              <textarea id={id} value={form.knowledge_base} onChange={set('knowledge_base')} rows={10}
-                placeholder="e.g. Palm Springs, Jaipur: 3 and 4 BHK villas from ₹1.2 Cr. Clubhouse, pool, 24x7 security. Possession Dec 2027."
-                className={`${CONTROL} h-auto min-h-[10rem] py-2 leading-relaxed`} />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <input ref={fileInput} type="file" accept={KNOWLEDGE_BASE_FILE_TYPES} onChange={readFile}
-                    className="hidden" aria-label="Upload a text file" data-testid="knowledge-base-file" />
-                  <OpsButton size="sm" type="button" onClick={() => fileInput.current?.click()}>
-                    <FileUp className="h-4 w-4" /> Add from a text file
-                  </OpsButton>
-                  {fileName && <span className="text-muted-foreground">Added {fileName}</span>}
-                  {chars > 0 && (
-                    <OpsButton size="sm" variant="quiet" type="button"
-                      onClick={() => { unanswered.current = null; setForm((f) => ({ ...f, knowledge_base: '' })); setFileName(null); }}>
-                      <X className="h-4 w-4" /> Clear
-                    </OpsButton>
-                  )}
-                </div>
-                <span className={over ? 'text-[color:var(--ops-bad)]' : 'text-muted-foreground'}>
-                  {`${chars.toLocaleString()} / ${MAX_KNOWLEDGE_BASE_CHARS.toLocaleString()} characters`}
-                </span>
-              </div>
-            </div>
-          )}
-        </Field>
+        <SavedKnowledgeBase />
 
         {problem && (
           <div role="alert" className="text-sm">
@@ -139,7 +110,7 @@ export default function NewCallTab() {
         )}
 
         <div className="flex justify-end">
-          <OpsButton variant="primary" type="submit" busy={busy} disabled={over}>
+          <OpsButton variant="primary" type="submit" busy={busy}>
             <Phone className="h-4 w-4" /> {busy ? 'Calling…' : 'Call now'}
           </OpsButton>
         </div>
