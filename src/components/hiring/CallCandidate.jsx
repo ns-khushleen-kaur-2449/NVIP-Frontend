@@ -12,14 +12,20 @@ import {
  * kept only when no answer came back (network lost), so pressing again retries that same click and the backend never
  * dials twice; any answer from the backend ends the click, and the next press is a new call. While a request runs the
  * button is off, so a double click sends one request.
+ *
+ * On a booking page it calls that booking. On a candidate's profile, `request(key)` places the candidate's call instead
+ * (the backend makes the booking if there is none), `name` says who is called, and `blocker` is what the profile already
+ * knows stops it; `showUsage` is off there.
  */
-export default function CallCandidate({ booking, calls, onDone }) {
+export default function CallCandidate({ booking = null, calls = [], onDone, request = null, name = null, blocker: given,
+  showUsage = true, title = 'Intake call' }) {
   const unanswered = useRef(null);
   // Set before the first await: a second click that lands before React re-renders still sees it.
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState(null);
-  const blocker = callBlocker(booking, calls);
+  const blocker = given !== undefined ? given : callBlocker(booking, calls);
+  const who = name || booking?.candidate_name;
   // One string, so it renders as one text node.
   const usage = `Calls used: ${callsUsed(calls)} of ${MAX_CALL_ATTEMPTS}. Calls that were not placed do not count.`;
   const label = busy ? 'Calling…' : 'Call candidate';
@@ -32,9 +38,9 @@ export default function CallCandidate({ booking, calls, onDone }) {
     setBusy(true);
     setProblem(null);
     try {
-      const response = await startHiringCall(booking.id, key);
+      const response = await (request ? request(key) : startHiringCall(booking.id, key));
       unanswered.current = null;
-      const { kind, text } = callStarted(response.status, booking.candidate_name);
+      const { kind, text } = callStarted(response.status, who);
       toast[kind](text);
     } catch (error) {
       if (error?.response) {
@@ -54,8 +60,8 @@ export default function CallCandidate({ booking, calls, onDone }) {
     <section aria-label="Call" className="space-y-2 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Intake call</h3>
-          <p className="text-xs text-muted-foreground">{usage}</p>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {showUsage && <p className="text-xs text-muted-foreground">{usage}</p>}
         </div>
         <OpsButton variant="primary" onClick={place} busy={busy} disabled={Boolean(blocker)}>
           <Phone className="h-4 w-4" /> {label}

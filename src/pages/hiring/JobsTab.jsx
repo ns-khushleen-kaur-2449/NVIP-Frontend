@@ -6,6 +6,7 @@ import StatusBadge from '@/components/ops/StatusBadge';
 import { EmptyState, ScrollTable, SkeletonRows } from '@/components/ops/States';
 import JobDialog from '@/components/hiring/JobDialog';
 import QuestionsDialog from '@/components/hiring/QuestionsDialog';
+import ScreeningQuestionsDialog from '@/components/hiring/ScreeningQuestionsDialog';
 import { CONTROL, HiringError, ListFooter } from '@/components/hiring/HiringBits';
 import useApiAction from '@/hooks/useApiAction';
 import { listHiringJobs, updateHiringJob } from '@/lib/api';
@@ -14,7 +15,10 @@ import { JOB_STATUS, MAX_ROWS, PAGE_SIZE, statusOf } from '@/lib/hiring';
 import { PERMISSIONS } from '@/lib/rbac';
 import useHiringData from './useHiringData';
 
-/** Jobs and their intake questions.  Tenant Admins and Managers change them; everyone else reads. */
+/**
+ * Jobs, their description, resume weights, intake questions and audio-screening questions.  Tenant Admins and
+ * Managers change them; everyone else reads.
+ */
 export default function JobsTab() {
   const { can } = useAuth();
   const canManage = can(PERMISSIONS.HIRING_MANAGE);
@@ -22,6 +26,7 @@ export default function JobsTab() {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [naming, setNaming] = useState(null); // { job } to rename, {} to create
   const [questionsOf, setQuestionsOf] = useState(null);
+  const [screeningOf, setScreeningOf] = useState(null);
   const { data: jobs, error, reload } = useHiringData(
     () => listHiringJobs({ status: jobStatus || undefined, limit }), [jobStatus, limit]);
   const toggle = useApiAction(
@@ -60,7 +65,9 @@ export default function JobsTab() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Job</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Description</th>
                   <th className="px-4 py-3 font-semibold">Questions</th>
+                  <th className="px-4 py-3 font-semibold">Screening</th>
                   <th className="px-4 py-3 font-semibold">Updated</th>
                   <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -73,9 +80,19 @@ export default function JobsTab() {
                       <td className="px-4 py-3 font-medium">{job.title}</td>
                       <td className="px-4 py-3"><StatusBadge label={state.label} tone={state.tone} /></td>
                       <td className="px-4 py-3">
+                        {job.has_jd
+                          ? <StatusBadge label="Added" tone="good" />
+                          : <StatusBadge label="No JD" tone="neutral" title="Resumes can only be scored against a job description" />}
+                      </td>
+                      <td className="px-4 py-3">
                         {job.question_count
                           ? <span className="ops-num">{job.question_count}</span>
                           : <StatusBadge label="No questions" tone="warn" title="A job needs at least one question before calls" />}
+                      </td>
+                      <td className="px-4 py-3">
+                        {job.screening_question_count
+                          ? <span className="ops-num" data-testid={`screening-count-${job.id}`}>{job.screening_question_count}</span>
+                          : <span className="text-muted-foreground">None</span>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground"><RelativeTime iso={job.updated_at} /></td>
                       <td className="px-4 py-3">
@@ -83,9 +100,12 @@ export default function JobsTab() {
                           <OpsButton size="sm" onClick={() => setQuestionsOf(job)}>
                             {canManage ? 'Edit questions' : 'View questions'}
                           </OpsButton>
+                          <OpsButton size="sm" onClick={() => setScreeningOf(job)}>
+                            {canManage ? 'Screening questions' : 'View screening'}
+                          </OpsButton>
                           {canManage && (
                             <>
-                              <OpsButton size="sm" onClick={() => setNaming({ job })}>Rename</OpsButton>
+                              <OpsButton size="sm" onClick={() => setNaming({ job })}>Edit job</OpsButton>
                               <OpsButton size="sm" variant="quiet" busy={toggle.pending} onClick={() => toggle.run(job)}>
                                 {job.status === 'open' ? 'Close' : 'Reopen'}
                               </OpsButton>
@@ -107,6 +127,8 @@ export default function JobsTab() {
         onSaved={saved} />
       <QuestionsDialog job={questionsOf} canEdit={canManage} onOpenChange={(open) => { if (!open) setQuestionsOf(null); }}
         onSaved={reload} />
+      <ScreeningQuestionsDialog job={screeningOf} canEdit={canManage}
+        onOpenChange={(open) => { if (!open) setScreeningOf(null); }} onSaved={reload} />
     </section>
   );
 }

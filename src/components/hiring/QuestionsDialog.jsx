@@ -7,27 +7,31 @@ import { SkeletonRows } from '@/components/ops/States';
 import { FormError, HiringError } from '@/components/hiring/HiringBits';
 import { errorMessage } from '@/hooks/useApiAction';
 import { getHiringJob, replaceHiringQuestions } from '@/lib/api';
-import { MAX_INTAKE_QUESTIONS, checkQuestions } from '@/lib/hiring';
+import { MAX_INTAKE_QUESTIONS, RESUME_SECTIONS, checkQuestions, sectionLabel } from '@/lib/hiring';
 
 /**
  * A job's intake questions, in the order the call asks them. With `canEdit` the whole set is edited and saved at
  * once (1 to 8); otherwise it is read only. Calls already placed keep the questions they were asked.
+ *
+ * Each question can name the resume section its answer fills (for example "Work & Professional Experience"); the
+ * AI resume built from the call puts the answer there. Without a section the AI places the answer by its meaning.
  */
 export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved }) {
-  const [texts, setTexts] = useState(null);
+  const [items, setItems] = useState(null); // [{ text, section_key }]
   const [loadError, setLoadError] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!job) return;
-    setTexts(null);
+    setItems(null);
     setLoadError(null);
     setError(null);
     try {
       const { data } = await getHiringJob(job.id);
-      const questions = (data.questions || []).map((question) => question.question_text);
-      setTexts(questions.length || !canEdit ? questions : ['']);
+      const questions = (data.questions || []).map((question) => (
+        { text: question.question_text, section_key: question.section_key || '' }));
+      setItems(questions.length || !canEdit ? questions : [{ text: '', section_key: '' }]);
     } catch (e) {
       setLoadError(e);
     }
@@ -35,9 +39,10 @@ export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved })
 
   useEffect(() => { load(); }, [load]);
 
-  const change = (index, value) => setTexts((list) => list.map((text, i) => (i === index ? value : text)));
-  const remove = (index) => setTexts((list) => list.filter((_, i) => i !== index));
-  const move = (index, delta) => setTexts((list) => {
+  const change = (index, field, value) => setItems((list) => list.map((item, i) => (
+    i === index ? { ...item, [field]: value } : item)));
+  const remove = (index) => setItems((list) => list.filter((_, i) => i !== index));
+  const move = (index, delta) => setItems((list) => {
     const next = [...list];
     [next[index], next[index + delta]] = [next[index + delta], next[index]];
     return next;
@@ -46,7 +51,7 @@ export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved })
   const save = async (event) => {
     event.preventDefault();
     if (busy) return;
-    const { questions, error: problem } = checkQuestions(texts);
+    const { questions, error: problem } = checkQuestions(items.map((item) => item.text));
     if (problem) {
       setError(problem);
       return;
@@ -54,7 +59,8 @@ export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved })
     setBusy(true);
     setError(null);
     try {
-      await replaceHiringQuestions(job.id, questions);
+      await replaceHiringQuestions(job.id, questions.map((text, i) => (
+        { text, section_key: items[i].section_key || null })));
       toast.success('Questions saved');
       onOpenChange(false);
       onSaved?.();
@@ -80,41 +86,56 @@ export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved })
           </DialogHeader>
 
           {loadError ? <HiringError error={loadError} onRetry={load} />
-            : texts === null ? <SkeletonRows rows={3} label="Loading questions" />
+            : items === null ? <SkeletonRows rows={3} label="Loading questions" />
             : !canEdit ? (
-              texts.length ? (
+              items.length ? (
                 <ol className="list-decimal space-y-2 pl-5 text-sm" data-testid="questions-read-only">
-                  {texts.map((text, i) => <li key={i}>{text}</li>)}
+                  {items.map((item, i) => (
+                    <li key={i}>
+                      {item.text}
+                      {item.section_key && (
+                        <span className="ml-2 text-xs text-muted-foreground">({sectionLabel(item.section_key)})</span>
+                      )}
+                    </li>
+                  ))}
                 </ol>
               ) : <p className="text-sm text-muted-foreground">No questions yet.</p>
             ) : (
               <div className="space-y-3">
-                {texts.map((text, i) => (
+                {items.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="ops-num mt-2 w-5 text-right text-sm text-muted-foreground">{i + 1}.</span>
-                    <textarea value={text} onChange={(e) => change(i, e.target.value)} rows={2} maxLength={2000}
-                      aria-label={`Question ${i + 1}`}
-                      className="min-h-[2.5rem] flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                    <div className="flex-1 space-y-1.5">
+                      <textarea value={item.text} onChange={(e) => change(i, 'text', e.target.value)} rows={2}
+                        maxLength={2000} aria-label={`Question ${i + 1}`}
+                        className="min-h-[2.5rem] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                      <select value={item.section_key} onChange={(e) => change(i, 'section_key', e.target.value)}
+                        aria-label={`Resume section of question ${i + 1}`}
+                        className="h-8 w-full rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground">
+                        <option value="">Resume section: let the AI decide</option>
+                        {RESUME_SECTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+                      </select>
+                    </div>
                     <div className="flex gap-1">
                       <button type="button" className={iconButton} onClick={() => move(i, -1)} disabled={i === 0}
                         aria-label={`Move question ${i + 1} up`}><ArrowUp className="h-4 w-4" /></button>
                       <button type="button" className={iconButton} onClick={() => move(i, 1)}
-                        disabled={i === texts.length - 1} aria-label={`Move question ${i + 1} down`}>
+                        disabled={i === items.length - 1} aria-label={`Move question ${i + 1} down`}>
                         <ArrowDown className="h-4 w-4" />
                       </button>
                       <button type="button" className={iconButton} onClick={() => remove(i)}
-                        disabled={texts.length === 1} aria-label={`Remove question ${i + 1}`}>
+                        disabled={items.length === 1} aria-label={`Remove question ${i + 1}`}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
                 ))}
                 <div className="flex items-center gap-3">
-                  <OpsButton size="sm" onClick={() => setTexts((list) => [...list, ''])}
-                    disabled={texts.length >= MAX_INTAKE_QUESTIONS}>
+                  <OpsButton size="sm" onClick={() => setItems((list) => [...list, { text: '', section_key: '' }])}
+                    disabled={items.length >= MAX_INTAKE_QUESTIONS}>
                     <Plus className="h-4 w-4" /> Add question
                   </OpsButton>
-                  <span className="text-xs text-muted-foreground">{texts.length} of {MAX_INTAKE_QUESTIONS}</span>
+                  <span className="text-xs text-muted-foreground">{items.length} of {MAX_INTAKE_QUESTIONS}</span>
                 </div>
               </div>
             )}
@@ -124,7 +145,7 @@ export default function QuestionsDialog({ job, canEdit, onOpenChange, onSaved })
             <OpsButton variant="quiet" onClick={() => onOpenChange(false)} disabled={busy}>
               {canEdit ? 'Cancel' : 'Close'}
             </OpsButton>
-            {canEdit && texts !== null && !loadError && (
+            {canEdit && items !== null && !loadError && (
               <OpsButton type="submit" variant="primary" busy={busy}>Save questions</OpsButton>
             )}
           </DialogFooter>

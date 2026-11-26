@@ -8,6 +8,7 @@ import { listAvailableAgents } from '@/lib/api';
 import { PERMISSIONS } from '@/lib/rbac';
 import BookingPage from './BookingPage';
 import BookingsTab from './BookingsTab';
+import CandidateProfile from './CandidateProfile';
 import CandidatesTab from './CandidatesTab';
 import JobsTab from './JobsTab';
 
@@ -39,7 +40,10 @@ function useHiringAvailable() {
   return { ...state, retry: check };
 }
 
-/** The Hiring agent's screen: bookings (each with its own page, /hiring_agent/bookings/<id>), jobs and candidates. */
+/**
+ * The Hiring agent's screen: bookings (each with its own page, /hiring_agent/bookings/<id>), jobs, and candidates
+ * (each with a profile, /hiring_agent/candidates/<id>).
+ */
 export default function HiringAgentPage() {
   const { available, error, retry } = useHiringAvailable();
   const { pathname } = useLocation();
@@ -81,6 +85,7 @@ export default function HiringAgentPage() {
               <Route path="bookings/:bookingId" element={<BookingPage />} />
               <Route path="jobs" element={<JobsTab />} />
               <Route path="candidates" element={<CandidatesTab />} />
+              <Route path="candidates/:candidateId" element={<CandidateProfile />} />
               <Route path="*" element={<Navigate to={`${HIRING_PATH}/bookings`} replace />} />
             </Routes>
           </>
