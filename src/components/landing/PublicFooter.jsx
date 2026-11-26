@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { AGENTS } from '@/config/agents';
 import { NETSMARTZ_URL, VOICE_STACK } from '@/config/platform';
-import NvipLockup from './NvipLockup';
 
 const linkClass = 'text-[var(--nv-muted)] transition-colors hover:text-[var(--nv-ink)] rounded-sm';
 
@@ -22,7 +21,10 @@ export default function PublicFooter({ signedIn, workspace }) {
       <div className="mx-auto max-w-7xl px-4 pb-10 pt-16 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <NvipLockup tone="onDark" className="text-[var(--nv-ink)]" />
+            {/* No logo in the footer: the product name alone, as the link home. */}
+            <Link to="/" className="inline-block rounded-sm text-xl font-bold tracking-[-0.02em] text-[var(--nv-ink)]">
+              Voice Intelligence Platform
+            </Link>
             <p className="mt-6 max-w-sm leading-relaxed text-[var(--nv-muted)]">
               One portal for every Netsmartz voice agent. Each agent is a configuration on the same managed platform, not a separate app.
             </p>

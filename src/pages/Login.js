@@ -8,6 +8,7 @@ import { motion, MotionConfig } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import HeroWave3D from '@/components/marketing/HeroWave3D';
 import ThemeToggle from '@/components/shared/ThemeToggle';
+import { NetsmartzLogo } from '@/components/shared/BrandLockup';
 import OrbStage from '@/components/landing/OrbStage';
 import { cn } from '@/lib/utils';
 import { homePath } from '@/lib/rbac';
@@ -123,15 +124,21 @@ export default function LoginPage() {
       {/* ── Backdrop: orange light behind the orb, a faint grid (dark), the dotted sound wave along the bottom.
              Purely decorative and always behind the content; the 3D wave is skipped on small screens. ── */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(38% 46% at 40% 48%, var(--l-glow), transparent 70%)' }} />
-        <div className="absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full" style={{ background: 'radial-gradient(circle, rgba(254,119,37,0.2), transparent 62%)' }} />
+        {/* Ambient light centred on the orb (left/main column on desktop, top of the page on small screens). */}
+        <div className="absolute inset-0 [background:radial-gradient(55%_38%_at_20%_30%,var(--l-glow),transparent_72%)] lg:[background:radial-gradient(36%_42%_at_24%_40%,var(--l-glow),transparent_72%)]" />
+        <div className="absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full" style={{ background: 'radial-gradient(circle, rgba(254,119,37,0.16), transparent 62%)' }} />
+        <div className="absolute -bottom-48 -right-40 h-[30rem] w-[30rem] rounded-full" style={{ background: 'radial-gradient(circle, rgba(254,119,37,0.1), transparent 62%)' }} />
         <div className="nvl-grid absolute inset-0" />
-        <HeroWave3D className="absolute inset-x-0 bottom-0 hidden h-[34%] opacity-70 md:block" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(to_top,var(--l-bg),transparent)] opacity-60" />
+        <HeroWave3D className="absolute inset-x-0 bottom-0 hidden h-[26%] opacity-60 md:block" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(to_top,var(--l-bg),transparent)] opacity-70" />
       </div>
 
-      {/* ── Top bar ── */}
-      <header className="relative z-10 mx-auto flex w-full max-w-[90rem] items-center justify-end gap-4 px-5 pt-5 sm:px-8 sm:pt-7 lg:px-12">
+      {/* ── Top bar: the Netsmartz logo alone at left, Back to home and the theme toggle at right ── */}
+      {/* Full width (not the centred content width), so the logo sits at the page's left edge on wide screens. */}
+      <header className="relative z-10 flex w-full items-center justify-between gap-4 px-5 pt-5 sm:px-8 sm:pt-6 lg:px-10">
+        <Link to="/" aria-label="NVIP by Netsmartz, home" className="flex min-w-0 items-center gap-3 rounded-md sm:gap-4">
+          <NetsmartzLogo className="h-[34px] shrink-0 sm:h-[44px]" />
+        </Link>
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <Link to="/" aria-label="Back to home" className="group flex items-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium text-[var(--l-muted)] transition-colors hover:text-[var(--l-ink)]">
             <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" aria-hidden="true" />
@@ -141,71 +148,64 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-[90rem] flex-1 content-center items-center gap-8 px-5 pb-12 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-4 lg:px-12 lg:pb-16 lg:pt-4">
+      <main className="relative z-10 mx-auto grid w-full max-w-[90rem] flex-1 items-center gap-10 px-5 pb-12 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12 lg:px-10 lg:pb-10 lg:pt-2 xl:gap-20 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
 
-        {/* ── Brand: compact above the form on small screens; copy, features and the orb on desktop ── */}
-        <section aria-label="NVIP" className="mx-auto w-full max-w-[28rem] lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-center lg:gap-2">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT }}>
-            {/* Same product name as the public hero: orange bar, "Netsmartz" over "Voice Intelligence Platform",
-                initials in orange so they spell NVIP. */}
-            <div className="flex items-stretch gap-4">
-              <span aria-hidden="true" className="w-1 shrink-0 rounded-full bg-gradient-to-b from-[#FE7725] to-[#FE7725]/0" />
-              <p className="nvp-fullname">
-                <span className="block">
-                  <span className="nvp-initial">N</span>etsmartz
-                </span>
-                <span className="block">
-                  <span className="nvp-initial">V</span>oice <span className="nvp-initial">I</span>ntelligence{' '}
-                  <span className="nvp-initial">P</span>latform
-                </span>
-                <span className="sr-only"> (NVIP)</span>
-              </p>
-            </div>
-            {/* Headline set like the public hero H1: medium weight, so the product name leads. */}
-            <p className="mt-10 max-w-[17ch] text-[1.9rem] font-medium leading-[1.14] tracking-[-0.03em] sm:mt-12 sm:text-[2.25rem] lg:text-[2.5rem]">
+        {/* ── Hero: type leads (no 3D figure, no decoration above it). The product name in two big lines,
+               the supporting line, the description, and the three features together in a row at the bottom.
+               A size container, so the type scales with the column (cqi) rather than the viewport. ── */}
+        <section aria-label="NVIP" className="relative isolate flex flex-col items-start text-left [container-type:inline-size]">
+          {/* Background only: the 3D orb behind the text, faded so every line stays readable. Absolutely placed,
+              so it never moves the text, features or card; no pointer events, hidden from assistive tech. */}
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-[44%] -z-10 lg:left-[66%] xl:left-[60%] aspect-[11/10] w-[min(115%,640px)] -translate-x-1/2 -translate-y-1/2"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.4, delay: 0.2, ease: EASE_OUT }}
+          >
+            <OrbStage className="nvl-orb-bg" shadow="rgba(0,0,0,0.25)" />
+          </motion.div>
+
+          <motion.div className="w-full" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: EASE_OUT }}>
+            <p className="nvl-title">
+              <span className="block">Netsmartz</span>
+              <span className="block"><span className="text-[var(--l-orange-text)]">Voice Intelligence</span> Platform</span>
+              <span className="sr-only"> (NVIP)</span>
+            </p>
+            <p className="nvl-subtitle mt-4 sm:mt-5">
               Your voice agents, <span className="text-[var(--l-orange-text)]">one workspace.</span>
             </p>
-            <p className="mt-4 hidden max-w-[29rem] text-[1.02rem] leading-relaxed text-[var(--l-muted)] sm:block">
+            <p className="mt-4 max-w-[36rem] text-[0.98rem] leading-relaxed text-[var(--l-muted)] sm:text-[1.08rem]">
               Run calling campaigns, review every conversation and book meetings with the AI voice agents your
               organisation uses.
             </p>
-
-            <ul className="mt-10 hidden max-w-[29rem] divide-y divide-[var(--l-field-line)] border-y border-[var(--l-field-line)] lg:block">
-              {FEATURES.map((f, i) => (
-                <motion.li key={f.t} className="flex items-start gap-3.5 py-4"
-                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.25 + i * 0.1, ease: EASE_OUT }}>
-                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--l-tile)] text-[var(--l-orange-text)]">
-                    <f.icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
-                  </span>
-                  <span>
-                    <span className="block text-[0.95rem] font-semibold tracking-[-0.01em]">{f.t}</span>
-                    <span className="mt-0.5 block text-[0.88rem] leading-relaxed text-[var(--l-muted)]">{f.d}</span>
-                  </span>
-                </motion.li>
-              ))}
-            </ul>
           </motion.div>
 
-          {/* The orb: desktop only, so it never competes with the form on small screens. */}
-          <motion.div
-            aria-hidden="true"
-            className="relative mx-auto hidden aspect-[11/10] w-full max-w-[520px] lg:block"
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.1, delay: 0.1, ease: EASE_OUT }}
-          >
-            <OrbStage shadow="rgba(0,0,0,0.35)" />
-          </motion.div>
+          <ul className="nvl-features mt-10 grid w-full max-w-[56rem] gap-px overflow-hidden rounded-2xl border border-[var(--l-field-line)] bg-[var(--l-field-line)] text-left lg:mt-12">
+            {FEATURES.map((f, i) => (
+              <motion.li key={f.t} className="flex items-start gap-3 bg-[var(--l-feature)] px-4 py-4 backdrop-blur-md sm:px-5"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}>
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--l-tile)] text-[var(--l-orange-text)] ring-1 ring-inset ring-[rgba(254,119,37,0.2)]">
+                  <f.icon className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-[0.92rem] font-semibold tracking-[-0.01em]">{f.t}</span>
+                  <span className="mt-1 block text-[0.84rem] leading-relaxed text-[var(--l-muted)]">{f.d}</span>
+                </span>
+              </motion.li>
+            ))}
+          </ul>
         </section>
 
-        {/* ── Sign-in card ── */}
+        {/* ── Sign-in card: glass, a hairline orange edge and a soft light along the top ── */}
         <section className="flex justify-center lg:justify-end">
           <motion.div
             initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}
-            className="relative w-full max-w-[27rem] rounded-[1.25rem] border border-[var(--l-card-line)] bg-[var(--l-card)] p-7 shadow-[var(--l-card-shadow)] backdrop-blur-xl sm:p-10"
+            className="relative w-full max-w-[27rem] rounded-[1.5rem] border border-[var(--l-card-edge)] bg-[var(--l-card)] p-7 shadow-[var(--l-card-shadow)] backdrop-blur-xl sm:p-9"
           >
             <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[inherit]"
-              style={{ background: 'radial-gradient(120% 55% at 0% 0%, rgba(254,119,37,0.12), transparent 60%)' }} />
+              style={{ background: 'radial-gradient(120% 55% at 0% 0%, rgba(254,119,37,0.14), transparent 60%)' }} />
+            <span aria-hidden="true" className="pointer-events-none absolute inset-x-10 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(254,119,37,0.85),transparent)]" />
             <div className="relative">
             {mfa ? (
               <form onSubmit={handleMfa} className="space-y-5" data-testid="login-mfa-form">

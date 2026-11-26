@@ -8,8 +8,7 @@ const LOGO_W = 860;
 const LOGO_H = 198;
 
 /**
- * Netsmartz │ NVIP lockup for the public site. The parent-brand logo leads (it is the larger mark), then a hairline
- * and the product name. tone="auto" follows the public theme; tone="onDark" always uses the white-lettered logo.
+ * The Netsmartz logo as the public site's home link. tone="auto" follows the public theme; tone="onDark" always uses the white-lettered logo.
  */
 export default function NvipLockup({ tone = 'auto', to = '/', className, onClick }) {
   const img = 'h-[34px] sm:h-[42px] w-auto max-w-none select-none';
@@ -28,11 +27,7 @@ export default function NvipLockup({ tone = 'auto', to = '/', className, onClick
           <img src={netsmartzOnDark} width={LOGO_W} height={LOGO_H} alt="" draggable={false} className={cn(img, 'nvp-logo-dark')} />
         </>
       )}
-      <span aria-hidden="true" className="h-8 w-px shrink-0 bg-current opacity-20" />
-      <span className="flex flex-col leading-none">
-        <span className="text-[1.1rem] font-bold tracking-[-0.02em] text-[var(--nvp-orange-text,#E4580B)]">NVIP</span>
-        <span className="mt-1 hidden text-[0.68rem] font-medium tracking-[0.01em] opacity-65 lg:block">Voice Intelligence Platform</span>
-      </span>
+      {/* The logo alone: no "NVIP" word and no product name beside it (the hero carries the name). */}
     </Link>
   );
 }

@@ -21,7 +21,7 @@ export default function HowItWorks() {
       <p className="mt-2 text-[var(--nv-muted)]">
         You get a login to your NVIP workspace — never raw provider credentials. NVIP manages the voice stack for you.
       </p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {STACK.map((s) => (
           <Panel key={s.name} className="p-5">
             <div className="font-semibold">{s.name}</div>

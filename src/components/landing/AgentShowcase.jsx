@@ -80,25 +80,25 @@ function AgentCard({ agent, tilt }) {
         style={{ background: 'radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(254, 119, 37, 0.1), transparent 45%)' }}
       />
       {agent.popular && (
-        <span className="absolute -top-3 right-6 inline-flex items-center gap-1 rounded-full bg-[var(--nv-orange)] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.06em] text-[var(--nv-on-orange)] shadow-[0_8px_18px_-10px_rgba(254,119,37,0.9)]">
+        <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-[var(--nv-orange)] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.06em] text-[var(--nv-on-orange)] shadow-[0_8px_18px_-10px_rgba(254,119,37,0.9)]">
           <Sparkles className="h-3 w-3" aria-hidden /> Most popular
         </span>
       )}
-      <div className="relative flex items-start gap-4">
+      {/* Header row: icon, then the name with its status. The summary sits below at full width, on the same
+          left edge as the tool list, so every card's text lines up. */}
+      <div className="relative flex items-center gap-4">
         <span
           aria-hidden
           className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[var(--nv-orange-soft)] text-[var(--nvp-orange-text)] ring-1 ring-inset ring-[rgba(254,119,37,0.18)] transition-transform duration-500 group-hover:scale-105"
         >
           <Icon className="h-7 w-7" strokeWidth={1.8} />
         </span>
-        <div className="min-w-0 pt-1">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <h3 className="text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">{agent.name}</h3>
-            <StatusBadge agent={agent} />
-          </div>
-          <p className="mt-1.5 text-[0.95rem] leading-relaxed text-[var(--nv-muted)]">{agent.summary}</p>
+        <div className="flex min-w-0 flex-col items-start gap-1.5">
+          <h3 className="text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">{agent.name}</h3>
+          <StatusBadge agent={agent} />
         </div>
       </div>
+      <p className="relative mt-4 text-[0.95rem] leading-relaxed text-[var(--nv-muted)]">{agent.summary}</p>
       <ul className="relative mt-5 grid gap-2 text-[0.9rem]">
         {agent.tools.slice(0, 3).map((tool) => (
           <li key={tool} className="flex gap-2.5">
@@ -123,17 +123,15 @@ function AgentCard({ agent, tilt }) {
 function CustomCard() {
   return (
     <div className="relative flex h-full flex-col rounded-[22px] border border-dashed border-[rgba(254,119,37,0.5)] bg-[var(--nv-surface-2)] p-6 sm:p-7">
-      <div className="relative flex items-start gap-4">
+      <div className="relative flex items-center gap-4">
         <span aria-hidden className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[var(--nv-surface)] text-[var(--nvp-orange-text)] shadow-[var(--nvp-shadow-card)]">
           <Sparkles className="h-7 w-7" strokeWidth={1.8} />
         </span>
-        <div className="min-w-0 pt-1">
-          <h3 className="text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">Need something custom?</h3>
-          <p className="mt-1.5 text-[0.95rem] leading-relaxed text-[var(--nv-muted)]">
-            MSP Service Desk, Voice Commerce and more agents are on the roadmap — talk to us.
-          </p>
-        </div>
+        <h3 className="min-w-0 text-[1.2rem] font-bold leading-snug tracking-[-0.02em]">Need something custom?</h3>
       </div>
+      <p className="relative mt-4 text-[0.95rem] leading-relaxed text-[var(--nv-muted)]">
+        MSP Service Desk, Voice Commerce and more agents are on the roadmap — talk to us.
+      </p>
       <div className="relative mt-auto pt-7">
         <ButtonLink to="/request-quote">Contact sales <ArrowRight className="h-4 w-4" aria-hidden /></ButtonLink>
       </div>

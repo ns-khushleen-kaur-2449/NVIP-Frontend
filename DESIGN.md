@@ -146,7 +146,7 @@ The dark theme is the SmartSDR look: a near-black ground, orange light, and a fa
 
 **The Band Flip Rule.** Navy bands and the CTA panel re-point the neutral tokens instead of restyling components.
 
-**The True Claims Rule.** The hero proof row, chips and integrations only state what the platform does. The integrations are Zoho CRM, Google Calendar and Outlook (via Nylas), Twilio, Vapi and ElevenLabs. HubSpot and Salesforce are not shown until they ship.
+**The True Claims Rule.** The hero proof row, chips and integrations only state what the platform does. The integrations are Zoho CRM, Google Calendar and Outlook (via Nylas), Twilio and Vapi. ElevenLabs is part of the managed voice stack, not a customer integration, so it is not in the strip. HubSpot and Salesforce are not shown until they ship.
 
 ## Typography
 
@@ -179,7 +179,7 @@ Shadows are soft, offset downward and tinted warm brown (`rgba(120,53,15,…)`).
 - **Agent card:** 22px radius, white, hairline border. A 64px orange-soft circle holds the agent icon, with the name and summary beside it. Below are three tools with orange check circles, then a hairline footer with "From $X/mo" and "Explore agent". The Most popular card has an orange border, a peach top wash and a badge straddling its top edge.
 - **Custom card:** a dashed orange border on peach.
 - **Hero chips:** white, 16px radius, with an orange-soft icon square and a two-line label that drifts slowly.
-- **Integrations strip:** a white 24px panel with a short heading at left and six tiles. Each tile shows a logo (Zoho, Twilio) or an icon and name, with its role underneath.
+- **Integrations strip:** a white 24px panel with a short heading at left and five tiles. Each tile shows a logo (the Zoho blocks followed by "CRM", Twilio) or an icon and name, with its role underneath.
 - **Voice orb (signature):** a three.js scene with a smoked-glass sphere, an orange equalizer inside, a metal headband and ear cups with orange rings, a tilted orange orbit with a travelling light, and a two-tier dark stand with an orange rim and rising light. Faint sound-wave bars sit either side. Hovering makes it "talk" and turn toward the pointer. The loop pauses off-screen, and reduced motion gets one still frame. An SVG fallback in the same coordinates draws the scene while it loads or without WebGL.
 - **Call demo (signature):** a navy band that plays a labelled sample call and fills a captured-fields panel.
 - **Closing CTA:** an orange gradient panel (28px) with a navy primary and a white secondary button.
