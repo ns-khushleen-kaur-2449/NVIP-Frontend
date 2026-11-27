@@ -140,6 +140,9 @@ function TipsPanel({ guide, tips, languages, language, readOnly, onInsert }) {
   const example = guide?.example || tips?.example;
   const recommended = guide?.recommended_variables || DEFAULT_RECOMMENDED_VARIABLES;
   const list = (english ? shown?.en : shown?.target) || [];
+  // The English toggle only when the English tips say something the shown ones don't. The backend sends the same
+  // list twice for English, so no language code is needed here (see test/noLanguageBranches.test.js).
+  const hasEnglishVersion = shown?.en?.length > 0 && shown.en.join('\n') !== (shown.target || []).join('\n');
   const tipDir = english ? 'ltr' : directionOf(languages, language);
   return (
     <details className="rounded-lg border border-border px-3 py-2 text-sm" data-testid="opening-line-tips">
@@ -150,7 +153,7 @@ function TipsPanel({ guide, tips, languages, language, readOnly, onInsert }) {
             <ul dir={tipDir} className="list-disc space-y-1 ps-5 text-sm" data-testid="opening-line-tip-list">
               {list.map((tip) => <li key={tip}>{tip}</li>)}
             </ul>
-            {language !== 'en' && shown?.en?.length > 0 && (
+            {hasEnglishVersion && (
               <button type="button" className="mt-1 text-xs text-primary underline underline-offset-2"
                 aria-pressed={english} onClick={() => setEnglish((v) => !v)}>
                 {english ? `Show in ${languageName(languages, language)}` : 'Show in English'}

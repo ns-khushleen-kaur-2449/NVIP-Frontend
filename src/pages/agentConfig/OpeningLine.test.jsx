@@ -30,7 +30,11 @@ const FR_CUSTOM = 'Bonjour {{lead_first_name}} ! Ici {{agent_name}}, de {{compan
 const ALLOWED = ['lead_first_name', 'agent_name', 'company_name', 'call_purpose', 'pitch', 'objection_handling'];
 const RECOMMENDED = ['lead_first_name', 'agent_name', 'company_name', 'call_purpose'];
 
-const tipsFor = (code) => ({ target: [`${code} tip one`, `${code} tip two`], en: [`English tip one (${code})`, `English tip two (${code})`] });
+// As the backend sends them: an English guide's English tips are its own tips (the same list twice).
+const tipsFor = (code) => {
+  const target = [`${code} tip one`, `${code} tip two`];
+  return { target, en: code === 'en' ? target : [`English tip one (${code})`, `English tip two (${code})`] };
+};
 const TEMPLATES = { en: EN_DEFAULT, fr: FR_DEFAULT };
 const guide = (code) => ({ language: code, tips: tipsFor(code), example: `${code} example line`, template: TEMPLATES[code] || `${code} template`,
   allowed_variables: ALLOWED, recommended_variables: RECOMMENDED, max_length: 500 });
