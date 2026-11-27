@@ -11,41 +11,57 @@ export function ScoreFigure({ score }) {
   return <span className="ops-num shrink-0 whitespace-nowrap text-2xl font-semibold" style={{ color: colour }} data-testid="score-figure">{formatScore(score)}</span>;
 }
 
+/** A category's score out of 5 as a thin bar in the score's colour (decorative: the number beside it is the value). */
+function ScoreBar({ score }) {
+  const tone = scoreTone(score);
+  const colour = tone === 'good' ? 'var(--ops-good)' : tone === 'warn' ? 'var(--ops-warn)' : tone === 'bad' ? 'var(--ops-bad)' : 'hsl(var(--muted-foreground))';
+  const percent = Math.max(0, Math.min(100, ((Number(score) || 0) / 5) * 100));
+  return (
+    <div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="h-full rounded-full" style={{ width: `${percent}%`, background: colour }} />
+    </div>
+  );
+}
+
 export default function ScoreCard({ score, canManage, onRetry, retrying, resumeFailed, onReplace, onRebuild }) {
   const state = statusOf(SCORE_STATUS, score.status);
   return (
-    <section className="space-y-3 rounded-lg border border-border p-4" aria-label={SCORE_KIND[score.kind] || score.kind}
+    <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label={SCORE_KIND[score.kind] || score.kind}
       data-testid={`score-${score.kind}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">{SCORE_KIND[score.kind] || score.kind}</h3>
+        <h3 className="text-[0.95rem] font-semibold">{SCORE_KIND[score.kind] || score.kind}</h3>
         <StatusBadge label={state.label} tone={state.tone} />
       </div>
 
       {score.status === 'scored' && (
         <>
-          <div className="flex items-baseline gap-3">
+          {/* The score, then the summary on its own lines, so a long reason reads as a paragraph. */}
+          <div className="space-y-2">
             <ScoreFigure score={score.score} />
-            {score.reason && <p className="text-sm text-muted-foreground">{score.reason}</p>}
+            {score.reason && <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{score.reason}</p>}
           </div>
           {score.categories.length > 0 && (
-            <ul className="divide-y divide-border rounded-md border border-border" aria-label="Score by category">
+            <ul className="grid gap-3 sm:grid-cols-2" aria-label="Score by category">
               {score.categories.map((category) => (
-                <li key={category.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 px-3 py-2 text-sm"
+                <li key={category.key} className="space-y-2 rounded-lg border border-border bg-background/40 p-3.5 text-sm"
                   data-testid={`category-${category.key}`}>
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium">{category.label}</span>
-                    {score.weights?.[category.key] !== undefined && (
-                      <span className="ml-2 text-xs text-muted-foreground">counts {score.weights[category.key]}%</span>
-                    )}
-                    {category.reason && <span className="block text-xs text-muted-foreground">{category.reason}</span>}
-                  </span>
-                  <span className="ops-num font-medium">{formatScore(category.score)}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-snug">{category.label}</p>
+                      {score.weights?.[category.key] !== undefined && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">counts {score.weights[category.key]}%</p>
+                      )}
+                    </div>
+                    <span className="ops-num shrink-0 whitespace-nowrap font-semibold">{formatScore(category.score)}</span>
+                  </div>
+                  <ScoreBar score={category.score} />
+                  {category.reason && <p className="text-[0.8rem] leading-relaxed text-muted-foreground">{category.reason}</p>}
                 </li>
               ))}
             </ul>
           )}
           {score.bullets.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-sm" aria-label="Strengths and gaps">
+            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed" aria-label="Strengths and gaps">
               {score.bullets.map((text) => <li key={text}>{text}</li>)}
             </ul>
           )}

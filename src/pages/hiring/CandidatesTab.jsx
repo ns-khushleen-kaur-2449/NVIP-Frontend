@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { BarChart3, Pencil, Plus, Search, Upload } from 'lucide-react';
+import { BarChart3, Pencil, Plus, Search, Sparkles, Upload } from 'lucide-react';
 import OpsButton from '@/components/ops/OpsButton';
 import RelativeTime from '@/components/ops/RelativeTime';
 import StatusBadge from '@/components/ops/StatusBadge';
@@ -25,7 +25,13 @@ const BUSY_REFRESH_MS = 3000;
 /** A detail the AI read from the resume, marked so a person checks it. */
 function AiRead({ show }) {
   if (!show) return null;
-  return <StatusBadge label="From resume" tone="info" title="Read from the resume by the AI. Check it, and edit it if it is wrong." />;
+  // Small and inline (not a pill), so it sits beside the value instead of taking a line of its own.
+  return (
+    <span title="Read from the resume by the AI. Check it, and edit it if it is wrong."
+      className="inline-flex items-center gap-0.5 whitespace-nowrap text-[0.68rem] font-semibold text-[color:var(--ops-info)]">
+      <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />From resume
+    </span>
+  );
 }
 
 /** The uploaded resume's state, or its score once there is one. */
@@ -120,66 +126,72 @@ export default function CandidatesTab() {
         ) : (
           <>
             <ScrollTable label="Candidates">
+              {/* Seven columns that fit the page without sideways scrolling: the job sits under the name, and the
+                  phone and email share one Contact column. Nothing is left out. */}
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Name</th>
-                  <th className="px-4 py-3 font-semibold">Job</th>
-                  <th className="px-4 py-3 font-semibold">Round</th>
-                  <th className="px-4 py-3 font-semibold">Phone</th>
-                  <th className="px-4 py-3 font-semibold">Email</th>
-                  <th className="px-4 py-3 font-semibold">Resume</th>
-                  <th className="px-4 py-3 font-semibold">Consent</th>
-                  <th className="px-4 py-3 font-semibold">Added</th>
-                  <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
+                  <th className="px-2.5 py-3 font-semibold">Candidate</th>
+                  <th className="px-2.5 py-3 font-semibold">Round</th>
+                  <th className="px-2.5 py-3 font-semibold">Contact</th>
+                  <th className="px-2.5 py-3 font-semibold">Resume</th>
+                  <th className="px-2.5 py-3 font-semibold">Consent</th>
+                  <th className="px-2.5 py-3 font-semibold">Added</th>
+                  <th className="px-2.5 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {candidates.map((candidate) => {
                   const consent = statusOf(CONSENT_STATUS, candidate.consent_status);
+                  const stage = statusOf(STAGE, candidate.stage);
                   return (
-                    <tr key={candidate.id} data-testid={`candidate-row-${candidate.id}`}>
-                      <td className="px-4 py-3 font-medium">
-                        <Link to={candidatePath(candidate.id)} className="text-[color:var(--ops-accent-ink)] hover:underline">
-                          {candidateName(candidate)}
-                        </Link>{' '}
-                        <AiRead show={readFromResume(candidate, 'first_name') || readFromResume(candidate, 'last_name')} />
+                    <tr key={candidate.id} data-testid={`candidate-row-${candidate.id}`} className="align-middle">
+                      <td className="px-2.5 py-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Link to={candidatePath(candidate.id)} className="whitespace-nowrap font-medium text-[color:var(--ops-accent-ink)] hover:underline">
+                            {candidateName(candidate)}
+                          </Link>
+                          <AiRead show={readFromResume(candidate, 'first_name') || readFromResume(candidate, 'last_name')} />
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{candidate.job_title || 'No job'}</p>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{candidate.job_title || '—'}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge label={statusOf(STAGE, candidate.stage).label} tone={statusOf(STAGE, candidate.stage).tone} />
+                      <td className="px-2.5 py-3"><StatusBadge label={stage.label} tone={stage.tone} /></td>
+                      <td className="px-2.5 py-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {candidate.phone_number
+                            ? <span className="ops-num whitespace-nowrap font-medium">{candidate.phone_number}</span>
+                            : <span className="text-muted-foreground" title="Add a phone number to call this candidate">Not found</span>}
+                          <AiRead show={candidate.phone_number && readFromResume(candidate, 'phone_number')} />
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="block max-w-[9.5rem] truncate" title={candidate.email || undefined}>{candidate.email || 'No email'}</span>
+                          <AiRead show={candidate.email && readFromResume(candidate, 'email')} />
+                        </div>
                       </td>
-                      <td className="ops-num px-4 py-3">
-                        {candidate.phone_number
-                          ? <>{candidate.phone_number} <AiRead show={readFromResume(candidate, 'phone_number')} /></>
-                          : <span className="text-muted-foreground" title="Add a phone number to call this candidate">Not found</span>}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {candidate.email || '—'} <AiRead show={readFromResume(candidate, 'email')} />
-                      </td>
-                      <td className="px-4 py-3"><ResumeCell candidate={candidate} onOpen={() => setScoresOf(candidate)} /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-2.5 py-3"><ResumeCell candidate={candidate} onOpen={() => setScoresOf(candidate)} /></td>
+                      <td className="px-2.5 py-3">
                         <StatusBadge label={consent.label} tone={consent.tone} />
                         {candidate.consent_source && (
                           <p className="mt-1 text-xs text-muted-foreground">{candidate.consent_source}</p>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground"><RelativeTime iso={candidate.created_at} /></td>
-                      <td className="px-4 py-3 text-right">
-                        {/* One line per row: the resume action at one fixed width (Scores or Upload resume), then
-                            Edit, so the buttons sit in two straight columns down the table. */}
-                        <div className="flex flex-nowrap items-center justify-end gap-2">
+                      <td className="whitespace-nowrap px-2.5 py-3 text-muted-foreground"><RelativeTime iso={candidate.created_at} /></td>
+                      <td className="px-2.5 py-3 text-right">
+                        {/* One line per row: the resume action at one fixed width (Scores or Upload resume), then the
+                            Edit icon, so the buttons sit in two straight columns down the table. */}
+                        <div className="flex flex-nowrap items-center justify-end gap-1.5">
                           {candidate.resume_status ? (
-                            <OpsButton size="sm" onClick={() => setScoresOf(candidate)} className="w-[8.5rem] whitespace-nowrap">
-                              <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" /> Scores
+                            <OpsButton size="sm" onClick={() => setScoresOf(candidate)} className="w-[6.5rem] whitespace-nowrap">
+                              <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Scores
                             </OpsButton>
                           ) : canManage ? (
-                            <OpsButton size="sm" onClick={() => setUploading({ candidate })} className="w-[8.5rem] whitespace-nowrap">
-                              <Upload className="h-3.5 w-3.5" aria-hidden="true" /> Upload resume
+                            <OpsButton size="sm" onClick={() => setUploading({ candidate })} aria-label="Upload resume" title="Upload a resume" className="w-[6.5rem] whitespace-nowrap">
+                              <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Upload
                             </OpsButton>
                           ) : null}
                           {canManage && (
-                            <OpsButton size="sm" variant="quiet" onClick={() => setEditing({ candidate })} className="whitespace-nowrap">
-                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
+                            <OpsButton size="sm" variant="quiet" onClick={() => setEditing({ candidate })}
+                              aria-label="Edit" title="Edit candidate" className="w-8 px-0">
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                             </OpsButton>
                           )}
                         </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Pencil, Upload } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, FileText, Pencil, Upload, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import OpsButton from '@/components/ops/OpsButton';
 import RelativeTime from '@/components/ops/RelativeTime';
@@ -43,6 +43,54 @@ function BackLink() {
 function AiRead({ show }) {
   if (!show) return null;
   return <StatusBadge label="From resume" tone="info" title="Read from the resume by the AI. Check it, and edit it if it is wrong." />;
+}
+
+// The stage's colour, for the header's initials, outline and (once decided) its tint.
+const TONE_VAR = { good: '--ops-good', bad: '--ops-bad', info: '--ops-info', warn: '--ops-warn', accent: '--ops-accent' };
+const initials = (candidate) => [candidate.first_name, candidate.last_name]
+  .filter(Boolean).map((part) => part.trim()[0]).join('').slice(0, 2).toUpperCase() || '?';
+
+/**
+ * The candidate's name with their stage right beside it, the job underneath. Once a decision is made the whole card
+ * takes its colour, with a check (Selected) or a cross (Rejected), so the outcome is the first thing seen.
+ */
+function CandidateHeader({ candidate, stage, busy }) {
+  const decided = candidate.stage === 'selected' || candidate.stage === 'rejected';
+  const tone = TONE_VAR[stage.tone];
+  const color = tone ? `var(${tone})` : 'hsl(var(--muted-foreground))';
+  const Icon = candidate.stage === 'selected' ? CheckCircle2 : candidate.stage === 'rejected' ? XCircle : null;
+  return (
+    <header data-testid="candidate-header" data-stage={candidate.stage}
+      className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
+      style={decided ? {
+        borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
+        background: `linear-gradient(90deg, color-mix(in srgb, ${color} 12%, transparent), transparent 70%)`,
+      } : undefined}>
+      <span aria-hidden="true"
+        className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-base font-bold"
+        style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)` }}>
+        {initials(candidate)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h2 className="font-display text-xl font-bold tracking-[-0.01em] sm:text-2xl" data-testid="candidate-name">
+            {candidateName(candidate)}{' '}
+            <AiRead show={readFromResume(candidate, 'first_name') || readFromResume(candidate, 'last_name')} />
+          </h2>
+          {/* The stage, beside the name. Selected and Rejected are larger, with an icon. */}
+          <span data-testid="candidate-stage"
+            className={`ops-tone ops-tone-${stage.tone} inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold ${decided ? 'h-7 px-3 text-sm' : 'h-6 px-2.5 text-xs'}`}>
+            {Icon ? <Icon className="h-4 w-4" aria-hidden="true" /> : <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />}
+            {stage.label}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {candidate.job_title || 'No job yet'}
+          {busy && ' · updating every few seconds'}
+        </p>
+      </div>
+    </header>
+  );
 }
 
 function Row({ label, children }) {
@@ -290,19 +338,7 @@ export default function CandidateProfile() {
   return (
     <section aria-label="Candidate" className="space-y-5">
       <BackLink />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-xl font-semibold" data-testid="candidate-name">
-            {candidateName(candidate)}{' '}
-            <AiRead show={readFromResume(candidate, 'first_name') || readFromResume(candidate, 'last_name')} />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {candidate.job_title || 'No job yet'}
-            {busy && ' · updating every few seconds'}
-          </p>
-        </div>
-        <StatusBadge label={stage.label} tone={stage.tone} />
-      </header>
+      <CandidateHeader candidate={candidate} stage={stage} busy={busy} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
