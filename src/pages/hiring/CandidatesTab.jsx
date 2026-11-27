@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
 import OpsButton from '@/components/ops/OpsButton';
 import RelativeTime from '@/components/ops/RelativeTime';
@@ -59,7 +59,9 @@ export default function CandidatesTab() {
   const canManage = can(PERMISSIONS.HIRING_MANAGE);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
-  const [jobFilter, setJobFilter] = useState('');
+  // A job's "Open in Candidates" link arrives with ?job=<id>, already filtered to that job.
+  const [searchParams] = useSearchParams();
+  const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [editing, setEditing] = useState(null); // { candidate } to edit, {} to add
   const [uploading, setUploading] = useState(null); // {} for new resumes, { candidate } to replace one

@@ -209,9 +209,13 @@ export function canUseAdmin(actor) {
   return hasPermission(actor, PERMISSIONS.ADMIN_ACCESS);
 }
 
-/** Where a user lands after signing in: the control area for a Super Admin, the dashboard for everyone else. */
+/**
+ * Where a user lands after signing in: the control area for a Super Admin, the Agents page for everyone else (every
+ * tenant role may view it), and the dashboard for an actor without that permission.
+ */
 export function homePath(actor) {
-  return canUseAdmin(actor) ? '/admin/overview' : '/dashboard';
+  if (canUseAdmin(actor)) return '/admin/overview';
+  return !actor || hasPermission(actor, PERMISSIONS.AGENTS_VIEW) ? '/agents' : '/dashboard';
 }
 
 /** May edit tenant settings (contact and appointment rules). */

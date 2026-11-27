@@ -14,9 +14,9 @@ import JobsTab from './JobsTab';
 
 export const HIRING_PATH = '/hiring_agent';
 
-// One page, one tab per screen; the tab is the path (/hiring_agent/<id>).
+// One page, one tab per screen; the tab is the path (/hiring_agent/<id>). No Bookings tab: its routes below stay, so a
+// booking's own page and the links to it keep working, but the tab bar starts at Jobs.
 export const HIRING_TABS = [
-  { id: 'bookings', label: 'Bookings' },
   { id: 'jobs', label: 'Jobs' },
   { id: 'candidates', label: 'Candidates' },
 ];
@@ -50,13 +50,18 @@ export default function HiringAgentPage() {
 
   return (
     <div className="ops mx-auto max-w-7xl space-y-5 px-4 py-4 sm:px-6 sm:py-6" data-testid="hiring-page">
-      <header>
-        <h1 className="font-display text-2xl font-semibold flex items-center gap-2">
-          <BriefcaseBusiness className="h-6 w-6 text-primary" /> Hiring
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Intake calls: jobs and their questions, candidates, and the bookings that call them.
-        </p>
+      {/* Page header: the agent's mark in a tinted tile, a large title, and one line on what the page is for. */}
+      <header className="flex items-center gap-4">
+        <span aria-hidden="true"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[color:var(--ops-accent-ink)] [background:color-mix(in_srgb,var(--ops-accent)_14%,transparent)] [box-shadow:inset_0_0_0_1px_color-mix(in_srgb,var(--ops-accent)_28%,transparent)] sm:h-14 sm:w-14">
+          <BriefcaseBusiness className="h-6 w-6 sm:h-7 sm:w-7" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="font-display text-[1.75rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2rem]">Hiring</h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-[0.95rem]">
+            Intake calls: jobs and their questions, candidates, and the bookings that call them.
+          </p>
+        </div>
       </header>
 
       {error ? <HiringError error={error} onRetry={retry} />
@@ -86,7 +91,7 @@ export default function HiringAgentPage() {
               <Route path="jobs" element={<JobsTab />} />
               <Route path="candidates" element={<CandidatesTab />} />
               <Route path="candidates/:candidateId" element={<CandidateProfile />} />
-              <Route path="*" element={<Navigate to={`${HIRING_PATH}/bookings`} replace />} />
+              <Route path="*" element={<Navigate to={`${HIRING_PATH}/jobs`} replace />} />
             </Routes>
           </>
         )}

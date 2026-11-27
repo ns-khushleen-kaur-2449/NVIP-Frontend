@@ -9,7 +9,6 @@ import { useAuth } from '@/lib/AuthContext';
 import HeroWave3D from '@/components/marketing/HeroWave3D';
 import ThemeToggle from '@/components/shared/ThemeToggle';
 import { NetsmartzLogo } from '@/components/shared/BrandLockup';
-import OrbStage from '@/components/landing/OrbStage';
 import { cn } from '@/lib/utils';
 import { homePath } from '@/lib/rbac';
 import { CodeInput, codeError } from '@/components/auth/MfaParts';
@@ -154,16 +153,6 @@ export default function LoginPage() {
                the supporting line, the description, and the three features together in a row at the bottom.
                A size container, so the type scales with the column (cqi) rather than the viewport. ── */}
         <section aria-label="NVIP" className="relative isolate flex flex-col items-start text-left [container-type:inline-size]">
-          {/* Background only: the 3D orb behind the text, faded so every line stays readable. Absolutely placed,
-              so it never moves the text, features or card; no pointer events, hidden from assistive tech. */}
-          <motion.div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-[44%] -z-10 lg:left-[66%] xl:left-[60%] aspect-[11/10] w-[min(115%,640px)] -translate-x-1/2 -translate-y-1/2"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.4, delay: 0.2, ease: EASE_OUT }}
-          >
-            <OrbStage className="nvl-orb-bg" shadow="rgba(0,0,0,0.25)" />
-          </motion.div>
-
           <motion.div className="w-full" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE_OUT }}>
             <p className="nvl-title">

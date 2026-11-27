@@ -109,22 +109,6 @@ export default function PipelineCard({ pipeline, canManage, busy, error, onAdvan
         </ul>
       )}
 
-      {canManage && !isFinalStage(pipeline.stage) && (
-        <div className="flex flex-wrap gap-2">
-          {pipeline.next_stage && (
-            <OpsButton variant="primary" disabled={!pipeline.can_advance} onClick={() => setAsking('advance')}>
-              Advance to {pipeline.next_label}
-            </OpsButton>
-          )}
-          {(pipeline.decisions || []).includes('selected') && (
-            <OpsButton onClick={() => setAsking('selected')}>Select candidate</OpsButton>
-          )}
-          {(pipeline.decisions || []).includes('rejected') && (
-            <OpsButton variant="quiet" onClick={() => setAsking('rejected')}>Reject</OpsButton>
-          )}
-        </div>
-      )}
-      {error && !asking && <FormError>{error}</FormError>}
 
       <div>
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">History</h4>
@@ -144,6 +128,24 @@ export default function PipelineCard({ pipeline, canManage, busy, error, onAdvan
           </ul>
         )}
       </div>
+
+      {/* The actions come last, under the steps and the history. */}
+      {canManage && !isFinalStage(pipeline.stage) && (
+        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+          {pipeline.next_stage && (
+            <OpsButton variant="primary" disabled={!pipeline.can_advance} onClick={() => setAsking('advance')}>
+              Advance to {pipeline.next_label}
+            </OpsButton>
+          )}
+          {(pipeline.decisions || []).includes('selected') && (
+            <OpsButton onClick={() => setAsking('selected')}>Select candidate</OpsButton>
+          )}
+          {(pipeline.decisions || []).includes('rejected') && (
+            <OpsButton variant="quiet" onClick={() => setAsking('rejected')}>Reject</OpsButton>
+          )}
+        </div>
+      )}
+      {error && !asking && <FormError>{error}</FormError>}
 
       <Confirm open={asking !== null} title={text.title} description={text.description}
         warnings={asking === 'advance' ? warnings : []} confirmLabel={text.label}

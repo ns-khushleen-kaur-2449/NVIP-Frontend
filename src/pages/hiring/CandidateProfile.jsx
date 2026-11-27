@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Pencil, Upload } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import OpsButton from '@/components/ops/OpsButton';
 import RelativeTime from '@/components/ops/RelativeTime';
@@ -46,7 +46,12 @@ function AiRead({ show }) {
 }
 
 function Row({ label, children }) {
-  return <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{label}</dt><dd className="min-w-0 text-right">{children}</dd></div>;
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 font-medium">{children}</dd>
+    </div>
+  );
 }
 
 /** Who the candidate is, and what a call needs from them. */
@@ -58,22 +63,22 @@ function DetailsPanel({ candidate, canManage, onEdit }) {
         <h3 className="font-semibold">Details</h3>
         {canManage && <OpsButton size="sm" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /> Edit</OpsButton>}
       </div>
-      <dl className="space-y-1.5">
-        <Row label="Job">{candidate.job_title || <span className="text-muted-foreground">Not linked to a job</span>}</Row>
+      <dl className="space-y-3">
+        <Row label="Job">{candidate.job_title || <span className="font-normal text-muted-foreground">Not linked to a job</span>}</Row>
         <Row label="Phone">
           {candidate.phone_number
-            ? <span className="ops-num">{candidate.phone_number} <AiRead show={readFromResume(candidate, 'phone_number')} /></span>
-            : <span className="text-muted-foreground">Not found</span>}
+            ? <><span className="ops-num">{candidate.phone_number}</span> <AiRead show={readFromResume(candidate, 'phone_number')} /></>
+            : <span className="font-normal text-muted-foreground">Not found</span>}
         </Row>
         <Row label="Email">
           {candidate.email
-            ? <span className="break-all">{candidate.email} <AiRead show={readFromResume(candidate, 'email')} /></span>
-            : <span className="text-muted-foreground">—</span>}
+            ? <><span className="break-all">{candidate.email}</span> <AiRead show={readFromResume(candidate, 'email')} /></>
+            : <span className="font-normal text-muted-foreground">—</span>}
         </Row>
         <Row label="Consent to be called">
           <StatusBadge label={consent.label} tone={consent.tone} title={candidate.consent_source || undefined} />
         </Row>
-        <Row label="Added"><RelativeTime iso={candidate.created_at} /></Row>
+        <Row label="Added"><span className="font-normal"><RelativeTime iso={candidate.created_at} /></span></Row>
       </dl>
     </section>
   );
@@ -102,21 +107,27 @@ function ResumePanel({ resume, canManage, onUpload }) {
   };
   const state = resume ? statusOf(RESUME_STATUS, resume.parse_status) : null;
   return (
-    <section aria-label="Uploaded resume" className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
+    <section aria-label="Uploaded resume" className="space-y-3 rounded-xl border border-border bg-card p-4 text-sm">
       <h3 className="font-semibold">Uploaded resume</h3>
       {resume ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="min-w-0 truncate font-medium" data-testid="resume-name">{resume.filename}</span>
-            <StatusBadge label={state.label} tone={state.tone} />
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/60 p-3">
+            <span aria-hidden="true"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-muted text-[color:var(--ops-accent-ink)]">
+              <FileText className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium" data-testid="resume-name" title={resume.filename}>{resume.filename}</p>
+              <div className="mt-1"><StatusBadge label={state.label} tone={state.tone} /></div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <OpsButton size="sm" busy={downloading} onClick={() => download(resume.candidate_id)}>
+                <Download className="h-3.5 w-3.5" /> Download
+              </OpsButton>
+              {canManage && <OpsButton size="sm" onClick={onUpload}><Upload className="h-3.5 w-3.5" /> Replace</OpsButton>}
+            </div>
           </div>
           {resume.failure_message && <p className="text-[color:var(--ops-bad)]" role="alert">{resume.failure_message}</p>}
-          <div className="flex flex-wrap gap-2">
-            <OpsButton size="sm" busy={downloading} onClick={() => download(resume.candidate_id)}>
-              <Download className="h-3.5 w-3.5" /> Download
-            </OpsButton>
-            {canManage && <OpsButton size="sm" onClick={onUpload}><Upload className="h-3.5 w-3.5" /> Replace</OpsButton>}
-          </div>
         </>
       ) : (
         <>
@@ -294,17 +305,10 @@ export default function CandidateProfile() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          {pipeline ? (
-            <PipelineCard pipeline={pipeline} canManage={canManage} busy={acting} error={actionError}
-              onAdvance={advance} onDecide={decide} />
-          ) : <SkeletonRows rows={2} label="Loading the pipeline" />}
-
-          {canCall && !isFinalStage(candidate.stage) && (
-            <CallCandidate request={(key) => callHiringCandidate(candidateId, key)} name={candidateName(candidate)}
-              onDone={reloadAll} showUsage={false}
-              title={candidate.stage === 'audio_screening' ? 'Audio screening call' : 'Intake call'}
-              blocker={callBlocker(candidate, pipeline)} />
+        <div className="space-y-5 lg:col-span-2">
+          {/* Read the resume first, then its scores, then where the candidate is and moving them on. */}
+          {resume !== undefined && (
+            <ResumePanel resume={resume} canManage={canManage} onUpload={() => setUploading(true)} />
           )}
 
           <section aria-label="Scores" className="space-y-3">
@@ -320,15 +324,24 @@ export default function CandidateProfile() {
               ))}
           </section>
 
+          {pipeline ? (
+            <PipelineCard pipeline={pipeline} canManage={canManage} busy={acting} error={actionError}
+              onAdvance={advance} onDecide={decide} />
+          ) : <SkeletonRows rows={2} label="Loading the pipeline" />}
+
+          {canCall && !isFinalStage(candidate.stage) && (
+            <CallCandidate request={(key) => callHiringCandidate(candidateId, key)} name={candidateName(candidate)}
+              onDone={reloadAll} showUsage={false}
+              title={candidate.stage === 'audio_screening' ? 'Audio screening call' : 'Intake call'}
+              blocker={callBlocker(candidate, pipeline)} />
+          )}
+
           <CallsSection calls={calls} />
         </div>
         <aside className="space-y-4">
           <DetailsPanel candidate={candidate} canManage={canManage} onEdit={() => setEditing(true)} />
           {aiResume !== undefined && (
             <AiResumePanel candidateId={candidateId} resume={aiResume} canManage={canManage} onChanged={reloadAll} />
-          )}
-          {resume !== undefined && (
-            <ResumePanel resume={resume} canManage={canManage} onUpload={() => setUploading(true)} />
           )}
         </aside>
       </div>

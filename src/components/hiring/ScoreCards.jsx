@@ -8,7 +8,7 @@ const WORKING = ['pending', 'scoring'];
 export function ScoreFigure({ score }) {
   const tone = scoreTone(score);
   const colour = tone === 'good' ? 'var(--ops-good)' : tone === 'warn' ? 'var(--ops-warn)' : tone === 'bad' ? 'var(--ops-bad)' : 'inherit';
-  return <span className="ops-num text-2xl font-semibold" style={{ color: colour }} data-testid="score-figure">{formatScore(score)}</span>;
+  return <span className="ops-num shrink-0 whitespace-nowrap text-2xl font-semibold" style={{ color: colour }} data-testid="score-figure">{formatScore(score)}</span>;
 }
 
 export default function ScoreCard({ score, canManage, onRetry, retrying, resumeFailed, onReplace, onRebuild }) {

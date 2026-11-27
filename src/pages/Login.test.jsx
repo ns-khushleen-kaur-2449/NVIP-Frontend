@@ -37,12 +37,12 @@ it('signs in with what the person typed', async () => {
 
 it.each([
   ['super_admin', 'admin-overview'],
-  ['tenant_admin', 'dashboard'],
+  ['tenant_admin', 'agents'],
 ])('after signing in, a %s lands on the %s page', async (role, page) => {
   const login = jest.fn().mockResolvedValue({ user: { id: 9, role } });
   const routes = [
     <Route key="admin" path="/admin/overview" element={<div>admin-overview</div>} />,
-    <Route key="dashboard" path="/dashboard" element={<div>dashboard</div>} />,
+    <Route key="agents" path="/agents" element={<div>agents</div>} />,
   ];
   renderWithAuth(<LoginPage />, { path: '/login', auth: { login }, routes });
   fireEvent.change(screen.getByTestId('login-email-input'), { target: { value: 'person@company.com' } });

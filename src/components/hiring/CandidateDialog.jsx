@@ -37,6 +37,10 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const linked = Boolean(candidate?.job_id);
+  // A resume-made candidate with no phone may be saved without one; everyone else needs a first name and a phone.
+  // A new candidate also needs a job.
+  const phoneOptional = Boolean(candidate && !candidate.phone_number);
+  const incomplete = !form.first_name.trim() || (!phoneOptional && !form.phone_number.trim()) || (!candidate && !jobId);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -53,7 +57,7 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
   const submit = async (event) => {
     event.preventDefault();
     if (busy) return;
-    const problem = candidateProblem(form, Boolean(candidate && !candidate.phone_number));
+    const problem = candidateProblem(form, phoneOptional) || (!candidate && !jobId ? 'Choose a job.' : null);
     if (problem) {
       setError(problem);
       return;
@@ -84,7 +88,10 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
         <form onSubmit={submit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>{candidate ? `Edit ${candidateName(candidate)}` : 'New candidate'}</DialogTitle>
-            <DialogDescription>A candidate is called only when consent is granted.</DialogDescription>
+            <DialogDescription>
+              {candidate ? 'A candidate is called only when consent is granted.'
+                : 'A candidate is called only when consent is granted; record it later with Edit.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="First name" required>
@@ -107,6 +114,8 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
           <Field label="Email">
             {(id) => <input id={id} type="email" value={form.email} onChange={set('email')} maxLength={320} className={CONTROL} />}
           </Field>
+          {/* Consent is not asked when adding a candidate (it is sent as "Not recorded"); it is recorded with Edit. */}
+          {candidate && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Consent to be called">
               {(id) => (
@@ -120,14 +129,16 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
                 className={CONTROL} placeholder="Application form" />}
             </Field>
           </div>
+          )}
           {linked ? (
             <p className="text-sm"><span className="text-muted-foreground">Job: </span>{candidate.job_title || 'Linked'}</p>
           ) : (
-            <Field label="Job" hint={candidate ? 'Link this candidate to a job so their resume can be scored against it.'
-              : 'Optional. Resumes are scored against a candidate’s job.'}>
+            <Field label="Job" required={!candidate} hint={candidate
+              ? 'Link this candidate to a job so their resume can be scored against it.'
+              : jobs.length ? 'Resumes are scored against the candidate’s job.' : 'No jobs yet: create one in the Jobs tab first.'}>
               {(id) => (
                 <select id={id} value={jobId} onChange={(e) => setJobId(e.target.value)} className={CONTROL}>
-                  <option value="">No job yet</option>
+                  <option value="">{candidate ? 'No job yet' : 'Choose a job'}</option>
                   {jobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
                 </select>
               )}
@@ -144,7 +155,9 @@ export default function CandidateDialog({ open, candidate = null, onOpenChange, 
           <FormError>{error}</FormError>
           <DialogFooter className="gap-2 sm:gap-2">
             <OpsButton variant="quiet" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</OpsButton>
-            <OpsButton type="submit" variant="primary" busy={busy}>{candidate ? 'Save' : 'Add candidate'}</OpsButton>
+            <OpsButton type="submit" variant="primary" busy={busy} disabled={incomplete}
+              title={incomplete ? (candidate ? 'Fill in the first name and phone number first'
+                : 'Fill in the first name, phone number and job first') : undefined}>{candidate ? 'Save' : 'Add candidate'}</OpsButton>
           </DialogFooter>
         </form>
       </DialogContent>

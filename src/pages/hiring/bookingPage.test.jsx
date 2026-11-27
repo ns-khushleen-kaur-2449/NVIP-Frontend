@@ -88,7 +88,7 @@ describe('Booking page: who may open it', () => {
     open(role);
     expect(await heading()).toBeInTheDocument();
     expect(api.getHiringBooking).toHaveBeenCalledWith('b-1');
-    expect(screen.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Bookings' })).not.toBeInTheDocument();
     expect(await screen.findByText('+14155550100')).toBeInTheDocument();
     expect(screen.getByText('Granted')).toBeInTheDocument();
   });

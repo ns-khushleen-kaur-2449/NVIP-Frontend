@@ -168,9 +168,10 @@ describe('platform control area (backend SUPER_ADMIN_PERMISSIONS, require_super_
     expect(ROLES.filter((r) => canUseAdmin(actorOf(r)))).toEqual(['super_admin']);
   });
 
-  test('a super admin lands on /admin/overview, everyone else on /dashboard', () => {
-    expect(ROLES.map((r) => homePath(actorOf(r)))).toEqual(['/admin/overview', '/dashboard', '/dashboard', '/dashboard']);
-    expect(homePath(null)).toBe('/dashboard');
+  test('a super admin lands on /admin/overview, everyone else on the Agents page', () => {
+    expect(ROLES.map((r) => homePath(actorOf(r)))).toEqual(['/admin/overview', '/agents', '/agents', '/agents']);
+    expect(homePath(null)).toBe('/agents');
+    expect(homePath({ role: 'rep', permissions: ['dashboard.own'] })).toBe('/dashboard');
   });
 
   test('the server\'s permissions decide when present', () => {

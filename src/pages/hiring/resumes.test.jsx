@@ -430,14 +430,15 @@ describe('Hiring: scores', () => {
 });
 
 describe('Hiring: the candidate dialog with jobs', () => {
-  test('a typed candidate can be given a job, and is sent without one otherwise', async () => {
+  test('a typed candidate must be given a job', async () => {
     const user = userEvent.setup();
     open();
     await user.click(await screen.findByRole('button', { name: /new candidate/i }));
     const form = within(dialog());
     await user.type(form.getByLabelText(/first name/i), 'Grace');
     await user.type(form.getByLabelText(/phone number/i), '4155550102');
-    await waitFor(() => expect(within(form.getByLabelText('Job')).getAllByRole('option').length).toBeGreaterThan(1));
+    expect(form.getByRole('button', { name: 'Add candidate' })).toBeDisabled();
+    await waitFor(() => expect(within(form.getByLabelText(/^Job/)).getAllByRole('option').length).toBeGreaterThan(1));
     await user.selectOptions(form.getByLabelText(/^Job/), 'j-1');
     await user.click(form.getByRole('button', { name: 'Add candidate' }));
     expect(api.createHiringCandidate).toHaveBeenCalledWith(expect.objectContaining({ first_name: 'Grace', job_id: 'j-1' }));

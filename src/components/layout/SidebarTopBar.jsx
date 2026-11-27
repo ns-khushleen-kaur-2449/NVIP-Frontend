@@ -70,13 +70,15 @@ export default function SidebarTopBar() {
   return (
     <div ref={barRef} className="nvw-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-3">
       <nav aria-label="Breadcrumb" className="min-w-0">
-        <ol className="flex min-w-0 items-center gap-1.5 text-sm">
+        <ol className="flex min-w-0 items-center gap-1.5 text-sm sm:text-[0.95rem]">
           {crumbs.map((crumb, i) => (
             <li key={crumb} className="flex min-w-0 items-center gap-1.5">
               {i > 0 && <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />}
               <span
                 aria-current={i === crumbs.length - 1 ? 'page' : undefined}
-                className={i === crumbs.length - 1 ? 'truncate font-semibold text-foreground' : 'truncate text-muted-foreground'}
+                className={i === crumbs.length - 1
+                  ? 'truncate text-base font-bold tracking-[-0.01em] text-foreground sm:text-lg'
+                  : 'truncate text-muted-foreground'}
               >
                 {crumb}
               </span>

@@ -730,22 +730,51 @@ body {
 }
 .nv-public[data-nv-theme='dark'] .nvp-band { border-block: 1px solid #171A23; }
 
-/* The closing call to action: an orange panel. Navy is the action colour on it. */
+/* The closing call to action: a frosted glass panel over two soft orange glows (.nvp-cta-glow), so the blur has
+   something to show. The page's own ink and orange buttons carry over; only the glass changes per theme. */
 .nv-public .nvp-cta {
-  --nv-ink: #0B1220;
-  --nv-muted: #5A3A26;
-  --nv-orange: #0B1220;
-  --nv-orange-2: #1D2843;
-  --nv-on-orange: #FFFFFF;
-  --nv-surface: #FFFFFF;
-  --nv-surface-2: #FFF1E7;
-  --nv-line: rgba(11, 18, 32, 0.08);
-  --nvp-focus: #0B1220;
-  /* A light peach-orange: soft enough to read as light, still clearly Netsmartz orange. Navy text on it. */
+  position: relative;
+  overflow: hidden;
   background:
-    radial-gradient(70% 120% at 88% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
-    linear-gradient(135deg, #FFDCC4 0%, #FFC59F 55%, #FFB282 100%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 30px 70px -40px rgba(254, 119, 37, 0.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
   color: var(--nv-ink);
+}
+/* A light sheen across the top edge of the glass. */
+.nv-public .nvp-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 90% at 85% 0%, rgba(255, 255, 255, 0.55), transparent 60%);
+}
+.nv-public .nvp-cta > * { position: relative; }
+.nv-public[data-nv-theme='dark'] .nvp-cta {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 30px 70px -40px rgba(254, 119, 37, 0.5);
+}
+.nv-public[data-nv-theme='dark'] .nvp-cta::before {
+  background: radial-gradient(60% 90% at 85% 0%, rgba(255, 255, 255, 0.07), transparent 60%);
+}
+/* The glows behind the glass. */
+.nv-public .nvp-cta-glow {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(40px);
+  background: radial-gradient(circle, rgba(254, 119, 37, 0.75), transparent 65%);
+}
+.nv-public[data-nv-theme='dark'] .nvp-cta-glow {
+  background: radial-gradient(circle, rgba(254, 119, 37, 0.45), transparent 65%);
 }
 
 .nv-public :focus-visible { outline: 2px solid var(--nvp-focus); outline-offset: 3px; }
@@ -878,16 +907,6 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
 /* The three login features: one row when the hero column has room for three readable cells, a stacked list
    otherwise (phones, and the narrow lg-to-xl column beside the card). */
 .nvl-features { grid-template-columns: minmax(0, 1fr); }
-/* The login's background orb: faded and soft-edged so the text over it stays readable. The dark glass orb reads
-   heavier on cream, so light mode fades it a little more. */
-.nvl-orb-bg {
-  opacity: 0.3;
-  /* Lifts the dark glass and metal so the orb reads light, not as a dark shape behind the text. */
-  filter: brightness(1.45) hue-rotate(-8deg);
-  -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
-  mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
-}
-.dark .nvl-orb-bg { opacity: 0.5; filter: brightness(1.55) hue-rotate(-8deg); }
 @container (min-width: 700px) { .nvl-features { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .nvl-subtitle {
   font-size: clamp(1.35rem, 3.6cqi, 2.15rem);
@@ -979,6 +998,21 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   color: var(--nvw-side-ink);
 }
 .nvw-sidebar .nvw-divider { border-color: var(--nvw-side-line); }
+/* The sidebar's collapse handle: a round button on its right edge, level with the logo. */
+.nvw-collapse {
+  background: var(--nvw-side-bg);
+  border: 1px solid var(--nvw-side-line);
+  color: var(--nvw-side-muted);
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.35);
+  transition: color 150ms, border-color 150ms, background-color 150ms, transform 150ms, box-shadow 150ms;
+}
+.nvw-collapse:hover {
+  color: #FFFFFF;
+  background: #FE7725;
+  border-color: #FE7725;
+  box-shadow: 0 6px 16px -6px rgba(254, 119, 37, 0.8);
+}
+.nvw-collapse:focus-visible { outline: 2px solid #FE7725; outline-offset: 2px; }
 .nvw-label {
   padding: 0 0.75rem;
   font-size: 0.68rem;

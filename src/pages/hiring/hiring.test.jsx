@@ -120,10 +120,11 @@ describe('Hiring: who may open it', () => {
     expect(await screen.findByTestId('booking-row-b-1')).toBeInTheDocument();
   });
 
-  test('the bare address opens the Bookings tab', async () => {
+  test('the bare address opens the Jobs tab, and there is no Bookings tab', async () => {
     open('rep', '/hiring_agent');
-    expect(await screen.findByTestId('booking-row-b-1')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByTestId('job-row-j-1')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Jobs' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Bookings' })).not.toBeInTheDocument();
   });
 });
 
@@ -194,25 +195,72 @@ describe('Hiring: jobs', () => {
     await user.click(within(screen.getByTestId('job-row-j-2')).getByRole('button', { name: 'Reopen' }));
     expect(api.updateHiringJob).toHaveBeenCalledWith('j-2', { status: 'open' });
   });
+
+  test('clicking a job title lists that job’s candidates, each linking to their profile', async () => {
+    const user = userEvent.setup();
+    open('rep', '/hiring_agent/jobs');
+    const title = within(await screen.findByTestId('job-row-j-1')).getByRole('button', { name: /Backend engineer/ });
+    expect(title).toHaveAttribute('aria-expanded', 'false');
+    await user.click(title);
+    expect(api.listHiringCandidates).toHaveBeenLastCalledWith({ job_id: 'j-1', limit: 11 });
+    const panel = await screen.findByTestId('job-candidates-j-1');
+    expect(await within(panel).findByRole('link', { name: 'Ada Lovelace' }))
+      .toHaveAttribute('href', '/hiring_agent/candidates/c-1');
+    expect(within(panel).getByRole('link', { name: /Open in Candidates/ }))
+      .toHaveAttribute('href', '/hiring_agent/candidates?job=j-1');
+    await user.click(title);
+    expect(screen.queryByTestId('job-candidates-j-1')).not.toBeInTheDocument();
+  });
+
+  test('a job with no candidates says so', async () => {
+    const user = userEvent.setup();
+    api.listHiringCandidates.mockResolvedValue({ data: [] });
+    open('rep', '/hiring_agent/jobs');
+    await user.click(within(await screen.findByTestId('job-row-j-2')).getByRole('button', { name: /Designer/ }));
+    expect(await screen.findByText('No one has applied for this job yet.')).toBeInTheDocument();
+  });
+
+  test('the Candidates tab opened from a job is already filtered to it', async () => {
+    open('rep', '/hiring_agent/candidates?job=j-1');
+    await waitFor(() => expect(api.listHiringCandidates).toHaveBeenCalledWith({ job_id: 'j-1', limit: 50 }));
+  });
 });
 
 describe('Hiring: candidates', () => {
-  test('granted consent needs a source before anything is sent', async () => {
+  test('a new candidate is not asked for consent, and Add candidate waits for a first name, a phone and a job', async () => {
     const user = userEvent.setup();
     open('manager', '/hiring_agent/candidates');
     await user.click(await screen.findByRole('button', { name: /new candidate/i }));
     const form = within(dialog());
+    expect(form.queryByLabelText(/consent to be called/i)).not.toBeInTheDocument();
+    expect(form.queryByLabelText(/how consent was given/i)).not.toBeInTheDocument();
+    const add = form.getByRole('button', { name: 'Add candidate' });
+    expect(add).toBeDisabled();
     await user.type(form.getByLabelText(/first name/i), 'Grace');
+    expect(add).toBeDisabled();
     await user.type(form.getByLabelText(/phone number/i), '4155550102');
-    await user.selectOptions(form.getByLabelText(/consent to be called/i), 'granted');
-    await user.click(form.getByRole('button', { name: 'Add candidate' }));
-    expect(form.getByRole('alert')).toHaveTextContent(/how consent was given/i);
-    expect(api.createHiringCandidate).not.toHaveBeenCalled();
-    await user.type(form.getByLabelText(/how consent was given/i), 'verbal');
-    await user.click(form.getByRole('button', { name: 'Add candidate' }));
+    expect(add).toBeDisabled();
+    await waitFor(() => expect(within(form.getByLabelText(/^Job/)).getAllByRole('option').length).toBeGreaterThan(1));
+    await user.selectOptions(form.getByLabelText(/^Job/), 'j-1');
+    expect(add).toBeEnabled();
+    await user.click(add);
     expect(api.createHiringCandidate).toHaveBeenCalledWith({
-      first_name: 'Grace', last_name: null, phone_number: '4155550102', email: null, consent_status: 'granted',
-      consent_source: 'verbal' });
+      first_name: 'Grace', last_name: null, phone_number: '4155550102', email: null, consent_status: 'unknown',
+      consent_source: null, job_id: 'j-1' });
+  });
+
+  test('granted consent, recorded with Edit, needs a source before anything is sent', async () => {
+    const user = userEvent.setup();
+    open('tenant_admin', '/hiring_agent/candidates');
+    await user.click(within(await screen.findByTestId('candidate-row-c-2')).getByRole('button', { name: 'Edit' }));
+    const form = within(dialog());
+    await user.selectOptions(form.getByLabelText(/consent to be called/i), 'granted');
+    await user.click(form.getByRole('button', { name: 'Save' }));
+    expect(form.getByRole('alert')).toHaveTextContent(/how consent was given/i);
+    expect(api.updateHiringCandidate).not.toHaveBeenCalled();
+    await user.type(form.getByLabelText(/how consent was given/i), 'verbal');
+    await user.click(form.getByRole('button', { name: 'Save' }));
+    expect(api.updateHiringCandidate).toHaveBeenCalledWith('c-2', { consent_status: 'granted', consent_source: 'verbal' });
   });
 
   test('an edit sends only what changed', async () => {

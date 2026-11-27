@@ -85,7 +85,7 @@ function KnowledgeBaseRoute() {
   return <ExecAppShell><ProtectedRoute roles={ADMINS}><KnowledgeBasePage /></ProtectedRoute></ExecAppShell>;
 }
 
-/** Shows the NVIP agent catalog (cards) for guests; redirects logged-in users home (/admin/overview for a Super Admin, else /dashboard) */
+/** Shows the NVIP agent catalog (cards) for guests; redirects logged-in users home (/admin/overview for a Super Admin, else the Agents page) */
 function SmartRoot() {
   const { user, token, loading } = useAuth();
   if (loading) {

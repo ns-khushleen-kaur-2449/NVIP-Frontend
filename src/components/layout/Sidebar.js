@@ -179,17 +179,30 @@ export function Sidebar() {
       <aside
         ref={asideRef}
         className={cn(
-          'mk nvw-sidebar flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200',
+          // z-40: the collapse handle sticks out over the page's edge (and its z-30 top bar), so the sidebar paints
+          // above the page; dialogs and popovers (z-50) still cover it.
+          'mk nvw-sidebar flex flex-col h-screen sticky top-0 z-40 shrink-0 transition-[width] duration-200',
           collapsed ? 'w-[76px]' : 'w-[272px]'
         )}
       >
-        <div className={cn('nvw-divider flex h-16 shrink-0 items-center border-b', collapsed ? 'justify-center px-2' : 'px-5')}>
+        <div className={cn('nvw-divider relative flex h-16 shrink-0 items-center border-b', collapsed ? 'justify-center px-2' : 'px-5')}>
           {/* The logo is only a brand mark: it does not navigate anywhere. */}
           <div role="img" aria-label="NVIP by Netsmartz" className={cn('flex items-center', !collapsed && 'w-full')}>
             {collapsed
               ? <NetsmartzMark size={30} />
               : <BrandLockup size="side" className="text-[var(--nvw-side-ink)]" />}
           </div>
+          {/* Collapse / expand: a round handle on the sidebar's right edge, level with the logo. */}
+          <button
+            type="button"
+            aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+            title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((v) => !v)}
+            className="nvw-collapse absolute -right-3.5 top-1/2 z-30 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full"
+          >
+            <ChevronLeft className={cn('h-4 w-4 transition-transform duration-200', collapsed && 'rotate-180')} aria-hidden="true" />
+          </button>
         </div>
 
         <ScrollArea className="flex-1 px-3 py-3">
@@ -374,14 +387,6 @@ export function Sidebar() {
           </button>
         </div>
 
-        <button
-          type="button"
-          aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-          onClick={() => setCollapsed((v) => !v)}
-          className="nvw-divider nvw-item flex items-center justify-center py-2.5 border-t transition-colors shrink-0"
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
       </aside>
     </TooltipProvider>
   );
