@@ -368,11 +368,21 @@ export default function AgentsPage() {
 
   return (
     <div className="ops max-w-6xl mx-auto space-y-8 pt-2" data-testid="agents-page">
-      <header>
-        <h1 className="nvw-h1">Agents</h1>
-        <p className="mt-2 max-w-xl text-[1.02rem] leading-relaxed text-muted-foreground">
-          {useTypes ? 'Set an agent up once. Campaigns and phone numbers then use it.' : 'The AI agents available to your organisation.'}
-        </p>
+      {/* Page header, like Hiring's: the mark in a tinted tile, a large title, and the line on what the page is for.
+          data-keep-title keeps the title visible although the top bar also says "Agents". */}
+      <header className="flex items-center gap-4">
+        <span aria-hidden="true"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[color:var(--ops-accent-ink)] [background:color-mix(in_srgb,var(--ops-accent)_14%,transparent)] [box-shadow:inset_0_0_0_1px_color-mix(in_srgb,var(--ops-accent)_28%,transparent)] sm:h-14 sm:w-14">
+          <Bot className="h-6 w-6 sm:h-7 sm:w-7" />
+        </span>
+        <div className="min-w-0">
+          <h1 data-keep-title className="font-display text-[1.6rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.85rem]">
+            Agents
+          </h1>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground sm:text-[0.95rem]">
+            {useTypes ? 'Set an agent up once. Campaigns and phone numbers then use it.' : 'The AI agents available to your organisation.'}
+          </p>
+        </div>
       </header>
       {useTypes && <h2 className="text-xl font-bold tracking-[-0.02em]">Your agents</h2>}
       {useTypes && !instances.failed && readiness.length > 0 && (

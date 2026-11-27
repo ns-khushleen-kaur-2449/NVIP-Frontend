@@ -22,9 +22,13 @@ const VOICE_TABS = {
 
 const titleCase = (segment) => segment.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+// Pages whose own header carries the title (icon, large name, description): the bar leaves the name out there.
+const OWN_TITLE_PAGES = new Set(['/agents']);
+
 function crumbsFor(location) {
   const [section] = location.pathname.split('/').filter(Boolean);
   if (!section) return [];
+  if (OWN_TITLE_PAGES.has(location.pathname.replace(/\/+$/, ''))) return [];
   const crumbs = [SECTION_NAMES[section] || titleCase(section)];
   if (section === 'voice_agent') {
     const params = new URLSearchParams(location.search);
