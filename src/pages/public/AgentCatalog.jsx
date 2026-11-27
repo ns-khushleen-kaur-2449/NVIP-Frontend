@@ -7,10 +7,9 @@ import { useNvipQuery } from '../../hooks/useNvipQuery';
 import LandingHero from '../../components/landing/LandingHero';
 import AgentShowcase from '../../components/landing/AgentShowcase';
 import CallDemo from '../../components/landing/CallDemo';
-import GoLiveSection from '../../components/landing/GoLiveSection';
 import UseCases from '../../components/landing/UseCases';
 import NetsmartzBand from '../../components/landing/NetsmartzBand';
-import PricingFaq from '../../components/landing/PricingFaq';
+import Faq from '../../components/landing/Faq';
 import ClosingCta from '../../components/landing/ClosingCta';
 
 /**
@@ -35,9 +34,8 @@ export default function AgentCatalog() {
       <AgentShowcase query={query} />
       <CallDemo agent={sdr} />
       <UseCases agents={agents} />
-      <GoLiveSection />
       <NetsmartzBand />
-      <PricingFaq agents={agents} />
+      <Faq />
       <ClosingCta />
     </MotionConfig>
   );

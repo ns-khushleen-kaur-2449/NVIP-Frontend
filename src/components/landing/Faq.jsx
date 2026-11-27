@@ -1,7 +1,6 @@
 import * as Accordion from '@radix-ui/react-accordion';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Plus } from 'lucide-react';
-import { AgentTile, ButtonLink } from '@/components/primitives';
+import { Plus } from 'lucide-react';
+import { TextLink } from '@/components/primitives';
 
 /** Answers drawn from the platform's own documentation (How it works, agent guardrails, pricing notes). */
 const FAQS = [
@@ -31,38 +30,20 @@ const FAQS = [
   },
 ];
 
-/** Pricing snapshot (from the live agent list) beside the FAQ. Agent names here are not headings. */
-export default function PricingFaq({ agents }) {
+/** Questions buyers ask. Pricing has its own page (/pricing), so the landing page links there instead of repeating it. */
+export default function Faq() {
   return (
-    <section aria-labelledby="pricing-title" className="bg-[var(--nv-bg)]">
-      <div className="mx-auto grid max-w-7xl gap-16 px-4 py-24 sm:px-6 lg:grid-cols-12 lg:gap-20 lg:py-28">
-        <div className="lg:col-span-5">
-          <h2 id="pricing-title" className="nvp-h2">Priced per agent</h2>
-          <p className="mt-4 max-w-md leading-relaxed text-[var(--nv-muted)]">
-            Every agent has Starter, Growth and Enterprise tiers. Usage beyond what's included is itemized separately.
+    <section aria-labelledby="faq-title" className="bg-[var(--nv-bg)]">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-24 sm:px-6 lg:grid-cols-12 lg:gap-20 lg:py-28">
+        <div className="lg:col-span-4">
+          <h2 id="faq-title" className="nvp-h2">Questions buyers ask</h2>
+          <p className="nvp-lede mt-4 max-w-sm text-[var(--nv-muted)]">
+            The short answers. The full path from demo to live calls is on <TextLink to="/how-it-works">How it works</TextLink>, and
+            every tier is on <TextLink to="/pricing">Pricing</TextLink>.
           </p>
-          {agents?.length > 0 && (
-            <ul className="mt-8 divide-y divide-[var(--nv-line)] border-y border-[var(--nv-line)]">
-              {agents.map((a) => (
-                <li key={a.type}>
-                  <Link to={`/pricing#${a.slug}`} className="group flex items-center gap-4 rounded-sm py-4">
-                    <AgentTile agent={a} size="sm" tone="neutral" />
-                    <span className="flex-1 font-semibold transition-colors group-hover:text-[var(--nv-orange-ink)]">{a.name}</span>
-                    <span className="text-sm text-[var(--nv-muted)]">
-                      From <span className="font-bold tabular-nums text-[var(--nv-ink)]">${a.startingPrice}</span>/mo
-                    </span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-[var(--nv-muted)] transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <ButtonLink to="/pricing" variant="secondary" className="mt-8">Compare all tiers</ButtonLink>
         </div>
-
-        <div className="lg:col-span-7">
-          <h2 className="nvp-h2">Questions buyers ask</h2>
-          <Accordion.Root type="single" collapsible className="mt-8 border-t border-[var(--nv-line)]">
+        <div className="lg:col-span-8">
+          <Accordion.Root type="single" collapsible className="border-t border-[var(--nv-line)]">
             {FAQS.map((f, i) => (
               <Accordion.Item key={f.q} value={`faq-${i}`} className="border-b border-[var(--nv-line)]">
                 <Accordion.Header>

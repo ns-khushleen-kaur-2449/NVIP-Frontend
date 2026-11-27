@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   AudioWaveform, CalendarCheck, CalendarDays, CirclePlay, DatabaseZap, Mail, Phone,
-  PhoneCall, ShieldCheck, UserCheck,
+  PhoneCall, UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ButtonLink } from '@/components/primitives';
@@ -11,12 +11,6 @@ import twilioLogo from '@/assets/twilio.png';
 import OrbStage from './OrbStage';
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
-
-/** True statements about the platform; the mockup's "deploy in minutes" style claims are not made. */
-const PROOF = [
-  { icon: DatabaseZap, label: 'Your CRM stays in charge' },
-  { icon: ShieldCheck, label: 'Fixed guardrails' },
-];
 
 
 /** A floating capability chip around the orb. */
@@ -175,13 +169,6 @@ export default function LandingHero() {
               <CirclePlay className="h-[18px] w-[18px] text-[var(--nvp-orange-text)]" aria-hidden /> Explore AI agents
             </ButtonLink>
           </motion.div>
-          <motion.ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-[var(--nv-muted)]" {...rise(0.3)}>
-            {PROOF.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2">
-                <Icon className="h-4 w-4 text-[var(--nvp-orange-text)]" aria-hidden /> {label}
-              </li>
-            ))}
-          </motion.ul>
         </div>
         <div className="lg:col-span-6">
           <HeroVisual reduce={reduce} />

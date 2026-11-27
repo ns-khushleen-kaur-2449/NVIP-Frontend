@@ -1,5 +1,6 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import ScrollToTop from "@/components/shared/ScrollToTop";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
@@ -265,6 +266,8 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="smartsdr-theme">
     <NextThemesBridge>
     <BrowserRouter>
+      {/* New pages open at the top instead of at the previous page's scroll position. */}
+      <ScrollToTop />
       <AuthProvider>
         {/* A Super Admin switch change seen by the /me refresh: leave a page that is no longer allowed (F-02). */}
         <FeatureLossWatcher />

@@ -12,10 +12,7 @@ export const GO_LIVE_STEPS = [
   { id: 'live', title: 'Test, then go live', body: 'Run test calls, pass the acceptance checklist, and approve activation.' },
 ];
 
-/** The three steps the landing page shows; the full five live on /how-it-works. */
-export const GO_LIVE_SHORT = ['demo', 'connect', 'live'].map((id) => GO_LIVE_STEPS.find((s) => s.id === id));
-
-/** The managed voice stack the public site names (landing, How it works, footer). ElevenLabs is not named publicly. */
+/** The managed voice stack the public site names (How it works, footer). ElevenLabs is not named publicly. */
 export const VOICE_STACK = [
   { name: 'Twilio', role: 'Phone numbers, call control and SMS' },
   { name: 'Vapi', role: 'Real-time conversation, speech-to-text, interruptions' },
