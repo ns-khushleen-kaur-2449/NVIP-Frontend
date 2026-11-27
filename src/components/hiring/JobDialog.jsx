@@ -56,6 +56,12 @@ export default function JobDialog({ open, job = null, onOpenChange, onSaved }) {
 
   const total = weightsTotal(weights);
   const isEqual = sameWeights(weights, equalWeights());
+  // A new job needs a title and a description (resumes are scored against it), and the weights must add up to 100.
+  // An existing job may predate descriptions, so editing it only needs the title.
+  const needsJd = !job;
+  const missing = !title.trim() ? 'Add a job title.'
+    : needsJd && !jd.trim() ? 'Add the job description.'
+      : weightsProblem(weights);
   // Changing one weight rebalances the others so the total is always 100. A cleared box is left empty while the
   // user types the next number, and counts as 0 once they leave it.
   const setWeight = (key, value) => {
@@ -74,13 +80,8 @@ export default function JobDialog({ open, job = null, onOpenChange, onSaved }) {
     event.preventDefault();
     if (busy || loading || loadError) return;
     const value = title.trim();
-    if (!value) {
-      setError('A job needs a title.');
-      return;
-    }
-    const problem = weightsProblem(weights);
-    if (problem) {
-      setError(problem);
+    if (missing) {
+      setError(missing);
       return;
     }
     const description = jd.trim();
@@ -115,7 +116,7 @@ export default function JobDialog({ open, job = null, onOpenChange, onSaved }) {
             <DialogTitle>{job ? 'Edit job' : 'New job'}</DialogTitle>
             <DialogDescription>
               {job ? 'Bookings and calls keep their link to the job.'
-                : 'Add the job description if you have it, then the questions its intake call asks.'}
+                : 'Add the job title and description, then the questions its intake call asks.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -128,7 +129,7 @@ export default function JobDialog({ open, job = null, onOpenChange, onSaved }) {
                     className={CONTROL} placeholder="Backend engineer" />}
                 </Field>
 
-                <Field label="Job description"
+                <Field label="Job description" required={needsJd}
                   hint={`Paste the job description. Resumes are scored against it, and screening questions can be written from it. ${jd.length} of ${JD_MAX_CHARS} characters.`}>
                   {(id) => <textarea id={id} value={jd} onChange={(e) => setJd(e.target.value)} rows={7}
                     maxLength={JD_MAX_CHARS} placeholder="Responsibilities, requirements, skills, experience…"
@@ -168,7 +169,8 @@ export default function JobDialog({ open, job = null, onOpenChange, onSaved }) {
           <FormError>{error}</FormError>
           <DialogFooter className="gap-2 sm:gap-2">
             <OpsButton variant="quiet" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</OpsButton>
-            <OpsButton type="submit" variant="primary" busy={busy} disabled={loading || Boolean(loadError)}>
+            <OpsButton type="submit" variant="primary" busy={busy}
+              disabled={loading || Boolean(loadError) || Boolean(missing)} title={missing || undefined}>
               {job ? 'Save' : 'Create job'}
             </OpsButton>
           </DialogFooter>

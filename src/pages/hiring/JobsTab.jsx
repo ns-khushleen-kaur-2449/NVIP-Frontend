@@ -23,10 +23,24 @@ import useHiringData from './useHiringData';
 // The status filter, as a segmented control: every job, or one status (sent to the backend as `status`).
 const FILTERS = [{ value: '', label: 'All jobs' }, ...Object.entries(JOB_STATUS).map(([value, { label }]) => ({ value, label }))];
 
+/**
+ * A small pill, the same height everywhere on the row (the job's status and each fact's value), with a dot in its
+ * tone so the meaning is never colour alone. Tones are index.css's .ops-tone-*.
+ */
+function Pill({ tone = 'neutral', title, dot = true, testId, children }) {
+  return (
+    <span title={title} data-testid={testId}
+      className={`ops-tone ops-tone-${tone} inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-semibold leading-none`}>
+      {dot && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />}
+      {children}
+    </span>
+  );
+}
+
 /** One fact about a job, with its label, on the row's second line. */
 function Fact({ icon: Icon, label, children }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex h-6 items-center gap-1.5">
       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       <span className="text-muted-foreground">{label}</span>
       {children}
@@ -91,13 +105,13 @@ function JobRow({ job, canManage, toggling, expanded, onExpand, onQuestions, onS
   return (
     <li data-testid={`job-row-${job.id}`} className="space-y-3 px-4 py-4 transition-colors hover:bg-muted/40 sm:px-5">
      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-start gap-3 lg:flex-1">
         <span aria-hidden="true"
           className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${closed ? 'bg-muted text-muted-foreground' : '[background:color-mix(in_srgb,var(--ops-accent)_12%,transparent)] text-[color:var(--ops-accent-ink)]'}`}>
           <Briefcase className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* The title opens the candidates who applied for this job. */}
             <h3 className="min-w-0 text-[0.95rem] font-semibold">
               <button type="button" onClick={onExpand} aria-expanded={expanded} aria-controls={`job-candidates-${job.id}`}
@@ -108,38 +122,51 @@ function JobRow({ job, canManage, toggling, expanded, onExpand, onQuestions, onS
                   className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
               </button>
             </h3>
-            <StatusBadge label={state.label} tone={state.tone} />
+            {/* Below lg the status follows the title; from lg it has its own column (below), so every row lines up. */}
+            <span className="lg:hidden"><Pill tone={state.tone}>{state.label}</Pill></span>
+            <span className="text-xs text-muted-foreground">Updated <RelativeTime iso={job.updated_at} /></span>
           </div>
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+          <p className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <Fact icon={FileText} label="Description">
               {job.has_jd
-                ? <StatusBadge label="Added" tone="good" />
-                : <StatusBadge label="No JD" tone="neutral" title="Resumes can only be scored against a job description" />}
+                ? <Pill tone="good">Added</Pill>
+                : <Pill tone="neutral" title="Resumes can only be scored against a job description">No JD</Pill>}
             </Fact>
             <Fact icon={ListChecks} label="Intake questions">
               {job.question_count
-                ? <span className="ops-num font-medium text-foreground">{job.question_count}</span>
-                : <StatusBadge label="No questions" tone="warn" title="A job needs at least one question before calls" />}
+                ? <Pill dot={false}><span className="ops-num">{job.question_count}</span></Pill>
+                : <Pill tone="warn" title="A job needs at least one question before calls">No questions</Pill>}
             </Fact>
             <Fact icon={MessagesSquare} label="Screening">
               {job.screening_question_count
-                ? <span className="ops-num font-medium text-foreground" data-testid={`screening-count-${job.id}`}>{job.screening_question_count}</span>
-                : <span className="font-medium text-foreground">None</span>}
+                ? <Pill dot={false} testId={`screening-count-${job.id}`}><span className="ops-num">{job.screening_question_count}</span></Pill>
+                : <Pill dot={false}>None</Pill>}
             </Fact>
-            <span className="text-muted-foreground">Updated <RelativeTime iso={job.updated_at} /></span>
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
-        <OpsButton size="sm" onClick={onQuestions}>{canManage ? 'Edit questions' : 'View questions'}</OpsButton>
-        <OpsButton size="sm" onClick={onScreening}>{canManage ? 'Screening questions' : 'View screening'}</OpsButton>
+      <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap lg:justify-end">
+        {/* The status column: a fixed width, so Open and Closed sit one under the other on every row. */}
+        <span className="hidden w-20 shrink-0 lg:flex" data-testid={`job-status-${job.id}`}>
+          <Pill tone={state.tone}>{state.label}</Pill>
+        </span>
+        {/* Short labels on the row; the full name is what the button is called (and its tooltip). */}
+        <OpsButton size="sm" onClick={onQuestions}
+          aria-label={canManage ? 'Edit questions' : 'View questions'} title={canManage ? 'Edit intake questions' : 'View intake questions'}>
+          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" /> Questions
+        </OpsButton>
+        <OpsButton size="sm" onClick={onScreening}
+          aria-label={canManage ? 'Screening questions' : 'View screening'} title={canManage ? 'Edit screening questions' : 'View screening questions'}>
+          <MessagesSquare className="h-3.5 w-3.5" aria-hidden="true" /> Screening
+        </OpsButton>
         {canManage && (
           <>
             <OpsButton size="sm" variant="quiet" onClick={onEdit} aria-label="Edit job" title="Edit job">
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" /><span className="lg:sr-only">Edit</span>
             </OpsButton>
-            <OpsButton size="sm" variant="quiet" busy={toggling} onClick={onToggle}
+            {/* One width for Close and Reopen, so the status column above stays in line on every row. */}
+            <OpsButton size="sm" variant="quiet" busy={toggling} onClick={onToggle} className="lg:w-[4.75rem] lg:justify-center"
               title={closed ? 'Open this job again' : 'Stop using this job for new calls'}>
               {closed ? 'Reopen' : 'Close'}
             </OpsButton>
@@ -184,34 +211,34 @@ export default function JobsTab() {
 
   return (
     <section className="space-y-4" aria-label="Jobs">
-      {/* Toolbar: search and the status filter on the left, the one primary action on the right. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative block sm:w-64">
-            <span className="sr-only">Search jobs</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search jobs"
-              className={`${CONTROL} pl-9`} />
-          </label>
-          <div role="group" aria-label="Status" className="inline-flex w-fit rounded-lg border border-border bg-background p-0.5">
+      {/* Toolbar: the status filter on the left; the search and the one primary action on the right. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="group" aria-label="Status" className="inline-flex w-fit rounded-lg border border-border bg-background p-0.5">
             {FILTERS.map((filter) => {
               const active = jobStatus === filter.value;
               return (
                 <button key={filter.value || 'all'} type="button" aria-pressed={active}
                   onClick={() => { setJobStatus(filter.value); setLimit(PAGE_SIZE); }}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ops-accent)] ${
+                  className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ops-accent)] ${
                     active ? 'bg-[color:var(--ops-accent)] text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                   {filter.label}
                 </button>
               );
             })}
-          </div>
         </div>
-        {canManage && (
-          <OpsButton variant="primary" onClick={() => setNaming({})} className="w-fit">
-            <Plus className="h-4 w-4" /> New job
-          </OpsButton>
-        )}
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <label className="relative block sm:w-72">
+            <span className="sr-only">Search jobs</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search jobs"
+              className={`${CONTROL} pl-9`} />
+          </label>
+          {canManage && (
+            <OpsButton variant="primary" onClick={() => setNaming({})} className="w-fit shrink-0">
+              <Plus className="h-4 w-4" /> New job
+            </OpsButton>
+          )}
+        </div>
       </div>
 
       {error && <HiringError error={error} onRetry={reload} />}

@@ -57,7 +57,10 @@ export default function HiringAgentPage() {
           <BriefcaseBusiness className="h-6 w-6 sm:h-7 sm:w-7" />
         </span>
         <div className="min-w-0">
-          <h1 className="font-display text-[1.75rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2rem]">Hiring</h1>
+          {/* Kept visible next to its icon and description, though the top bar also names the page. */}
+          <h1 data-keep-title className="font-display text-[1.6rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.85rem]">
+            Hiring Agent
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-[0.95rem]">
             Intake calls: jobs and their questions, candidates, and the bookings that call them.
           </p>

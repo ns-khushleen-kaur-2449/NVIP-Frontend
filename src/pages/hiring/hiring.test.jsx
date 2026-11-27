@@ -148,14 +148,32 @@ describe('Hiring: jobs', () => {
     expect(within(await screen.findByTestId('job-row-j-2')).getByText('No questions')).toBeInTheDocument();
   });
 
+  test('Create job stays off until the job has a title and a description', async () => {
+    const user = userEvent.setup();
+    open('tenant_admin', '/hiring_agent/jobs');
+    await user.click(await screen.findByRole('button', { name: /new job/i }));
+    const create = within(dialog()).getByRole('button', { name: 'Create job' });
+    expect(create).toBeDisabled();
+    await user.type(within(dialog()).getByLabelText(/job title/i), 'Data analyst');
+    expect(create).toBeDisabled();
+    await user.type(within(dialog()).getByLabelText(/job description/i), '   ');
+    expect(create).toBeDisabled();
+    await user.type(within(dialog()).getByLabelText(/job description/i), 'Analyse sales data.');
+    expect(create).toBeEnabled();
+    await user.clear(within(dialog()).getByLabelText(/job title/i));
+    expect(create).toBeDisabled();
+    expect(api.createHiringJob).not.toHaveBeenCalled();
+  });
+
   test('a new job goes straight on to its questions', async () => {
     api.getHiringJob.mockResolvedValue({ data: { id: 'j-3', title: 'Data analyst', questions: [] } });
     const user = userEvent.setup();
     open('tenant_admin', '/hiring_agent/jobs');
     await user.click(await screen.findByRole('button', { name: /new job/i }));
     await user.type(within(dialog()).getByLabelText(/job title/i), 'Data analyst');
+    await user.type(within(dialog()).getByLabelText(/job description/i), 'Analyse sales data.');
     await user.click(within(dialog()).getByRole('button', { name: 'Create job' }));
-    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst' });
+    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', jd_text: 'Analyse sales data.' });
     await user.type(await screen.findByLabelText('Question 1'), 'Why this role?');
     await user.click(within(dialog()).getByRole('button', { name: 'Save questions' }));
     expect(api.replaceHiringQuestions).toHaveBeenCalledWith('j-3', [{ text: 'Why this role?', section_key: null }]);
@@ -421,10 +439,14 @@ describe('Hiring: the new booking dialog offers only the chosen job’s candidat
 describe('Hiring: job setup (description, weights, sections, screening questions)', () => {
   const WEIGHTS = { skills_match: 40, experience_match: 30, qualifications: 20, keyword_presence: 10 };
 
-  async function openNewJob(user) {
+  const JD = 'Analyse sales data.';
+
+  // A new job with its title and (unless `jd` is false) its description, both of which Create job waits for.
+  async function openNewJob(user, { jd = true } = {}) {
     open('tenant_admin', '/hiring_agent/jobs');
     await user.click(await screen.findByRole('button', { name: /new job/i }));
     await user.type(within(dialog()).getByLabelText(/job title/i), 'Data analyst');
+    if (jd) await user.type(within(dialog()).getByLabelText(/job description/i), JD);
     return within(dialog());
   }
 
@@ -439,7 +461,7 @@ describe('Hiring: job setup (description, weights, sections, screening questions
   test('a new job can carry its description', async () => {
     api.getHiringJob.mockResolvedValue({ data: { id: 'j-3', title: 'Data analyst', questions: [] } });
     const user = userEvent.setup();
-    const form = await openNewJob(user);
+    const form = await openNewJob(user, { jd: false });
     await user.type(form.getByLabelText(/job description/i), '  Analyse sales data with SQL.  ');
     await user.click(form.getByRole('button', { name: 'Create job' }));
     expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', jd_text: 'Analyse sales data with SQL.' });
@@ -462,7 +484,7 @@ describe('Hiring: job setup (description, weights, sections, screening questions
     expect(shown(form)).toEqual(WEIGHTS);
     expect(form.getByTestId('weights-total')).toHaveTextContent('Total: 100 of 100');
     await user.click(form.getByRole('button', { name: 'Create job' }));
-    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', resume_weights: WEIGHTS });
+    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', jd_text: JD, resume_weights: WEIGHTS });
   });
 
   test('the total is 100 after every keystroke, whatever is typed', async () => {
@@ -498,7 +520,7 @@ describe('Hiring: job setup (description, weights, sections, screening questions
     expect(shown(form)).toEqual({ skills_match: 0, experience_match: 34, qualifications: 33, keyword_presence: 33 });
     expect(form.getByTestId('weights-total')).toHaveTextContent('Total: 100 of 100');
     await user.click(form.getByRole('button', { name: 'Create job' }));
-    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', resume_weights: {
+    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', jd_text: JD, resume_weights: {
       skills_match: 0, experience_match: 34, qualifications: 33, keyword_presence: 33 } });
   });
 
@@ -512,7 +534,7 @@ describe('Hiring: job setup (description, weights, sections, screening questions
     expect(shown(form)).toEqual(equalWeights());
     expect(form.getByRole('button', { name: 'Equal weights' })).toBeDisabled();
     await user.click(form.getByRole('button', { name: 'Create job' }));
-    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst' });
+    expect(api.createHiringJob).toHaveBeenCalledWith({ title: 'Data analyst', jd_text: JD });
   });
 
   test('after a reset, the next change adjusts all the others again', async () => {

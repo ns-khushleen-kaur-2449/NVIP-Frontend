@@ -45,6 +45,8 @@ function useHideDuplicateHeading(barRef, crumbs) {
     if (!content) return undefined;
     const names = key.split('|').map(normalize).filter(Boolean);
     const isDuplicate = (h1) => {
+      // A page can keep its heading on purpose (data-keep-title), e.g. a header with an icon and a description.
+      if (h1.hasAttribute('data-keep-title')) return false;
       const text = normalize(h1.textContent);
       return !!text && names.some((name) => text === name || text.includes(name) || name.includes(text));
     };
@@ -77,7 +79,7 @@ export default function SidebarTopBar() {
               <span
                 aria-current={i === crumbs.length - 1 ? 'page' : undefined}
                 className={i === crumbs.length - 1
-                  ? 'truncate text-base font-bold tracking-[-0.01em] text-foreground sm:text-lg'
+                  ? 'truncate font-display text-lg font-bold tracking-[-0.02em] text-foreground sm:text-[1.4rem]'
                   : 'truncate text-muted-foreground'}
               >
                 {crumb}

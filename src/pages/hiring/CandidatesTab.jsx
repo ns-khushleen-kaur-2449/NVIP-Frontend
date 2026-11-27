@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Upload } from 'lucide-react';
+import { BarChart3, Pencil, Plus, Search, Upload } from 'lucide-react';
 import OpsButton from '@/components/ops/OpsButton';
 import RelativeTime from '@/components/ops/RelativeTime';
 import StatusBadge from '@/components/ops/StatusBadge';
@@ -30,7 +30,7 @@ function AiRead({ show }) {
 
 /** The uploaded resume's state, or its score once there is one. */
 function ResumeCell({ candidate, onOpen }) {
-  if (!candidate.resume_status) return <span className="text-muted-foreground">No resume</span>;
+  if (!candidate.resume_status) return <span className="whitespace-nowrap text-muted-foreground">No resume</span>;
   if (candidate.resume_score_status === 'scored') {
     return (
       <button type="button" onClick={onOpen} aria-label={`Resume score ${formatScore(candidate.resume_score)}`}
@@ -86,16 +86,20 @@ export default function CandidatesTab() {
     <section className="space-y-4" aria-label="Candidates">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">Search
-            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} maxLength={100}
-              placeholder="Name, phone or email" className={`${CONTROL} w-64`} />
-          </label>
+          {/* The job first, then the search to its right. */}
           <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">Job
             <select value={jobFilter} onChange={(e) => { setJobFilter(e.target.value); setLimit(PAGE_SIZE); }}
               className={`${CONTROL} w-52`}>
               <option value="">All jobs</option>
               {(jobs || []).map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
             </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">Search
+            <span className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} maxLength={100}
+                placeholder="Name, phone or email" className={`${CONTROL} w-64 pl-9`} />
+            </span>
           </label>
         </div>
         {canManage && (
@@ -159,16 +163,25 @@ export default function CandidatesTab() {
                           <p className="mt-1 text-xs text-muted-foreground">{candidate.consent_source}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground"><RelativeTime iso={candidate.created_at} /></td>
+                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground"><RelativeTime iso={candidate.created_at} /></td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {candidate.resume_status && (
-                            <OpsButton size="sm" onClick={() => setScoresOf(candidate)}>Scores</OpsButton>
+                        {/* One line per row: the resume action at one fixed width (Scores or Upload resume), then
+                            Edit, so the buttons sit in two straight columns down the table. */}
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
+                          {candidate.resume_status ? (
+                            <OpsButton size="sm" onClick={() => setScoresOf(candidate)} className="w-[8.5rem] whitespace-nowrap">
+                              <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" /> Scores
+                            </OpsButton>
+                          ) : canManage ? (
+                            <OpsButton size="sm" onClick={() => setUploading({ candidate })} className="w-[8.5rem] whitespace-nowrap">
+                              <Upload className="h-3.5 w-3.5" aria-hidden="true" /> Upload resume
+                            </OpsButton>
+                          ) : null}
+                          {canManage && (
+                            <OpsButton size="sm" variant="quiet" onClick={() => setEditing({ candidate })} className="whitespace-nowrap">
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
+                            </OpsButton>
                           )}
-                          {canManage && !candidate.resume_status && (
-                            <OpsButton size="sm" onClick={() => setUploading({ candidate })}>Upload resume</OpsButton>
-                          )}
-                          {canManage && <OpsButton size="sm" onClick={() => setEditing({ candidate })}>Edit</OpsButton>}
                         </div>
                       </td>
                     </tr>
