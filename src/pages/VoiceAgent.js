@@ -330,13 +330,8 @@ export default function VoiceAgentPage() {
 
   const renderSingleCall = () => (
     <div className="va-tab-content">
-      <div className="va-tab-header">
-        <div className="va-tab-icon-wrap"><PhoneCall className="w-5 h-5" /></div>
-        <div>
-          <h2 className="text-lg font-semibold">Single Call</h2>
-          <p className="text-sm text-muted-foreground">Initiate a direct call to a single lead or contact</p>
-        </div>
-      </div>
+      {/* The top bar's breadcrumb already names this view, so it carries no heading of its own. */}
+      <h2 className="sr-only">Single Call</h2>
 
       <Card className="bg-card border-border">
         <CardContent className="p-6 space-y-5">
@@ -434,13 +429,8 @@ export default function VoiceAgentPage() {
 
   const renderCsvCampaign = () => (
     <div className="va-tab-content">
-      <div className="va-tab-header">
-        <div className="va-tab-icon-wrap"><UploadCloud className="w-5 h-5" /></div>
-        <div>
-          <h2 className="text-lg font-semibold">CSV Call Campaign</h2>
-          <p className="text-sm text-muted-foreground">Upload a contact file, then fill in the campaign details to start or schedule it</p>
-        </div>
-      </div>
+      <h2 className="sr-only">CSV Call Campaign</h2>
+      <p className="text-sm text-muted-foreground">Upload a contact file, then fill in the campaign details to start or schedule it</p>
 
       <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
         <Info className="w-4 h-4 shrink-0 text-amber-500" />

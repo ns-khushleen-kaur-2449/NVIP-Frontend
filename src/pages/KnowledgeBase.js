@@ -132,7 +132,7 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto mt-8 px-4 pb-16">
+    <div className="space-y-8 max-w-5xl mx-auto">
       <div className="text-center">
         <h1 className="font-display text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
           <Bot className="h-7 w-7" /> Knowledge Base

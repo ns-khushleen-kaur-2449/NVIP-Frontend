@@ -401,7 +401,7 @@ export default function VoiceCampaignDetail() {
   const bannerActions = { missed: ['start', 'reschedule'], waiting: ['close'], credits: ['resume'], system_pause: ['resume'] }[banner?.kind] || [];
 
   return (
-    <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <button type="button" onClick={() => navigate('/voice-campaigns')} className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All campaigns
       </button>

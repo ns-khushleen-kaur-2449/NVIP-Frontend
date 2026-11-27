@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import NotificationBell from '@/components/ops/NotificationBell';
@@ -33,12 +34,41 @@ function crumbsFor(location) {
   return crumbs;
 }
 
+const normalize = (text) => (text || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+
+// A page heading that only repeats the section name already shown in this bar ("Agents" here and "Agents" below)
+// is hidden visually. It stays in the DOM for screen readers. Headings that say more, such as a campaign's name, stay visible.
+function useHideDuplicateHeading(barRef, crumbs) {
+  const key = crumbs.join('|');
+  useEffect(() => {
+    const content = barRef.current?.parentElement?.querySelector('.page-content');
+    if (!content) return undefined;
+    const names = key.split('|').map(normalize).filter(Boolean);
+    const isDuplicate = (h1) => {
+      const text = normalize(h1.textContent);
+      return !!text && names.some((name) => text === name || text.includes(name) || name.includes(text));
+    };
+    const apply = () => {
+      content.querySelectorAll('h1').forEach((h1) => {
+        if (isDuplicate(h1)) h1.setAttribute('data-duplicate-title', '');
+        else h1.removeAttribute('data-duplicate-title');
+      });
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(content, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [barRef, key]);
+}
+
 /** The thin bar above pages in the sidebar layout: where you are on the left, notifications on the right. */
 export default function SidebarTopBar() {
   const location = useLocation();
   const crumbs = crumbsFor(location);
+  const barRef = useRef(null);
+  useHideDuplicateHeading(barRef, crumbs);
   return (
-    <div className="nvw-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+    <div ref={barRef} className="nvw-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-3">
       <nav aria-label="Breadcrumb" className="min-w-0">
         <ol className="flex min-w-0 items-center gap-1.5 text-sm">
           {crumbs.map((crumb, i) => (

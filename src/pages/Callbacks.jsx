@@ -132,9 +132,9 @@ export default function CallbacksPage() {
   const setTab = (id) => setParams({ tab: id });
 
   return (
-    <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Callbacks</h1>
+        <h1 className="sr-only">Callbacks</h1>
         <p className="text-sm text-muted-foreground">Calls promised to leads and single scheduled calls. Times in {zone}.</p>
       </header>
 

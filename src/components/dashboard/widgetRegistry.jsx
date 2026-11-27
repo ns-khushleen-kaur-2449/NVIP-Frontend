@@ -28,7 +28,7 @@ export const WIDGETS = [
   {
     id: 'platform-stats', title: 'Platform', perm: PERMISSIONS.DASHBOARD_PLATFORM, group: 'platform',
     render: (d) => (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Tenants" value={d.tenants.total} icon={Building2} subtitle={`${d.tenants.active} active, ${d.tenants.suspended} suspended`} />
         <KpiCard title="Users" value={Object.values(d.users_by_role).reduce((a, b) => a + b, 0)} icon={Users}
           subtitle={Object.entries(d.users_by_role).map(([r, n]) => `${n} ${roleLabel(r)}`).join(', ')} />
@@ -39,7 +39,7 @@ export const WIDGETS = [
   {
     id: 'tenant-kpis', title: 'Your organisation', perm: PERMISSIONS.DASHBOARD_TENANT, group: 'tenant',
     render: (d) => (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Users" value={d.kpis.users} icon={Users} />
         <KpiCard title="Calls (30 days)" value={d.kpis.calls_last_30_days} icon={Phone} />
         <KpiCard title="Active campaigns" value={d.kpis.active_campaigns} icon={Megaphone} />
@@ -68,7 +68,7 @@ export const WIDGETS = [
   {
     id: 'team-call-scores', title: 'Team call scores', perm: PERMISSIONS.DASHBOARD_TEAM, group: 'team',
     render: (d) => (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Average intent confidence" value={score(d.team_call_scores.average_confidence)} icon={Star}
           subtitle="Intent assessments of prospects in your team's campaigns, last 30 days" />
         <KpiCard title="Assessments" value={d.team_call_scores.assessments} icon={Activity} />
@@ -117,7 +117,7 @@ export const WIDGETS = [
   {
     id: 'my-scores', title: 'My scores', perm: PERMISSIONS.DASHBOARD_OWN, group: 'own',
     render: (d) => (
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KpiCard title="My average intent confidence" value={score(d.my_scores.average_confidence)} icon={Star} />
         <KpiCard title="Assessments" value={d.my_scores.assessments} icon={Activity} />
       </div>

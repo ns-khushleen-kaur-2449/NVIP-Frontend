@@ -1048,6 +1048,7 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   border-bottom: 1px solid hsl(var(--border) / 0.8);
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
   backdrop-filter: saturate(1.4) blur(14px);
+  padding-inline: max(var(--page-gutter, 1rem), calc((100% - var(--page-max, 1360px)) / 2));
 }
 
 /* Page headings and agent cards */
@@ -1114,3 +1115,18 @@ html:has(.nv-public[data-nv-theme='dark']) { scrollbar-color: #2E3240 #0B0C11; }
   text-wrap: balance;
 }
 .nvp-fullname--hero { font-size: clamp(2.25rem, 1.6rem + 2.1vw, 3.4rem); line-height: 1.02; }
+
+/* Page headings that repeat the section name in the sidebar top bar (see SidebarTopBar). Kept for screen readers. */
+.page-content h1[data-duplicate-title] {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+/* With the repeated title hidden, the page's description line becomes its first line: no gap above it. */
+.page-content h1[data-duplicate-title] + p,
+.page-content h1[data-duplicate-title] + div > p:first-child { margin-top: 0; }
+
+/* Absolutely positioned bits (sr-only labels, badges) inside a sideways-scrolling table box must stay inside that box;
+   without a positioned ancestor they escape it and widen the whole page on phones. */
+.page-content { position: relative; }
+.page-content .overflow-x-auto,
+.page-content .overflow-auto { position: relative; }

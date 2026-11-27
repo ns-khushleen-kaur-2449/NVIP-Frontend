@@ -14,18 +14,23 @@
   min-height: 100vh;
 }
 
+/* One content column for every signed-in page: the same width and side gutters everywhere, centred on wide screens.
+   The sidebar top bar (.nvw-topbar) uses the same numbers so its breadcrumb lines up with the page's left edge. */
+:root {
+  --page-max: 1360px;
+  --page-gutter: 1rem;
+}
+@media (min-width: 640px) { :root { --page-gutter: 1.5rem; } }
+@media (min-width: 1024px) { :root { --page-gutter: 2.5rem; } }
+
 .page-content {
   flex: 1;
-  padding: 1.5rem 1.75rem 2rem;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-}
-
-@media (min-width: 1024px) {
-  .page-content {
-    padding: 1.75rem 2.5rem 2.5rem;
-  }
+  padding-top: 1.75rem;
+  padding-bottom: 3rem;
+  padding-inline: max(var(--page-gutter), calc((100% - var(--page-max)) / 2));
 }
 
 /* KPI Cards */
@@ -184,7 +189,7 @@
 .va-layout {
   display: flex;
   gap: 0;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 8rem);
   position: relative;
 }
 
@@ -356,7 +361,8 @@
 .va-main {
   flex: 1;
   min-width: 0;
-  padding: 1.25rem 1.5rem;
+  /* .page-content already gives the shared gutters; no second layer of padding here. */
+  padding: 0;
 }
 
 /* ─── Tab content shared styles ──────────────────────────────── */
@@ -437,6 +443,6 @@
   }
 
   .va-main {
-    padding: 1rem;
+    padding: 0;
   }
 }

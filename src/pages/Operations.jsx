@@ -70,9 +70,9 @@ export default function OperationsPage() {
   if (!tabs.includes(tab)) return <Navigate to={roleAllows(tab, user) ? `/operations/${tabs[0].id}` : '/403'} replace />;
 
   return (
-    <div className="ops">
-      <nav aria-label="Operations" className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6">
-        <ul className="flex gap-1 overflow-x-auto border-b border-border">
+    <div className="ops space-y-5">
+      <nav aria-label="Operations">
+        <ul className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
           {tabs.map((t) => {
             const active = t.id === tab.id;
             const count = counts[t.id];

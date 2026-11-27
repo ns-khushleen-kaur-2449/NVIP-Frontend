@@ -47,8 +47,9 @@ test('offboarding can be cancelled with a reason', async () => {
   api.cancelTenantOffboarding.mockResolvedValue({ data: { ...TENANT, offboarding_started_at: null } });
   renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
   const row = await screen.findByTestId('tenant-row-t-1');
-  expect(within(row).queryByRole('button', { name: 'Offboard' })).not.toBeInTheDocument();
-  fireEvent.click(within(row).getByRole('button', { name: 'Cancel offboarding' }));
+  fireEvent.keyDown(within(row).getByRole('button', { name: /^Actions for / }), { key: 'Enter' });
+  expect(screen.queryByRole('menuitem', { name: 'Offboard' })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Cancel offboarding' }));
   const dialog = screen.getByRole('dialog');
   const confirm = within(dialog).getByRole('button', { name: 'Cancel offboarding' });
   expect(confirm).toBeDisabled();

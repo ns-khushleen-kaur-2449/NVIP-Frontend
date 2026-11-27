@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Copy, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Building2, Copy, Loader2, MoreHorizontal, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ReasonDialog from '@/components/ops/ReasonDialog';
 import CallingBoundDialog from '@/components/admin/CallingBoundDialog';
@@ -538,25 +541,38 @@ export default function TenantsPage() {
                         <span className="text-xs text-muted-foreground">{tenant.apollo_access_enabled ? 'Enabled' : 'Disabled'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{tenant.active_user_count} active / {tenant.user_count}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">{tenant.active_user_count} active / {tenant.user_count}</TableCell>
                     <TableCell className="text-sm">{tenant.admin_count}</TableCell>
                     <TableCell className="text-sm">{tenant.active_assistant_count}</TableCell>
                     <TableCell className="text-sm">{tenant.call_count}</TableCell>
                     <TableCell className="text-sm" data-testid={`tenant-plan-${tenant.tenant_id}`}><PlanCell plan={tenant.plan} /></TableCell>
                     <TableCell className="text-sm">{new Date(tenant.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm"><Link to={`/admin/tenant-users?tenant_id=${tenant.tenant_id}`}>Admins</Link></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setSettingsOf(tenant)}>Settings</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setBounding(tenant)}>Calling hours</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setZoning(tenant)}>Time zone</Button>
-                      {tenant.offboarding_started_at
-                        ? <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setCancelling(tenant)}>Cancel offboarding</Button>
-                        : <Button variant="ghost" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setOffboarding(tenant)}>Offboard</Button>}
-                      <Button variant="ghost" size="sm" onClick={() => setNumbersFor(tenant)}>Phone numbers</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setInvitesFor(tenant)}>Invites</Button>
-                      <Button variant="outline" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setConfirming(tenant)}>
-                        {tenant.status === 'active' ? 'Suspend' : 'Activate'}
-                      </Button>
+                      {/* Suspend/Activate stays in view; the rest sit in one menu so the row keeps a single line. */}
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button variant="outline" size="sm" disabled={busyId === tenant.tenant_id} onClick={() => setConfirming(tenant)}>
+                          {tenant.status === 'active' ? 'Suspend' : 'Activate'}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for ${tenant.name}`}>
+                              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild><Link to={`/admin/tenant-users?tenant_id=${tenant.tenant_id}`}>Admins</Link></DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setSettingsOf(tenant)}>Settings</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setBounding(tenant)}>Calling hours</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setZoning(tenant)}>Time zone</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setNumbersFor(tenant)}>Phone numbers</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setInvitesFor(tenant)}>Invites</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {tenant.offboarding_started_at
+                              ? <DropdownMenuItem disabled={busyId === tenant.tenant_id} onSelect={() => setCancelling(tenant)}>Cancel offboarding</DropdownMenuItem>
+                              : <DropdownMenuItem disabled={busyId === tenant.tenant_id} onSelect={() => setOffboarding(tenant)} className="text-destructive focus:text-destructive">Offboard</DropdownMenuItem>}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

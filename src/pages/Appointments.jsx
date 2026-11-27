@@ -45,15 +45,17 @@ const sourceText = (a) => a.campaign?.name || (a.source_vapi_call_id ? 'Agent ca
 
 function Filters({ filters, onChange, assistants, campaigns }) {
   const set = (key) => (e) => onChange({ ...filters, [key]: e.target.value });
-  const field = 'h-9 rounded-lg border border-border bg-card px-3 text-sm';
+  const field = 'h-9 w-full rounded-lg border border-border bg-card px-3 text-sm';
+  // Every filter is one width: a long agent or campaign name no longer stretches its box, and on a phone they stack full width.
+  const box = 'flex w-full flex-col gap-1 text-xs font-medium text-muted-foreground sm:w-56';
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+      <label className={box}>
         Search
-        <input type="search" value={filters.q} onChange={set('q')} placeholder="Lead, email or phone" className={`${field} w-56`} />
+        <input type="search" value={filters.q} onChange={set('q')} placeholder="Lead, email or phone" className={field} />
       </label>
       {assistants && (
-        <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+        <label className={box}>
           Agent
           <select value={filters.agent} onChange={set('agent')} className={field}>
             <option value="">All agents</option>
@@ -61,18 +63,18 @@ function Filters({ filters, onChange, assistants, campaigns }) {
           </select>
         </label>
       )}
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+      <label className={box}>
         Campaign
         <select value={filters.campaign} onChange={set('campaign')} className={field}>
           <option value="">All campaigns</option>
           {(campaigns || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+      <label className={box}>
         From
         <input type="date" value={filters.from} onChange={set('from')} className={field} />
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+      <label className={box}>
         To
         <input type="date" value={filters.to} onChange={set('to')} className={field} />
       </label>
@@ -368,10 +370,10 @@ export default function AppointmentsPage() {
 
   const rows = useMemo(() => data?.items || [], [data]);
   return (
-    <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Appointments</h1>
+          <h1 className="sr-only">Appointments</h1>
           <p className="text-sm text-muted-foreground">Meetings booked by your agents, with their full history. Times in {zone}.</p>
         </div>
         <OpsButton size="sm" variant="outline" onClick={refresh} aria-label="Refresh the appointments">

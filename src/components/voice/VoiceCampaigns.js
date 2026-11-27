@@ -119,7 +119,7 @@ export default function VoiceCampaigns() {
   const canCreate = canCreateCampaigns(user);
 
   return (
-    <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{newMode ? 'Campaigns' : 'Voice campaigns'}</h1>

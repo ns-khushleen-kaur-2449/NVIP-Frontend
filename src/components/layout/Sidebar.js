@@ -1,10 +1,10 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Sparkles,  PhoneCall, Inbox as InboxIcon, CalendarClock, Package,
-  Layers, Phone, Mic, BookOpen, UploadCloud, Megaphone, ClipboardCheck, Bot,
+  Layers, Phone, Mic, UploadCloud, Megaphone, ClipboardCheck, Bot,
   ChevronDown, ChevronLeft, ChevronRight, Settings, LogOut, GitCompareArrows, ShieldCheck, Crown, BarChart3,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getBillingSubscription } from '@/lib/api';
 import { BILLING_CHANGED } from '@/components/billing/billingUi';
@@ -47,10 +47,6 @@ const PENDING_NAV = [
 const VOICE_TABS = [
   { id: 'builder',  label: 'Lead-to-Campaign Builder', icon: Layers },
   { id: 'logs',      label: 'Call Logs',                icon: Phone },
-  // Creating assistants is Manager and up (the backend's AssistantAction.CREATE); the knowledge
-  // base is refused to Sales Reps, so neither is offered to them.
-  { id: 'create',    label: 'Create Agent',             icon: Mic, requires: canViewAssistants },
-  { id: 'kb',        label: 'Knowledge Base',           icon: BookOpen, requires: canViewAssistants },
   { id: 'csv',       label: 'CSV Call Campaign',        icon: UploadCloud },
   // Its own route rather than a ?tab= view, so it carries `path`. The render
   // below falls back to the ?tab= form for every entry without one.
@@ -128,6 +124,32 @@ export function Sidebar() {
     window.addEventListener(BILLING_CHANGED, update);
     return () => window.removeEventListener(BILLING_CHANGED, update);
   }, [billingAdmin]);
+
+  // On a short window the menu scrolls; keep the current page's item in view instead of half cut off at the edge.
+  const asideRef = useRef(null);
+  useEffect(() => {
+    const viewport = asideRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return undefined;
+    const reveal = () => {
+      const active = viewport.querySelector('[data-active="true"], [aria-current="page"]');
+      if (!active) return;
+      const box = viewport.getBoundingClientRect();
+      const item = active.getBoundingClientRect();
+      if (item.bottom > box.bottom) viewport.scrollTop += item.bottom - box.bottom + 12;
+      else if (item.top < box.top) viewport.scrollTop -= box.top - item.top + 12;
+    };
+    reveal();
+    // Things load after the first paint: groups (Voice Agent) open and push items down, and the plan line under the menu
+    // shrinks the scroll box. Check again whenever either resizes, for the first few seconds after a navigation only,
+    // so it never fights the user's own scrolling.
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(reveal) : null;
+    if (observer) {
+      observer.observe(viewport);
+      if (viewport.firstElementChild) observer.observe(viewport.firstElementChild);
+    }
+    const stop = setTimeout(() => observer?.disconnect(), 3000);
+    return () => { clearTimeout(stop); observer?.disconnect(); };
+  }, [location.pathname, location.search, user]);
   const topPlan = plan?.key === 'pro_plus';
 
   const params = new URLSearchParams(location.search);
@@ -155,6 +177,7 @@ export function Sidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <aside
+        ref={asideRef}
         className={cn(
           'mk nvw-sidebar flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200',
           collapsed ? 'w-[76px]' : 'w-[272px]'

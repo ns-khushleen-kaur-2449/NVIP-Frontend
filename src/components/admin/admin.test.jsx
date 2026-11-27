@@ -246,8 +246,8 @@ describe('Voice Agent nav hides what a Sales Rep is refused', () => {
     expect(visibleTabs(role)).not.toContain('requests');
   });
 
-  test.each(['tenant_admin', 'manager'])('%s keeps Create Agent, Knowledge Base and CSV', (role) => {
-    expect(visibleTabs(role)).toEqual(expect.arrayContaining(['create', 'kb', 'csv', 'builder', 'logs', 'single']));
+  test.each(['tenant_admin', 'manager'])('%s keeps CSV and the other tabs, without Create Agent or Knowledge Base (removed from the nav)', (role) => {
+    expect(visibleTabs(role)).toEqual(['builder', 'logs', 'csv', 'single']);
   });
 
   test('Voice Campaigns, a route of its own, is still there for a Sales Rep', () => {

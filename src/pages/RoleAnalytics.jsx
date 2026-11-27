@@ -50,10 +50,10 @@ const NoView = () => <p className="ops-card p-4 text-sm text-muted-foreground">T
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, view, filters, setFilters } = useRoleView();
-  if (!view) return <main className="ops mx-auto max-w-[1280px] p-4 sm:p-6"><NoView /></main>;
+  if (!view) return <main className="ops"><NoView /></main>;
   return (
     <TooltipProvider>
-      <main className="ops mx-auto max-w-[1280px] space-y-5 p-4 sm:p-6" data-testid="role-dashboard">
+      <main className="ops space-y-5" data-testid="role-dashboard">
         <Header title="Dashboard" user={user} view={view} />
         <Filters value={filters} onChange={setFilters} show={view.filter ? [view.filter] : []} />
         <AnalyticsProvider role={user.role} filters={filters}><view.Dashboard /></AnalyticsProvider>
@@ -72,7 +72,7 @@ export function DashboardPage() {
 export function ReportsPage() {
   const { user, view, filters, setFilters } = useRoleView();
   const [exporting, setExporting] = useState(false);
-  if (!view) return <main className="ops mx-auto max-w-[1280px] p-4 sm:p-6"><NoView /></main>;
+  if (!view) return <main className="ops"><NoView /></main>;
 
   const exportCsv = async () => {
     setExporting(true);
@@ -91,7 +91,7 @@ export function ReportsPage() {
 
   return (
     <TooltipProvider>
-      <main className="ops mx-auto max-w-[1280px] space-y-5 p-4 sm:p-6" data-testid="role-reports">
+      <main className="ops space-y-5" data-testid="role-reports">
         <Header title="Reports & Analytics" user={user} view={view}>
           <OpsButton onClick={exportCsv} busy={exporting}><Download className="h-4 w-4" aria-hidden="true" /> Export CSV</OpsButton>
         </Header>

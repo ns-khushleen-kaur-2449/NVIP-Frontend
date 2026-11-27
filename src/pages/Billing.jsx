@@ -201,7 +201,7 @@ export default function Billing() {
   }
 
   return <>
-    <main className="ops mx-auto max-w-[1280px] space-y-6 p-4 sm:p-6">
+    <main className="ops space-y-6">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Billing &amp; subscription</h1>
         <p className="mt-1 max-w-xl text-sm text-muted-foreground">Choose a plan for your organisation, change it at any time, and manage your payment details.</p>

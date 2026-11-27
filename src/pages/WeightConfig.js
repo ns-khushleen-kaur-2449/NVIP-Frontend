@@ -125,7 +125,7 @@ export default function WeightConfigPage() {
   if (loading) return <div className="py-16 text-center text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto mt-8 px-4">
+    <div className="space-y-8 max-w-4xl mx-auto">
       <div className="text-center">
         <h1 className="font-display text-3xl font-bold tracking-tight text-slate-900">Scoring Weight Configuration</h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">

@@ -264,9 +264,9 @@ export default function IntentReviewPage({ onReviewed }) {
   const showActions = operator && filter.id === 'pending';
 
   return (
-    <div className="ops mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Intent review</h1>
+        <h1 className="sr-only">Intent review</h1>
         <p className="text-sm text-muted-foreground">
           AI assessments of calls that a person needs to confirm. Approving one makes it the lead's current intent.
         </p>

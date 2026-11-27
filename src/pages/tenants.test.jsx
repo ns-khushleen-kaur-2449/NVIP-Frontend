@@ -27,7 +27,8 @@ beforeEach(() => {
 async function openNumbers(user) {
   renderWithAuth(<TenantsPage />, { user: USERS.super_admin, path: '/admin/tenants' });
   const row = await screen.findByTestId('tenant-row-t-1');
-  await user.click(within(row).getByRole('button', { name: 'Phone numbers' }));
+  await user.click(within(row).getByRole('button', { name: 'Actions for Apex Motors' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Phone numbers' }));
   return screen.findByTestId('tenant-phone-numbers-dialog');
 }
 

@@ -24,7 +24,7 @@ export default function RoleDashboard() {
   const newMode = featureOn(user, 'agent_instances');
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6" data-testid="role-dashboard">
+    <div className="space-y-6" data-testid="role-dashboard">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-2xl font-semibold flex items-center gap-2"><LayoutDashboard className="w-6 h-6 text-primary" /> Dashboard</h1>

@@ -135,10 +135,10 @@ export default function DoNotCallPage() {
   const setTab = (id) => { setRows(null); setParams({ tab: id }); };
 
   return (
-    <div className="ops mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
+    <div className="ops space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Do-not-call</h1>
+          <h1 className="sr-only">Do-not-call</h1>
           <p className="text-sm text-muted-foreground">Numbers that are never dialled. Opt-outs said on a call wait here for review.</p>
         </div>
         {operator && <OpsButton variant="primary" onClick={() => setAdding(true)}><Plus className="h-4 w-4" aria-hidden="true" /> Add a number</OpsButton>}

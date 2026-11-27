@@ -189,7 +189,7 @@ export default function ConversionWorkspace() {
     else setDialog({ type, decision: payload, fromDesk });
   };
 
-  return <><main className="ops mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6">
+  return <><main className="ops space-y-5">
     <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Conversion Workspace</h1>

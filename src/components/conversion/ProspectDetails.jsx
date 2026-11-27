@@ -101,7 +101,7 @@ export default function ProspectDetails({
         </dl>
       </div>
 
-      <div role="tablist" aria-label="Conversion details" onKeyDown={onTabKeyDown} className="flex shrink-0 overflow-x-auto border-b border-border px-3">
+      <div role="tablist" aria-label="Conversion details" onKeyDown={onTabKeyDown} className="flex shrink-0 overflow-x-auto overflow-y-hidden border-b border-border px-3">
         {tabs.map((item) => (
           <button key={item.id} id={`conversion-tab-${item.id}`} type="button" role="tab" aria-selected={tab === item.id} aria-controls="conversion-tabpanel"
             tabIndex={tab === item.id ? 0 : -1} onClick={() => onTab(item.id)}
