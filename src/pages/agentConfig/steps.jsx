@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OpsButton from '@/components/ops/OpsButton';
 import { errorMessage } from '@/hooks/useApiAction';
@@ -23,6 +24,7 @@ import CallPreviewView from '@/components/voice/CallPreview';
 import HandoffSection from './HandoffSection';
 import { OpeningLineField, VoiceReadiness, useOpeningLineSuggestion } from './OpeningLine';
 import useCallPreview from '@/hooks/useCallPreview';
+import { cn } from '@/lib/utils';
 
 const BOTH = ['sdr_outbound', 'sdr_inbound'];
 
@@ -72,7 +74,7 @@ const TOOL_CALLBACK = 'request_callback';
 // Each step's card: title, one-line explanation, optional badge (components/setup/SetupUi Panel).
 const SUBTITLES = {
   'Business details': 'The agent uses these on every call to introduce your company.',
-  'Product catalog': 'What the agent may talk about. Prices always come from the catalog, never from the agent.',
+  'Product catalog': 'What the agent may talk about on calls.',
   'Agent identity': 'Who your leads will hear. Every campaign uses this agent.',
   'Campaign defaults': 'What every campaign starts from; a campaign can change them for its own calls.',
   'Inbound calls': 'How the agent answers calls to your numbers.',
@@ -104,10 +106,14 @@ export function fieldPropsFor({ payload, update, errors, conflicts, readOnly }) 
 const PROFILE_FIELDS = ['company_name', 'company_description', 'industry', 'location', 'locations', 'website',
   'business_hours', 'brochure'];
 const profileForm = (business) => Object.fromEntries(PROFILE_FIELDS.map((k) => [k, business?.[k] ?? (k === 'locations' ? [] : null)]));
+// What Save sends: blank locations dropped. Also what "unsaved changes" compares, so an empty added row is not a change.
+const profileBody = (form) => ({ ...form, locations: (form.locations || []).filter((l) => (l || '').trim()) });
 const MODE_LABELS = { fixed: 'Fixed assistant', shared: 'Shared via NVIP' };
 
-/** The business profile: Tenant Admins edit it (Save replaces it), Managers read it. Not part of the agent version. */
-export function BusinessStep({ context, user }) {
+/** The business profile: Tenant Admins edit it (Save replaces it), Managers read it. Not part of the agent version,
+ * so the draft's autosave never saves it: `businessFlush` (a ref the page holds) gets this step's save while there are
+ * unsaved changes, and the page calls it before leaving the step, saving the draft or publishing. */
+export function BusinessStep({ context, user, businessFlush }) {
   const editable = canEditBusinessProfile(user);
   const [form, setForm] = useState(() => profileForm(context.business));
   const [errors, setErrors] = useState({});
@@ -117,30 +123,42 @@ export function BusinessStep({ context, user }) {
     path, value: form[path], readOnly: !editable, error: errors[path],
     onChange: (value) => setForm((f) => ({ ...f, [path]: value })),
   });
+  const dirty = editable && JSON.stringify(profileBody(form)) !== JSON.stringify(profileBody(profileForm(context.business)));
+  /** Saves the form; true when saved, false when refused (the errors are shown on the fields). */
   const save = async () => {
     setSaving(true);
     try {
-      const body = { ...form, locations: (form.locations || []).filter((l) => (l || '').trim()) };
-      const saved = (await updateBusinessProfile(body)).data;
+      const saved = (await updateBusinessProfile(profileBody(form))).data;
       setErrors({});
       context.onBusinessSaved?.(saved);
       toast.success('Business details saved');
+      return true;
     } catch (e) {
       const byField = fieldErrors(e);
       setErrors(byField);
       const first = Object.keys(byField)[0];
       if (first) document.querySelector(`[data-field="${first}"]`)?.focus();
       toast.error(errorMessage(e, 'Could not save the business details'));
+      return false;
     } finally {
       setSaving(false);
     }
   };
+  // Re-registered on every render, so the page always calls the save that sees the latest form.
+  useEffect(() => {
+    if (!businessFlush) return undefined;
+    businessFlush.current = dirty ? save : null;
+    return () => { businessFlush.current = null; };
+  });
   const business = context.business;
   return (
     // The profile's own metadata (GET /api/v1/business-profile `fields`): which details reach calls.
     <FieldUseProvider value={business?.fields || null}>
     <Section title="Business details" badge="Shared with all your agents" action={editable && (
-      <OpsButton variant="primary" busy={saving} onClick={save}>Save business details</OpsButton>
+      <div className="flex items-center gap-2">
+        {dirty && <span className="text-xs text-amber-600" data-testid="business-unsaved">Unsaved changes</span>}
+        <OpsButton variant="primary" busy={saving} onClick={save}>Save business details</OpsButton>
+      </div>
     )} note={business?.updated_at && (
       <p className="text-xs text-muted-foreground" data-testid="business-updated">
         Last changed {business.updated_by_name ? `by ${business.updated_by_name} ` : ''}
@@ -194,39 +212,109 @@ export function BusinessStep({ context, user }) {
 
 // ── 2. Product catalog ──
 
+const CATALOG_PREVIEW_ROWS = 3;
+
+/** A catalog price as the Catalog page shows it, in the tenant's currency (`context.catalogSettings`; INR, Indian
+ * grouping when they are not known). */
+export function catalogPrice(value, settings) {
+  if (value === undefined || value === null || value === '') return '—';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return String(value);
+  const locale = (settings?.price_format || 'indian') === 'indian' ? 'en-IN' : 'en-US';
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: settings?.currency || 'INR', maximumFractionDigits: 0 })
+      .format(amount);
+  } catch {
+    return amount.toLocaleString(locale);
+  }
+}
+
 export function CatalogStep({ agentType, context, field, readOnly }) {
-  const items = context.catalog;
+  const items = context.catalog ? context.catalog.filter((item) => item.active !== false) : context.catalog;
   const featured = field('inbound.featured_product_ids');
   const chosen = new Set(featured.value || []);
   const toggle = (id) => featured.onChange(chosen.has(id) ? [...chosen].filter((x) => x !== id) : [...chosen, id]);
+  const [showAll, setShowAll] = useState(false);
+  const inbound = agentType === 'sdr_inbound';
+  const count = items?.length || 0;
+  const rows = items ? (showAll ? items : items.slice(0, CATALOG_PREVIEW_ROWS)) : [];
   return (
     <Section title="Product catalog">
-      <p className="text-sm text-muted-foreground">
-        The agent talks only about active products in your catalog and never invents prices.{' '}
-        <Link to="/catalog" className="underline">Manage the catalog</Link>
-      </p>
-      {context.catalogError && <p className="text-sm text-muted-foreground">{context.catalogError}</p>}
-      {items && items.length === 0 && <p className="text-sm text-muted-foreground">Your catalog has no active products yet.</p>}
-      {items && items.length > 0 && agentType === 'sdr_outbound' && (
-        <p className="text-sm">{items.length} active product{items.length === 1 ? '' : 's'}. Choose featured products per campaign.</p>
-      )}
-      {items && items.length > 0 && agentType === 'sdr_inbound' && (
-        <fieldset data-field="inbound.featured_product_ids" tabIndex={-1}>
-          <legend className="text-sm font-medium">Featured products (mentioned first to callers)</legend>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-            {items.map((item) => (
-              <li key={item.id}>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={chosen.has(item.id)} disabled={readOnly} onChange={() => toggle(item.id)}
-                    className="h-4 w-4" />
-                  {item.name}{item.category ? <span className="text-xs text-muted-foreground"> · {item.category}</span> : null}
-                </label>
-              </li>
-            ))}
-          </ul>
-          {featured.error && <p role="alert" className="mt-1 text-xs text-red-600">{featured.error}</p>}
-        </fieldset>
-      )}
+      <div className="flex gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3" data-testid="catalog-price-note">
+        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+        <div className="text-sm">
+          <p className="font-semibold">Prices always come from your catalog</p>
+          <p className="text-muted-foreground">The agent only mentions active products and never makes up a price.</p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border" data-testid="catalog-products">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
+          <div className="min-w-0">
+            <p className="font-semibold">
+              {items == null ? 'Products' : `${count} active product${count === 1 ? '' : 's'}`}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {inbound ? 'Tick the ones the agent mentions first to callers.' : 'You pick which ones to feature in each campaign.'}
+            </p>
+          </div>
+          <Link to="/catalog"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+            Manage catalog <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+
+        {context.catalogError && <p className="border-t border-border px-5 py-4 text-sm text-muted-foreground">{context.catalogError}</p>}
+        {items && count === 0 && (
+          <p className="border-t border-border px-5 py-4 text-sm text-muted-foreground">
+            Your catalog has no active products yet. Add them on the catalog page; the agent talks only about those.
+          </p>
+        )}
+        {count > 0 && (
+          <fieldset data-field="inbound.featured_product_ids" tabIndex={-1}>
+            {inbound && <legend className="sr-only">Featured products (mentioned first to callers)</legend>}
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-t border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {inbound && <th scope="col" className="w-10 py-2 pl-4 sm:pl-5"><span className="sr-only">Featured</span></th>}
+                  <th scope="col" className={cn('py-2 pr-3', !inbound && 'pl-4 sm:pl-5')}>Product</th>
+                  <th scope="col" className="py-2 pr-3">Category</th>
+                  <th scope="col" className="py-2 pr-4 text-right sm:pr-5">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((item) => (
+                  <tr key={item.id} className="border-t border-border">
+                    {inbound && (
+                      <td className="py-3 pl-4 sm:pl-5">
+                        <input type="checkbox" aria-label={`Feature ${item.name}`} checked={chosen.has(item.id)} disabled={readOnly}
+                          onChange={() => toggle(item.id)} className="h-4 w-4" />
+                      </td>
+                    )}
+                    <td className={cn('py-3 pr-3 font-medium', !inbound && 'pl-4 sm:pl-5')}>{item.name}</td>
+                    <td className="py-3 pr-3 text-muted-foreground">{item.category || '—'}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums sm:pr-5">{catalogPrice(item.price, context.catalogSettings)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {count > CATALOG_PREVIEW_ROWS && (
+              <div className="border-t border-border px-4 py-3 sm:px-5">
+                <button type="button" className="text-sm font-medium text-primary hover:underline" aria-expanded={showAll}
+                  onClick={() => setShowAll((v) => !v)}>
+                  {showAll ? 'Show fewer' : `Show all ${count}`}
+                </button>
+              </div>
+            )}
+            {inbound && chosen.size > 0 && (
+              <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-5">
+                {chosen.size} featured: mentioned first to callers.
+              </p>
+            )}
+            {featured.error && <p role="alert" className="px-5 pb-3 text-xs text-red-600">{featured.error}</p>}
+          </fieldset>
+        )}
+      </div>
     </Section>
   );
 }
@@ -465,7 +553,7 @@ export function RulesStep({ agentType, field }) {
 export function BehaviourStep({ payload, field, platform }) {
   const silence = platform?.silence_timeout_seconds;
   return (
-    <details className="rounded-2xl border border-border bg-card p-5 sm:p-6" open={false}>
+    <details className="rounded-2xl border border-border bg-card p-5 sm:p-6" open>
       <summary className="cursor-pointer text-sm font-semibold">Advanced: call behaviour</summary>
       <div className="mt-4 space-y-4">
         <TextField label="Voicemail message" multiline maxLength={500} {...field('call_behaviour.voicemail_message')} />

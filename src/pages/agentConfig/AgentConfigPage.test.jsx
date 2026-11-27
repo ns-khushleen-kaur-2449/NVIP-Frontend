@@ -19,6 +19,7 @@ jest.mock('@/lib/api', () => ({
   updateBusinessProfile: jest.fn(),
   listOwnPhoneNumbers: jest.fn(),
   getCatalogItems: jest.fn(),
+  getCatalogSettings: jest.fn(),
   getBuilderLanguages: jest.fn(),
   previewAgentInstance: jest.fn(),
   suggestOpeningLine: jest.fn(),
@@ -71,6 +72,7 @@ beforeEach(() => {
     { id: 'n-1', vapi_phone_number_id: 'pn-1', phone_number: null, label: 'Sales', inbound_mode: 'fixed', assistant_name: null },
   ] });
   api.getCatalogItems.mockResolvedValue({ data: { items: [] } });
+  api.getCatalogSettings.mockResolvedValue({ data: { currency: 'INR', price_format: 'indian' } });
   // As GET /api/v1/assistant-builder/languages answers: `name` is the English name (there is no english_name).
   api.getBuilderLanguages.mockResolvedValue({ data: [
     { code: 'en', name: 'English', native_name: 'English', status: 'approved', direction: 'ltr' },
@@ -251,6 +253,38 @@ describe('feature gating', () => {
   });
 });
 
+describe('product catalog (step 2)', () => {
+  const ITEMS = [1, 2, 3, 4, 5].map((n) => ({ id: `p-${n}`, name: `Model ${n}`, category: 'SUV', price: n * 1000000, active: true }));
+
+  test('outbound: the price note, the count, the first three products with prices, then all of them', async () => {
+    api.getCatalogItems.mockResolvedValue({ data: { items: [...ITEMS, { id: 'old', name: 'Retired', price: 1, active: false }] } });
+    renderEditor(admin);
+    await userEvent.click(await screen.findByRole('button', { name: 'Product catalog' }));
+    expect(screen.getByTestId('catalog-price-note')).toHaveTextContent('Prices always come from your catalog');
+    const card = await screen.findByTestId('catalog-products');
+    await waitFor(() => expect(card).toHaveTextContent('5 active products'));
+    expect(card).toHaveTextContent('You pick which ones to feature in each campaign.');
+    expect(screen.getByRole('link', { name: /Manage catalog/ })).toHaveAttribute('href', '/catalog');
+    expect(screen.getAllByRole('row')).toHaveLength(1 + 3);
+    expect(card).toHaveTextContent('₹10,00,000');
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show all 5' }));
+    expect(screen.getAllByRole('row')).toHaveLength(1 + 5);
+    expect(card).not.toHaveTextContent('Retired');
+    expect(screen.getByRole('button', { name: 'Show fewer' })).toBeInTheDocument();
+  });
+
+  test('inbound: products are ticked as featured', async () => {
+    api.getCatalogItems.mockResolvedValue({ data: { items: ITEMS } });
+    renderWithAuth(<AgentConfigEditor agentType="sdr_inbound" user={admin} />, { user: admin });
+    await userEvent.click(await screen.findByRole('button', { name: 'Product catalog' }));
+    const box = await screen.findByRole('checkbox', { name: 'Feature Model 1' });
+    await userEvent.click(box);
+    expect(box).toBeChecked();
+    expect(screen.getByTestId('catalog-products')).toHaveTextContent('1 featured');
+  });
+});
+
 describe('business details (step 1)', () => {
   const openBusiness = async (user) => {
     renderEditor(user);
@@ -269,6 +303,36 @@ describe('business details (step 1)', () => {
     await userEvent.clear(name);
     await userEvent.type(name, 'Apex Motors');
     await userEvent.click(screen.getByRole('button', { name: 'Save business details' }));
+    await waitFor(() => expect(api.updateBusinessProfile).toHaveBeenCalledWith(expect.objectContaining({ company_name: 'Apex Motors' })));
+  });
+
+  test('edits are saved when the user moves on without pressing Save; a refused save stays on the step', async () => {
+    api.updateBusinessProfile
+      .mockRejectedValueOnce({ response: { status: 422, data: { detail: 'Invalid website' } } })
+      .mockResolvedValue({ data: { company_name: 'Apex Motors', locations: [], source: 'api', updated_at: at } });
+    await openBusiness(admin);
+    const name = screen.getByLabelText('Company name');
+    await waitFor(() => expect(name).toHaveValue('Acme Motors'));
+    expect(screen.queryByTestId('business-unsaved')).not.toBeInTheDocument();
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Apex Motors');
+    expect(screen.getByTestId('business-unsaved')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Next:/ }));
+    await waitFor(() => expect(api.updateBusinessProfile).toHaveBeenCalledTimes(1));
+    expect(screen.getByLabelText('Company name')).toHaveValue('Apex Motors'); // refused: still here, edits kept
+    await userEvent.click(screen.getByRole('button', { name: /^Next:/ }));
+    await waitFor(() => expect(api.updateBusinessProfile).toHaveBeenLastCalledWith(expect.objectContaining({ company_name: 'Apex Motors' })));
+    await waitFor(() => expect(screen.queryByLabelText('Company name')).not.toBeInTheDocument());
+  });
+
+  test('Save draft also saves unsaved business details', async () => {
+    api.updateBusinessProfile.mockResolvedValue({ data: { company_name: 'Apex Motors', locations: [], source: 'api', updated_at: at } });
+    await openBusiness(admin);
+    const name = screen.getByLabelText('Company name');
+    await waitFor(() => expect(name).toHaveValue('Acme Motors'));
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Apex Motors');
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await waitFor(() => expect(api.updateBusinessProfile).toHaveBeenCalledWith(expect.objectContaining({ company_name: 'Apex Motors' })));
   });
 

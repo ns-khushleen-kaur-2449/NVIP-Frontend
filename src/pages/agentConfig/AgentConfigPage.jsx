@@ -10,7 +10,7 @@ import { errorMessage } from '@/hooks/useApiAction';
 import { useAuth } from '@/lib/AuthContext';
 import {
   createAgentInstanceDraft, discardAgentInstanceDraft, getAgentInstance, getAgentInstanceVersion, getBuilderLanguages,
-  getBusinessProfile, getCatalogItems, listOwnPhoneNumbers, publishAgentInstanceVersion, rebaseAgentInstanceDraft,
+  getBusinessProfile, getCatalogItems, getCatalogSettings, listOwnPhoneNumbers, publishAgentInstanceVersion, rebaseAgentInstanceDraft,
   restoreAgentInstanceVersion, updateAgentInstanceDraft,
 } from '@/lib/api';
 import { agentTypeLabel, canonicalAgentType, isConfigurableAgentType } from '@/lib/agents';
@@ -77,6 +77,9 @@ export function AgentConfigEditor({ agentType, user }) {
   const draftRef = useRef(draft);
   const dirtyRef = useRef(false);
   const timerRef = useRef(null);
+  // The Business details step's save while it has unsaved changes (steps.jsx BusinessStep); null otherwise.
+  const businessFlushRef = useRef(null);
+  const flushBusiness = () => (businessFlushRef.current ? businessFlushRef.current() : Promise.resolve(true));
   draftRef.current = draft;
 
   const loadInstance = useCallback(async () => {
@@ -124,6 +127,9 @@ export function AgentConfigEditor({ agentType, user }) {
       .catch((e) => set({ numbers: null, numbersError: errorMessage(e, 'Your phone numbers could not be loaded.') }));
     getCatalogItems().then((r) => set({ catalog: r.data?.items || [] }))
       .catch((e) => set({ catalog: null, catalogError: errorMessage(e, 'The catalog could not be loaded.') }));
+    // Currency and number format for the catalog step's prices; without them prices show in INR.
+    Promise.resolve().then(() => getCatalogSettings()).then((r) => set({ catalogSettings: r.data || null }))
+      .catch(() => set({ catalogSettings: null }));
     getBuilderLanguages().then((r) => set({ languages: r.data || [] })).catch(() => set({ languages: [] }));
     return () => { cancelled = true; };
   }, []);
@@ -207,6 +213,7 @@ export function AgentConfigEditor({ agentType, user }) {
   const publish = async ({ force = false } = {}) => {
     const current = draftRef.current;
     if (!current) return;
+    if (!(await flushBusiness())) return;
     if (!(await save())) { toast.error('Fix the highlighted fields first'); return; }
     const problems = publishProblems(payloadRef.current, agentType);
     if (Object.keys(problems).length) { showErrors(problems); toast.error('Some required fields are missing'); return; }
@@ -328,8 +335,10 @@ export function AgentConfigEditor({ agentType, user }) {
   const previewVersion = draft?.version ?? instance?.published_version ?? null;
   const previewKey = savedAt ? savedAt.getTime() : 0;
   const panelProps = { agentType, payload, context, field, readOnly, errors, user, platform: instance?.platform || {},
-    versionNumber: previewVersion, refreshKey: previewKey };
-  const go = (id) => {
+    versionNumber: previewVersion, refreshKey: previewKey, businessFlush: businessFlushRef };
+  const go = async (id) => {
+    // Leaving Business details saves its edits first (they are not in the draft); a refused save stays on it.
+    if (id !== step.id && !(await flushBusiness())) return;
     setVisited((v) => new Set([...v, step.id]));
     setStepId(id);
     setTimeout(() => document.getElementById('setup-title')?.focus(), 0);
@@ -420,7 +429,7 @@ export function AgentConfigEditor({ agentType, user }) {
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-5">
             <div className="flex gap-2">
               {index > 0 && <OpsButton variant="outline" onClick={() => go(steps[index - 1].id)}>Back</OpsButton>}
-              {editing && <OpsButton variant="outline" onClick={() => save().then((ok) => ok && toast.success('Draft saved'))}>Save draft</OpsButton>}
+              {editing && <OpsButton variant="outline" onClick={async () => { if (await flushBusiness() && await save()) toast.success('Draft saved'); }}>Save draft</OpsButton>}
               {editing && <OpsButton variant="quiet" onClick={() => setDiscarding(true)}>Discard draft</OpsButton>}
             </div>
             {index < steps.length - 1 ? (
